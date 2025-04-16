@@ -13735,3 +13735,50 @@ sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed
 2025-04-16 08:28:01,665 - src.controllers.socket_core - INFO - Client connected: 0bHK7cNBtZ9kE5dtAAAD
 2025-04-16 08:28:04,241 - werkzeug - INFO -  * Detected change in 'C:\\Monoply\\src\\controllers\\bot_controller.py', reloading
 2025-04-16 08:28:04,424 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 08:28:05,942 - src.models - INFO - Database models initialized
+2025-04-16 08:28:05,946 - root - INFO - Ensured database tables exist.
+2025-04-16 08:28:05,992 - banker - INFO - Banker initialized.
+2025-04-16 08:28:05,992 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 08:28:05,992 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 08:28:05,992 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 08:28:05,992 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 08:28:05,993 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 08:28:05,995 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 08:28:05,995 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 08:28:05,995 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 08:28:05,995 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 08:28:05,995 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 08:28:05,996 - bot_controller - INFO - BotController initialized.
+2025-04-16 08:28:05,996 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 08:28:05,997 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 08:28:05,997 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 08:28:05,998 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 08:28:05,998 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 08:28:05,998 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 08:28:05,999 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 08:28:06,006 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 08:28:06,006 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 08:28:06,016 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 08:28:06,025 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 08:28:06,027 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 08:28:06,027 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 08:28:06,033 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 08:28:06,037 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 08:28:06,157 - src.controllers.socket_core - INFO - Client connected: PjdCE86HByEwmxtaAAAB
+2025-04-16 08:28:06,341 - src.controllers.socket_core - INFO - Client connected: 43kxgUeKUWOBh-dhAAAD
+2025-04-16 08:28:43,741 - src.controllers.bot_controller - INFO - Retrieved starting money for bot creation: 1500
+2025-04-16 08:28:43,749 - src.controllers.bot_controller - INFO - Committed new bot player job with ID: 10
+2025-04-16 08:28:43,749 - src.logic.bot_decision_maker - INFO - Initialized BotDecisionMaker for Player 10 with difficulty 'easy'
+2025-04-16 08:28:43,749 - src.models.bots.base_bot - INFO - Initialized BotPlayer for Player 10 (job) with difficulty 'easy'.
+2025-04-16 08:28:43,750 - src.controllers.bot_controller - INFO - Bot action processor started.
+2025-04-16 08:28:43,750 - src.controllers.bot_controller - INFO - Started bot action processing thread.
+2025-04-16 08:28:43,750 - src.controllers.bot_controller - ERROR - Flask app instance not found in app_config for bot action thread. Stopping.
+2025-04-16 08:28:43,750 - src.controllers.bot_controller - INFO - Created new bot: job (ID: 10, Type: opportunistic, Difficulty: easy)
+2025-04-16 08:28:54,118 - src.controllers.bot_controller - INFO - Retrieved starting money for bot creation: 1500
+2025-04-16 08:28:54,124 - src.controllers.bot_controller - INFO - Committed new bot player nrfeuonhbvf with ID: 11
+2025-04-16 08:28:54,124 - src.logic.bot_decision_maker - INFO - Initialized BotDecisionMaker for Player 11 with difficulty 'medium'
+2025-04-16 08:28:54,124 - src.models.bots.base_bot - INFO - Initialized BotPlayer for Player 11 (nrfeuonhbvf) with difficulty 'medium'.
+2025-04-16 08:28:54,125 - src.controllers.bot_controller - INFO - Bot action processor started.
+2025-04-16 08:28:54,125 - src.controllers.bot_controller - INFO - Started bot action processing thread.
+2025-04-16 08:28:54,125 - src.controllers.bot_controller - ERROR - Flask app instance not found in app_config for bot action thread. Stopping.
+2025-04-16 08:28:54,125 - src.controllers.bot_controller - INFO - Created new bot: nrfeuonhbvf (ID: 11, Type: conservative, Difficulty: medium)
