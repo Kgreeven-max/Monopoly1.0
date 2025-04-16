@@ -1,0 +1,222 @@
+from . import db
+from datetime import datetime
+import json
+import logging
+
+# Import necessary model for loan accrual
+from .finance.loan import Loan
+
+class GameState(db.Model):
+    """Model for overall game state"""
+    __tablename__ = 'game_state'
+    
+    id = db.Column(db.Integer, primary_key=True, default=1)
+    current_player_id = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=True)
+    player_order = db.Column(db.Text, nullable=True) # Comma-separated list of player IDs in order
+    current_lap = db.Column(db.Integer, default=0)
+    total_laps = db.Column(db.Integer, default=0)  # For limited-lap games
+    community_fund = db.Column(db.Integer, default=0)
+    inflation_state = db.Column(db.String(20), default='stable')  # stable, inflation, deflation, recession, boom
+    inflation_factor = db.Column(db.Float, default=1.0)
+    tax_rate = db.Column(db.Float, default=0.1)  # 10% default
+    start_time = db.Column(db.DateTime, default=datetime.utcnow)
+    end_time = db.Column(db.DateTime, nullable=True)  # End time for timed games
+    status = db.Column(db.String(20), default='Waiting') # Waiting, Setup, In Progress, Paused, Ended
+    difficulty = db.Column(db.String(10), default='normal')  # easy, normal, hard
+    game_id = db.Column(db.String(36), unique=True, nullable=False)  # UUID for socket room
+    _temporary_effects = db.Column(db.Text, default='[]')  # JSON string for temporary effects
+    last_event_lap = db.Column(db.Integer, default=0)
+    police_activity = db.Column(db.Float, default=1.0)  # Multiplier for crime detection rates
+    turn_timer = db.Column(db.Integer, nullable=True)  # Timer for turns in seconds
+    turn_number = db.Column(db.Integer, default=0)  # Total number of turns taken
+    mode = db.Column(db.String(20), default='classic')  # Game mode
+    _settings = db.Column(db.Text, nullable=True)  # JSON string for game settings
+    
+    # Game configuration
+    auction_required = db.Column(db.Boolean, default=True)  # Whether properties must be auctioned if declined
+    property_multiplier = db.Column(db.Float, default=1.0)  # Property value multiplier
+    rent_multiplier = db.Column(db.Float, default=1.0)  # Rent multiplier
+    improvement_cost_factor = db.Column(db.Float, default=0.5)  # Improvement cost as percentage of property value
+    event_frequency = db.Column(db.Float, default=0.15)  # Frequency of random events
+    
+    # --- Fields for Action Validation --- 
+    expected_action_type = db.Column(db.String(50), nullable=True) # e.g., 'buy_or_auction_prompt', 'pay_rent', 'draw_chance'
+    _expected_action_details_json = db.Column(db.Text, nullable=True) # JSON string, e.g., '{"property_id": 12}'
+    
+    # Relationships
+    current_player = db.relationship('Player', foreign_keys=[current_player_id])
+    
+    def __repr__(self):
+        return f'<GameState ID: {self.game_id} Status: {self.status} Turn: {self.turn_number} Player: {self.current_player_id}>'
+    
+    @property
+    def temporary_effects(self):
+        """Get temporary effects as Python list"""
+        try:
+            return json.loads(self._temporary_effects)
+        except (TypeError, json.JSONDecodeError):
+            return []
+            
+    @temporary_effects.setter
+    def temporary_effects(self, effects_list):
+        """Store temporary effects as JSON string"""
+        self._temporary_effects = json.dumps(effects_list)
+    
+    @property
+    def settings(self):
+        """Get game settings as Python dict"""
+        try:
+            return json.loads(self._settings) if self._settings else {}
+        except (TypeError, json.JSONDecodeError):
+            return {}
+            
+    @settings.setter
+    def settings(self, settings_dict):
+        """Store game settings as JSON string"""
+        self._settings = json.dumps(settings_dict)
+
+    @property
+    def expected_action_details(self):
+        """Get expected action details as Python dict"""
+        try:
+            return json.loads(self._expected_action_details_json) if self._expected_action_details_json else None
+        except (TypeError, json.JSONDecodeError):
+            return None # Return None if JSON is invalid
+            
+    @expected_action_details.setter
+    def expected_action_details(self, details_dict):
+        """Store expected action details as JSON string"""
+        if details_dict is None:
+            self._expected_action_details_json = None
+        else:
+            self._expected_action_details_json = json.dumps(details_dict)
+    
+    def to_dict(self):
+        """Convert game state to dictionary for API responses"""
+        return {
+            'id': self.id,
+            'game_id': self.game_id,
+            'status': self.status, # Use status field
+            'current_player_id': self.current_player_id,
+            'player_order': [int(pid) for pid in self.player_order.split(',') if pid] if self.player_order else [],
+            'current_lap': self.current_lap,
+            'total_laps': self.total_laps,
+            'turn_number': self.turn_number,
+            'community_fund': self.community_fund,
+            'inflation_state': self.inflation_state,
+            'inflation_factor': self.inflation_factor,
+            'tax_rate': self.tax_rate,
+            'difficulty': self.difficulty,
+            'game_duration_minutes': self.calculate_duration_minutes(),
+            'temporary_effects': self.temporary_effects,
+            'police_activity': self.police_activity,
+            'mode': self.mode,
+            'settings': self.settings,
+            'end_time': self.end_time.isoformat() if self.end_time else None,
+            'turn_timer': self.turn_timer,
+            'expected_action_type': self.expected_action_type, # Include expected action
+            'expected_action_details': self.expected_action_details # Include details
+        }
+    
+    def calculate_duration_minutes(self):
+        """Calculate game duration in minutes"""
+        if not self.start_time: return 0
+        now = datetime.utcnow()
+        duration = now - self.start_time
+        return int(duration.total_seconds() / 60)
+    
+    @classmethod
+    def get_instance(cls):
+        """Get the singleton game state instance"""
+        # Assuming only one game runs at a time for simplicity with singleton pattern
+        game_state = cls.query.first()
+        if not game_state:
+            # Need a default game_id if creating a new one
+            import uuid
+            game_state = cls(game_id=str(uuid.uuid4()))
+            db.session.add(game_state)
+            db.session.commit()
+        return game_state
+        
+    def add_temporary_effect(self, effect):
+        """Add a temporary effect to the game state"""
+        effects = self.temporary_effects
+        effects.append(effect)
+        self.temporary_effects = effects
+        # db.session.add(self) # No need to add, just modify
+        # db.session.commit() # Commit should happen after the action that adds the effect
+        
+    def process_turn_end(self):
+        """Process end of turn updates including temporary effects"""
+        # THIS METHOD SEEMS REDUNDANT if turn ending is handled by GameController._internal_end_turn
+        # Refactor or remove if logic is duplicated in GameController
+        logger = logging.getLogger(__name__)
+        logger.warning("GameState.process_turn_end() may be redundant, check GameController._internal_end_turn")
+        # ... (rest of existing logic) ...
+        pass
+        
+    def advance_lap(self):
+        """Increment the lap counter and process lap-based mechanics"""
+        # THIS METHOD SEEMS REDUNDANT if lap advancement is handled by GameController._internal_end_turn
+        # Refactor or remove if logic is duplicated
+        logger = logging.getLogger(__name__)
+        logger.warning("GameState.advance_lap() may be redundant, check GameController._internal_end_turn")
+        # ... (rest of existing logic) ...
+        pass 
+        
+    def process_economic_cycle(self):
+        """Process economic changes based on current lap"""
+        # This might still be useful if called from GameController._internal_end_turn during lap change
+        # ... (rest of existing logic) ...
+        pass
+            
+    def _update_police_activity(self):
+        """Update police activity level randomly"""
+        # This might still be useful if called from GameController._internal_end_turn during lap change
+        # ... (rest of existing logic) ...
+        pass
+    
+    def process_game_mode_lap_effects(self):
+        """Process lap-based effects specific to the current game mode"""
+        # This might still be useful if called from GameController._internal_end_turn during lap change
+        # ... (rest of existing logic) ...
+        pass
+
+    def reset(self): # Added reset method based on GameController usage
+        """Resets the game state for a new game, preserving game_id and settings."""
+        logger = logging.getLogger(__name__)
+        logger.info(f"Resetting GameState for game_id: {self.game_id}")
+        
+        # Preserve game_id and potentially some settings if desired
+        # Keep: game_id, difficulty, mode, _settings (if applicable)
+        
+        # Reset turn/player state
+        self.current_player_id = None
+        self.player_order = None
+        self.current_lap = 0
+        self.turn_number = 0
+        self.expected_action_type = None
+        self.expected_action_details = None
+        
+        # Reset financial/economic state
+        self.community_fund = 0
+        self.inflation_state = 'stable'
+        self.inflation_factor = 1.0
+        # self.tax_rate = 0.1 # Keep configured tax rate?
+        
+        # Reset time and status
+        self.start_time = None # Reset start time
+        self.end_time = None
+        self.status = 'Waiting' # Reset status to Waiting or Setup
+        
+        # Reset temporary state
+        self.temporary_effects = []
+        self.last_event_lap = 0
+        self.police_activity = 1.0
+        
+        # Keep game configuration like auction_required, multipliers etc.
+        
+        # Note: Resetting associated Players and Properties needs to happen separately
+        # (e.g., in GameController.create_new_game or a dedicated reset service)
+
+# End of GameState class 

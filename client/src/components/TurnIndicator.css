@@ -1,0 +1,122 @@
+.turn-indicator {
+  width: 100%;
+  max-width: 400px;
+  margin: 20px auto;
+  padding: 15px;
+  border-radius: 10px;
+  background-color: #f8f9fa;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.turn-indicator.my-turn {
+  background-color: #e8f5e9;
+  border-left: 4px solid #4caf50;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+.turn-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.current-player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.player-token {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.player-name {
+  font-weight: 600;
+  font-size: 18px;
+  color: #333;
+}
+
+.turn-number {
+  font-size: 14px;
+  color: #666;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.timer-container {
+  margin-top: 10px;
+}
+
+.timer-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 5px;
+  color: #555;
+}
+
+.timer-bar-container {
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.timer-bar {
+  height: 100%;
+  background-color: #4caf50;
+  border-radius: 4px;
+  transition: width 1s linear;
+}
+
+.timer-warning {
+  background-color: #ff9800;
+  color: #f57c00;
+}
+
+.timer-critical {
+  background-color: #f44336;
+  color: #d32f2f;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.turn-status {
+  text-align: center;
+  font-style: italic;
+  color: #757575;
+  padding: 10px;
+}
+
+.game-not-playing {
+  background-color: #f5f5f5;
+  border-color: #ddd;
+  box-shadow: none;
+} 

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect to Pi-nopoly Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding-top: 56px;
+            background-color: #f8f9fa;
+        }
+        .content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .connect-card {
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .logo {
+            max-width: 150px;
+            margin-bottom: 20px;
+        }
+        .status-badge {
+            font-size: 1rem;
+        }
+        #connection-status.connected {
+            background-color: #28a745;
+        }
+        #connection-status.connecting {
+            background-color: #ffc107;
+        }
+        #connection-status.disconnected {
+            background-color: #dc3545;
+        }
+        .footer {
+            font-size: 0.8rem;
+            padding: 15px;
+            text-align: center;
+            background-color: #f1f1f1;
+            margin-top: auto;
+        }
+        #player-view {
+            display: none;
+        }
+        #qrcode-container {
+            text-align: center;
+            margin: 15px 0;
+        }
+        #qrcode {
+            display: inline-block;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+        }
+        .reconnect-timer {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">Pi-nopoly</a>
+            <span id="connection-status" class="badge disconnected ms-auto status-badge">Disconnected</span>
+        </div>
+    </nav>
+
+    <div class="container content my-4">
+        <div class="card connect-card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Connect to Pi-nopoly Game</h4>
+            </div>
+            
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Pi-nopoly Logo" class="logo">
+                </div>
+                
+                <!-- Connection Form -->
+                <div id="connect-form">
+                    <div class="alert alert-info">
+                        Enter your player PIN to connect to the game.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="pin-input" class="form-label">Player PIN:</label>
+                        <input type="text" class="form-control form-control-lg text-center" id="pin-input" 
+                               placeholder="Enter your PIN" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="name-input" class="form-label">Your Name (optional):</label>
+                        <input type="text" class="form-control" id="name-input" 
+                               placeholder="Enter your name">
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary btn-lg" id="connect-btn">Connect to Game</button>
+                    </div>
+                    
+                    <div class="alert alert-danger mt-3" id="error-message" style="display: none;"></div>
+                </div>
+                
+                <!-- Player View (after connection) -->
+                <div id="player-view">
+                    <div class="alert alert-success mb-4">
+                        <h5 class="mb-1">Connected as Player: <span id="player-name">Unknown</span></h5>
+                        <div>Status: <span id="player-status">Active</span></div>
+                    </div>
+                    
+                    <div id="reconnecting-view" style="display: none;">
+                        <div class="alert alert-warning">
+                            <h5>Connection Lost</h5>
+                            <p>Trying to reconnect... <span class="reconnect-timer" id="reconnect-timer">0</span></p>
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" 
+                                     id="reconnect-progress" role="progressbar" style="width: 100%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-info mb-2" id="ping-btn">Test Connection</button>
+                        <button class="btn btn-danger" id="disconnect-btn">Disconnect</button>
+                    </div>
+                    
+                    <div class="mt-3" id="ping-result" style="display: none;">
+                        <div class="alert alert-info">
+                            <strong>Ping Result:</strong> <span id="ping-time">0</span>ms
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- QR Code for sharing -->
+                <div id="qrcode-container" style="display: none;">
+                    <hr>
+                    <h5>Share this connection page:</h5>
+                    <div id="qrcode"></div>
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-outline-primary" id="share-btn">
+                            Share Link
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-footer">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="save-connection">
+                    <label class="form-check-label" for="save-connection">
+                        Remember my connection details
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p class="mb-0">&copy; 2023 Pi-nopoly. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/qrcode.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/remote-play-client.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize client connection
+            RemotePlayClient.init();
+            
+            // Create QR code if browser supports sharing
+            if (navigator.share || navigator.clipboard) {
+                const qrcodeContainer = document.getElementById('qrcode-container');
+                qrcodeContainer.style.display = 'block';
+                
+                // Generate QR code for current URL
+                new QRCode(document.getElementById('qrcode'), {
+                    text: window.location.href,
+                    width: 128,
+                    height: 128
+                });
+                
+                // Share button click handler
+                document.getElementById('share-btn').addEventListener('click', function() {
+                    if (navigator.share) {
+                        navigator.share({
+                            title: 'Connect to Pi-nopoly Game',
+                            text: 'Join our Pi-nopoly game using this link:',
+                            url: window.location.href
+                        }).catch(console.error);
+                    } else if (navigator.clipboard) {
+                        navigator.clipboard.writeText(window.location.href)
+                            .then(() => {
+                                alert('Link copied to clipboard!');
+                            })
+                            .catch(console.error);
+                    }
+                });
+            }
+            
+            // Try to restore saved connection details
+            if (localStorage.getItem('pinopolyPin')) {
+                document.getElementById('pin-input').value = localStorage.getItem('pinopolyPin');
+            }
+            if (localStorage.getItem('pinopolyName')) {
+                document.getElementById('name-input').value = localStorage.getItem('pinopolyName');
+            }
+            if (localStorage.getItem('pinopolySaveConnection') === 'true') {
+                document.getElementById('save-connection').checked = true;
+            }
+        });
+    </script>
+</body>
+</html> 

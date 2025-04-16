@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi-nopoly - Remote Play Connection</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-top: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .connection-info {
+            background-color: #f8f9fa;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .connection-url {
+            background-color: #e9f7ef;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 15px 0;
+            word-break: break-all;
+        }
+        .qr-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .qr-code {
+            padding: 15px;
+            background-color: white;
+            display: inline-block;
+            border: 1px solid #ddd;
+        }
+        .button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .disabled:hover {
+            background-color: #cccccc;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-active {
+            background-color: #4CAF50;
+        }
+        .status-inactive {
+            background-color: #f44336;
+        }
+        .instructions {
+            margin-top: 30px;
+        }
+        .instructions ol {
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Pi-nopoly Remote Play</h1>
+        
+        {% if remote_enabled %}
+            <div class="connection-info">
+                <h2>
+                    <span class="status-indicator {% if tunnel_running %}status-active{% else %}status-inactive{% endif %}"></span>
+                    Remote Play Status: {% if tunnel_running %}Active{% else %}Inactive{% endif %}
+                </h2>
+                
+                {% if tunnel_running %}
+                    <p>Your Pi-nopoly game is accessible remotely! Use the following URL to connect:</p>
+                    <div class="connection-url">{{ tunnel_url }}</div>
+                    
+                    <div class="qr-container">
+                        <h3>Scan QR Code to Connect</h3>
+                        <div class="qr-code">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ tunnel_url|urlencode }}" alt="QR Code for Remote Connection">
+                        </div>
+                    </div>
+                    
+                    <div class="instructions">
+                        <h3>Connection Instructions:</h3>
+                        <ol>
+                            <li>Share the URL above or the QR code with players.</li>
+                            <li>Players can use any device with a modern web browser.</li>
+                            <li>Each player will need to enter their PIN to join the game.</li>
+                            <li>Remote players have a {{ config.REMOTE_PLAY_TIMEOUT }} second time limit for their turns.</li>
+                        </ol>
+                    </div>
+                {% else %}
+                    <p>Remote play is enabled but the tunnel is not currently active.</p>
+                    <p>Please ask the game administrator to start the remote play tunnel.</p>
+                {% endif %}
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="/" class="button">Return to Game</a>
+                {% if tunnel_running %}
+                    <a href="/board?display=tv" class="button">Open Board Display</a>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="connection-info">
+                <h2>
+                    <span class="status-indicator status-inactive"></span>
+                    Remote Play: Disabled
+                </h2>
+                <p>Remote play is not currently enabled for this Pi-nopoly server.</p>
+                <p>To enable remote play, set the <code>REMOTE_PLAY_ENABLED</code> environment variable to <code>true</code> and restart the server.</p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="/" class="button">Return to Game</a>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html> 

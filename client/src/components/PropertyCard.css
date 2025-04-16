@@ -1,0 +1,187 @@
+.property-card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 12px;
+  overflow: hidden;
+  transition: transform 0.2s ease-in-out;
+  width: 300px;
+}
+
+.property-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.property-card.owned {
+  border: 2px solid #4CAF50;
+}
+
+.property-header {
+  padding: 12px 16px;
+  color: white;
+  text-align: center;
+}
+
+.property-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.property-group {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+/* Property group colors */
+.property-group-brown { background-color: #8B4513; }
+.property-group-light_blue { background-color: #87CEEB; }
+.property-group-pink { background-color: #FF69B4; }
+.property-group-orange { background-color: #FFA500; }
+.property-group-red { background-color: #FF0000; }
+.property-group-yellow { background-color: #FFD700; }
+.property-group-green { background-color: #008000; }
+.property-group-blue { background-color: #0000FF; }
+.property-group-railroad { background-color: #000000; }
+.property-group-utility { background-color: #708090; }
+
+.property-details {
+  padding: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.property-value,
+.property-rent,
+.property-development {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.amount {
+  font-weight: 600;
+  color: #2196F3;
+}
+
+.level {
+  font-weight: 600;
+  color: #4CAF50;
+}
+
+.property-status {
+  padding: 12px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-tag {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-tag.mortgaged {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.status-tag.lien {
+  background-color: #fff3e0;
+  color: #ef6c00;
+}
+
+.status-tag.damaged {
+  background-color: #fce4ec;
+  color: #c2185b;
+}
+
+.status-tag.approved {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-tag.study {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.property-actions {
+  padding: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.action-button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.action-button.improve {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.action-button.improve:hover {
+  background-color: #43A047;
+}
+
+.action-button.repair {
+  background-color: #FF9800;
+  color: white;
+}
+
+.action-button.repair:hover {
+  background-color: #F57C00;
+}
+
+.action-button.mortgage {
+  background-color: #F44336;
+  color: white;
+}
+
+.action-button.mortgage:hover {
+  background-color: #E53935;
+}
+
+.action-button.unmortgage {
+  background-color: #2196F3;
+  color: white;
+}
+
+.action-button.unmortgage:hover {
+  background-color: #1E88E5;
+}
+
+.action-button.details {
+  background-color: #9E9E9E;
+  color: white;
+}
+
+.action-button.details:hover {
+  background-color: #757575;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .property-card {
+    width: 100%;
+    margin: 8px 0;
+  }
+  
+  .property-actions {
+    flex-direction: column;
+  }
+  
+  .action-button {
+    width: 100%;
+  }
+} 

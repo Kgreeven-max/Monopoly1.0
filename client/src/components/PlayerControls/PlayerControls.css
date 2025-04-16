@@ -1,0 +1,169 @@
+.player-controls {
+  background-color: var(--background);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Game info section */
+.game-info {
+  text-align: center;
+}
+
+.game-info h3 {
+  color: var(--primary-color);
+  margin-bottom: var(--spacing-sm);
+}
+
+.current-player {
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+  margin-bottom: var(--spacing-xs);
+}
+
+.economic-state {
+  font-size: var(--font-size-sm);
+}
+
+.economic-state span {
+  font-weight: 600;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+}
+
+.economic-state .recession {
+  background-color: var(--error);
+  color: white;
+}
+
+.economic-state .stable {
+  background-color: var(--info);
+  color: white;
+}
+
+.economic-state .growth {
+  background-color: var(--success);
+  color: white;
+}
+
+.economic-state .boom {
+  background-color: var(--warning);
+  color: white;
+}
+
+/* Dice section */
+.dice-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.dice-container {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+}
+
+.dice {
+  width: var(--dice-size);
+  height: var(--dice-size);
+  background-color: white;
+  border: 2px solid var(--primary-color);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xl);
+  font-weight: bold;
+  box-shadow: var(--shadow-md);
+}
+
+.doubles-indicator {
+  color: var(--success);
+  font-weight: 600;
+  animation: bounce 0.5s ease infinite;
+}
+
+/* Action buttons */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.roll-button {
+  background-color: var(--primary-color);
+  color: white;
+  font-size: var(--font-size-lg);
+  padding: var(--spacing-md);
+}
+
+.purchase-button {
+  background-color: var(--success);
+  color: white;
+}
+
+.end-turn-button {
+  background-color: var(--secondary-color);
+  color: white;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Player status */
+.player-status {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.status-item span {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.status-item strong {
+  font-size: var(--font-size-lg);
+  color: var(--text-primary);
+}
+
+/* Animations */
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .player-controls {
+    padding: var(--spacing-md);
+  }
+
+  .dice {
+    --dice-size: 2.5rem;
+  }
+
+  .status-item strong {
+    font-size: var(--font-size-base);
+  }
+} 

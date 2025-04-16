@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi-nopoly Admin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+</head>
+<body>
+    <div class="container mt-4">
+        <header class="mb-4">
+            <h1>Pi-nopoly Admin</h1>
+            <p>Manage your game settings and monitor players</p>
+        </header>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <ul class="nav nav-tabs card-header-tabs" id="adminTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" 
+                                        data-bs-target="#dashboard" type="button" role="tab" 
+                                        aria-controls="dashboard" aria-selected="true">Dashboard</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="game-settings-tab" data-bs-toggle="tab" 
+                                        data-bs-target="#game-settings" type="button" role="tab" 
+                                        aria-controls="game-settings" aria-selected="false">Game Settings</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="players-tab" data-bs-toggle="tab" 
+                                        data-bs-target="#players" type="button" role="tab" 
+                                        aria-controls="players" aria-selected="false">Players</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="properties-tab" data-bs-toggle="tab" 
+                                        data-bs-target="#properties" type="button" role="tab" 
+                                        aria-controls="properties" aria-selected="false">Properties</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="bots-tab" data-bs-toggle="tab" 
+                                        data-bs-target="#bots" type="button" role="tab" 
+                                        aria-controls="bots" aria-selected="false">Bots</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="finance-tab" data-bs-toggle="tab" 
+                                        data-bs-target="#finance" type="button" role="tab" 
+                                        aria-controls="finance" aria-selected="false">Finance</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="crime-tab" data-bs-toggle="tab" 
+                                        data-bs-target="#crime" type="button" role="tab" 
+                                        aria-controls="crime" aria-selected="false">Crime</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="remote-play-tab" data-bs-toggle="tab" 
+                                        data-bs-target="#remote-play" type="button" role="tab" 
+                                        aria-controls="remote-play" aria-selected="false">Remote Play</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="game-modes-tab" data-bs-toggle="tab" 
+                                        data-bs-target="#game-modes" type="button" role="tab" 
+                                        aria-controls="game-modes" aria-selected="false">Game Modes</button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content" id="adminTabsContent">
+                            <!-- Dashboard Tab -->
+                            <div class="tab-pane fade show active" id="dashboard" role="tabpanel" aria-labelledby="dashboard-tab">
+                                <h2>Game Dashboard</h2>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                <h5 class="card-title">Game Status</h5>
+                                                <p class="card-text">Current Status: <span id="game-status">Initializing</span></p>
+                                                <button class="btn btn-primary" onclick="startGame()" disabled>Start Game</button>
+                                                <button class="btn btn-warning" onclick="pauseGame()">Pause Game</button>
+                                                <button class="btn btn-danger" onclick="resetGame()">Reset Game</button>
+                                                <small class="d-block mt-2 text-muted">Game can only be started when its status is 'Waiting'.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                <h5 class="card-title">Player Stats</h5>
+                                                <p>Active Players: <span id="active-players-count">0</span></p>
+                                                <p>Total Money in Game: $<span id="total-money">0</span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                <h5 class="card-title">System Info</h5>
+                                                <p>Server Uptime: <span id="server-uptime">Unknown</span></p>
+                                                <p>Player Connections: <span id="player-connections">0</span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Game Settings Tab -->
+                            <div class="tab-pane fade" id="game-settings" role="tabpanel" aria-labelledby="game-settings-tab">
+                                <h2>Game Settings</h2>
+                                <form id="game-settings-form">
+                                    <div class="mb-3">
+                                        <label for="starting-money" class="form-label">Starting Money</label>
+                                        <input type="number" class="form-control" id="starting-money" value="1500">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="turn-timeout" class="form-label">Turn Timeout (seconds)</label>
+                                        <input type="number" class="form-control" id="turn-timeout" value="60">
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="free-parking-jackpot">
+                                        <label class="form-check-label" for="free-parking-jackpot">Free Parking Jackpot</label>
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="salary-on-go">
+                                        <label class="form-check-label" for="salary-on-go">Double Salary on GO</label>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                                </form>
+                            </div>
+                            
+                            <!-- Players Tab -->
+                            <div class="tab-pane fade" id="players" role="tabpanel" aria-labelledby="players-tab">
+                                <h2>Player Management</h2>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Money</th>
+                                                <th>Position</th>
+                                                <th>Properties</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="players-table">
+                                            <!-- Player rows will be populated dynamically -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#add-player-modal">Add Player</button>
+                            </div>
+
+                            <!-- Properties Tab -->
+                            <div class="tab-pane fade" id="properties" role="tabpanel" aria-labelledby="properties-tab">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h2 class="mb-0">Property Management</h2>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="fetchProperties()">Refresh Properties</button>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-bordered table-hover table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Name</th>
+                                                <th>Owner</th>
+                                                <th>Houses</th>
+                                                <th>Hotel</th>
+                                                <th>Mortgaged</th>
+                                                <th>Price</th>
+                                                <th>Current Rent</th>
+                                                <!-- Add more columns if needed (e.g., color, type) -->
+                                                <th>Actions</th> <!-- Placeholder for admin actions -->
+                                            </tr>
+                                        </thead>
+                                        <tbody id="properties-table-body">
+                                            <tr>
+                                                <td colspan="10" class="text-center">Click 'Refresh Properties' to load data.</td>
+                                            </tr>
+                                            <!-- Property rows will be populated dynamically -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Bots Tab -->
+                            <div class="tab-pane fade" id="bots" role="tabpanel" aria-labelledby="bots-tab">
+                                <h2>Bot Management</h2>
+                                <div class="row">
+                                    <!-- Add Bot Form Column -->
+                                    <div class="col-md-6 mb-3">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h5 class="card-title">Add New Bot</h5>
+                                                <form id="add-bot-form">
+                                                    <div class="mb-3">
+                                                        <label for="bot-name" class="form-label">Bot Name (Optional)</label>
+                                                        <input type="text" class="form-control" id="bot-name" placeholder="e.g., Bot_Alpha">
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-sm-6 mb-3">
+                                                            <label for="bot-type" class="form-label">Bot Type</label>
+                                                            <select class="form-select" id="bot-type" required>
+                                                                <!-- Options populated by JS -->
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-sm-6 mb-3">
+                                                            <label for="bot-difficulty" class="form-label">Difficulty</label>
+                                                            <select class="form-select" id="bot-difficulty" required>
+                                                                <!-- Options populated by JS -->
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label for="admin-pin-bot" class="form-label">Admin PIN</label>
+                                                        <input type="password" class="form-control" id="admin-pin-bot" required placeholder="Enter Admin PIN">
+                                                    </div>
+                                                    <button type="submit" class="btn btn-success">Add Bot</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Active Bots List Column -->
+                                    <div class="col-md-6 mb-3">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <h5 class="card-title mb-0">Active Bots</h5>
+                                                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="fetchActiveBots()">Refresh List</button>
+                                                </div>
+                                                <div id="active-bots-list">
+                                                    <p>Enter Admin PIN above and click Refresh List.</p>
+                                                    <!-- Bot list will be populated dynamically here -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Finance Tab (Placeholder) -->
+                            <div class="tab-pane fade" id="finance" role="tabpanel" aria-labelledby="finance-tab">
+                                <h2>Finance Overview</h2>
+                                <p>Financial details coming soon...</p>
+                            </div>
+
+                            <!-- Crime Tab (Placeholder) -->
+                            <div class="tab-pane fade" id="crime" role="tabpanel" aria-labelledby="crime-tab">
+                                <h2>Crime System</h2>
+                                <p>Crime details and controls coming soon...</p>
+                            </div>
+                            
+                            <!-- Remote Play Tab -->
+                            {% include 'admin_remote_play.html' %}
+                            
+                            <!-- Game Modes Tab -->
+                            {% include 'admin_game_modes.html' %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Player Modal -->
+    <div class="modal fade" id="add-player-modal" tabindex="-1" aria-labelledby="add-player-modal-label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="add-player-modal-label">Add New Player</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="add-player-form">
+                        <div class="mb-3">
+                            <label for="player-name" class="form-label">Player Name</label>
+                            <input type="text" class="form-control" id="player-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="player-token" class="form-label">Token</label>
+                            <select class="form-select" id="player-token" required>
+                                <option value="car">Car</option>
+                                <option value="ship">Ship</option>
+                                <option value="hat">Hat</option>
+                                <option value="shoe">Shoe</option>
+                                <option value="dog">Dog</option>
+                                <option value="cat">Cat</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="player-is-bot">
+                            <label class="form-check-label" for="player-is-bot">AI Player</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addPlayer()">Add Player</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Required Scripts -->
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/remote-play-admin.js') }}"></script>
+    <script>
+        // Store admin key in a global variable for use by modules
+        window.adminKey = "{{ admin_key }}";
+        
+        // Connect to Socket.IO
+        const socket = io({
+            query: {
+                adminKey: window.adminKey,
+                client: 'admin'
+            },
+            path: "/ws/socket.io"
+        });
+        
+        // Store socket in a global variable for use by modules
+        window.socket = socket;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize admin functionality
+            // ... (admin initialization code) ...
+            
+            // Display admin key for debugging
+            console.log('Admin initialized with key:', window.adminKey);
+
+            // Fetch and populate bot options
+            fetchBotOptions(); 
+            
+            // Fetch initial bot list on load - REMOVED
+            // fetchActiveBots();
+            
+            // Add event listener for the bot form
+            const addBotForm = document.getElementById('add-bot-form');
+            if (addBotForm) {
+                addBotForm.addEventListener('submit', handleAddBotSubmit);
+            }
+            
+            // Listen for bot created/removed events to update list (placeholder)
+            socket.on('bot_created', (data) => {
+                console.log('Bot created:', data);
+                // TODO: Add logic to update the active bots list UI
+                alert(`Bot ${data.name || data.bot_name} created successfully!`); 
+                clearBotForm();
+                fetchActiveBots(); // Refresh list after adding
+            });
+
+            socket.on('bot_removed', (data) => {
+                console.log('Bot removed:', data);
+                // TODO: Add logic to update the active bots list UI
+                alert(`Bot ${data.name} removed successfully!`);
+                fetchActiveBots(); // Refresh list after removing
+            });
+
+            // Listen for the bot list response
+            socket.on('active_bots_list', (data) => {
+                console.log('Received active_bots_list:', data);
+                if (data && data.success) {
+                    renderBotList(data.bots);
+                } else {
+                    console.error("Failed to fetch active bots list:", data ? data.error : 'Unknown error');
+                    document.getElementById('active-bots-list').innerHTML = '<p class="text-danger">Error fetching bot list.</p>';
+                }
+            });
+
+            // Listen for errors related to bot actions
+            socket.on('auth_error', (data) => {
+                if (data && data.error) {
+                    console.error('Auth Error:', data.error);
+                    alert(`Authentication Error: ${data.error}`);
+                }
+            });
+            socket.on('event_error', (data) => { // Assuming bot errors use 'event_error'
+                if (data && data.error) {
+                    console.error('Bot Event Error:', data.error);
+                    alert(`Bot Error: ${data.error}`);
+                }
+            });
+
+            // Added globally for button onclick
+            window.removeBot = removeBot;
+            window.fetchActiveBots = fetchActiveBots; // Expose fetch function for button
+            window.fetchProperties = fetchProperties; // Expose properties fetch function
+        });
+        
+        // Game control functions
+        function startGame() {
+            console.log('Attempting to start game...');
+            // Remove confirmation or make it specific to starting
+            // if (!confirm('Are you sure you want to start the game? ...')) { return; }
+            
+            fetch('/api/game/start', { // Corrected endpoint
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Add admin key header if your decorator checks headers first
+                    'X-Admin-Key': window.adminKey 
+                },
+                // body: JSON.stringify({}) // No body needed for start usually
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errData => {
+                        throw new Error(errData.error || `HTTP error! Status: ${response.status}`);
+                    }).catch(() => {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('Game started successfully! Current Player: ' + data.current_player);
+                    console.log('Game start response:', data);
+                    // Rely on socket updates for state changes
+                } else {
+                    alert('Failed to start game: ' + (data.error || 'Unknown error'));
+                    console.error('Game start failed:', data);
+                }
+            })
+            .catch(error => {
+                console.error('Error starting game:', error);
+                alert('Error starting game: ' + error.message);
+            });
+        }
+        
+        function pauseGame() {
+            console.log('Attempting to pause game...');
+            // TODO: Implement API call or socket emit to pause game
+            alert('Pause Game functionality not yet implemented.');
+        }
+        
+        function resetGame() {
+            console.log('Attempting to reset game...');
+            if (!confirm('Are you sure you want to reset the game? This will create a new game instance and initialize properties if needed.')) {
+                return;
+            }
+            
+            fetch('/api/game/new', { // This endpoint is correct for reset
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Add admin key header if your decorator checks headers first
+                    'X-Admin-Key': window.adminKey // Uncommented this line
+                },
+                body: JSON.stringify({}) // Explicitly send empty JSON object
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Try to parse error message from response body
+                    return response.json().then(errData => {
+                        throw new Error(errData.error || `HTTP error! Status: ${response.status}`);
+                    }).catch(() => {
+                        // Fallback if parsing error fails
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('Game reset successfully! Game ID: ' + data.game_id + '. Properties initialized (if they were missing).');
+                    console.log('Game reset response:', data);
+                    // Optionally, fetch updated game state here or rely on socket updates
+                } else {
+                    alert('Failed to reset game: ' + (data.error || 'Unknown error'));
+                    console.error('Game reset failed:', data);
+                }
+            })
+            .catch(error => {
+                console.error('Error resetting game:', error);
+                alert('Error resetting game: ' + error.message);
+            });
+        }
+        
+        function addPlayer() {
+            // Implement add player logic
+        }
+
+        // Fetch Bot Types and Difficulties
+        async function fetchBotOptions() {
+            try {
+                // Assuming your route returns the bot types like we saw earlier
+                const response = await fetch('/api/admin/bots/types', {
+                    method: 'GET',
+                    headers: {
+                        'X-Admin-Key': window.adminKey // Add the admin key header
+                    }
+                }); 
+                if (!response.ok) {
+                    // Handle specific auth error
+                    if (response.status === 401) {
+                         console.error("Authorization error fetching bot options. Ensure admin key is correct or available.");
+                         alert("Authorization error fetching bot configuration options.");
+                    } else {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return; // Stop processing if response not ok
+                }
+                const data = await response.json();
+
+                if (data.success) {
+                    const botTypeSelect = document.getElementById('bot-type');
+                    const botDifficultySelect = document.getElementById('bot-difficulty');
+
+                    if (botTypeSelect) {
+                        botTypeSelect.innerHTML = ''; // Clear previous options if any
+                        data.bot_types.forEach(type => {
+                            const option = document.createElement('option');
+                            option.value = type.id;
+                            // Shorten description for display
+                            const shortDesc = type.description.length > 50 ? type.description.substring(0, 47) + '...' : type.description;
+                            option.textContent = `${type.name}`; 
+                            option.title = type.description; // Show full description on hover
+                            botTypeSelect.appendChild(option);
+                        });
+                    }
+
+                    if (botDifficultySelect) {
+                        botDifficultySelect.innerHTML = ''; // Clear previous options if any
+                        data.difficulty_levels.forEach(level => {
+                            const option = document.createElement('option');
+                            option.value = level.id;
+                            option.textContent = `${level.name}`;
+                            option.title = level.description; // Show full description on hover
+                            botDifficultySelect.appendChild(option);
+                        });
+                        // Set default to medium if exists
+                        if (botDifficultySelect.querySelector('option[value="medium"]')) {
+                            botDifficultySelect.value = 'medium';
+                        }
+                    }
+                } else {
+                    console.error("Failed to fetch bot options:", data.error);
+                    alert("Error fetching bot configuration options.");
+                }
+            } catch (error) {
+                console.error("Error fetching bot options:", error);
+                // Displaying alert might be annoying if API requires auth later
+                // alert("Error fetching bot configuration options."); 
+            }
+        }
+
+        // Fetch Active Bots List
+        function fetchActiveBots() {
+            const adminPinInput = document.getElementById('admin-pin-bot'); // Reuse PIN input for auth
+            if (!adminPinInput || !adminPinInput.value) {
+                // Only show alert if PIN field exists and is empty, maybe user hasn't entered it yet
+                // console.warn('Admin PIN required to fetch bot list. Enter PIN in the Add Bot form.');
+                // Alternatively, could add a separate PIN input just for fetching/removing if needed
+                // For now, we proceed assuming PIN might be entered later or is not strictly needed for read-only list
+                 console.log("Attempting to fetch bots without PIN..."); // Or prompt if required
+                 socket.emit('get_active_bots', { admin_pin: '' }); // Send empty PIN, backend might reject
+            } else {
+                console.log("Fetching active bots...");
+                socket.emit('get_active_bots', { admin_pin: adminPinInput.value });
+            }
+        }
+
+        // Render Active Bots List
+        function renderBotList(bots) {
+            const listContainer = document.getElementById('active-bots-list');
+            if (!listContainer) return;
+
+            if (!bots || bots.length === 0) {
+                listContainer.innerHTML = '<p>No active bots found.</p>';
+                return;
+            }
+
+            // Using List Group from Bootstrap
+            let listHtml = '<ul class="list-group">';
+            bots.forEach(bot => {
+                listHtml += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${bot.name || 'Unnamed Bot'}</strong> (ID: ${bot.id})<br>
+                            <small>Type: ${bot.bot_type || 'N/A'} | Difficulty: ${bot.difficulty || 'N/A'} | Money: $${bot.money !== undefined ? bot.money : 'N/A'}</small>
+                        </div>
+                        <button class="btn btn-sm btn-danger" onclick="removeBot('${bot.id}')">Remove</button>
+                    </li>
+                `;
+            });
+            listHtml += '</ul>';
+
+            listContainer.innerHTML = listHtml;
+        }
+
+        // Remove Bot Function (Placeholder - requires PIN input)
+        function removeBot(botId) {
+            const adminPinInput = document.getElementById('admin-pin-bot'); // Reuse PIN from add form
+            const adminPin = adminPinInput ? adminPinInput.value : null;
+
+            if (!adminPin) {
+                alert('Admin PIN is required to remove a bot. Please enter it in the Add Bot form.');
+                return;
+            }
+
+            if (confirm(`Are you sure you want to remove bot ID: ${botId}?`)) {
+                console.log(`Attempting to remove bot ID: ${botId}`);
+                socket.emit('remove_bot', { 
+                    bot_id: botId, 
+                    admin_pin: adminPin 
+                });
+            }
+        }
+
+        // Handle Add Bot Form Submission
+        function handleAddBotSubmit(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const botNameInput = document.getElementById('bot-name');
+            const botTypeSelect = document.getElementById('bot-type');
+            const botDifficultySelect = document.getElementById('bot-difficulty');
+            const adminPinInput = document.getElementById('admin-pin-bot');
+
+            const botData = {
+                admin_pin: adminPinInput.value,
+                name: botNameInput.value || null, // Send null if empty, backend handles default
+                type: botTypeSelect.value,
+                difficulty: botDifficultySelect.value
+            };
+            
+            if (!botData.admin_pin) {
+                 alert('Admin PIN is required to add a bot.');
+                 return;
+            }
+
+            console.log("Emitting create_bot with data:", botData);
+            socket.emit('create_bot', botData);
+        }
+
+        function clearBotForm() {
+            document.getElementById('bot-name').value = '';
+            // Optionally reset selects to default or leave as is
+            // document.getElementById('bot-type').value = 'conservative'; 
+            // document.getElementById('bot-difficulty').value = 'medium';
+            document.getElementById('admin-pin-bot').value = ''; 
+        }
+
+        // --- Property Tab Functions --- 
+        async function fetchProperties() {
+            const propertiesTableBody = document.getElementById('properties-table-body');
+            propertiesTableBody.innerHTML = '<tr><td colspan="10" class="text-center">Loading properties...</td></tr>';
+            
+            try {
+                const response = await fetch('/api/admin/properties', {
+                    method: 'GET',
+                    headers: {
+                        'X-Admin-Key': window.adminKey // Use stored admin key
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        propertiesTableBody.innerHTML = '<tr><td colspan="10" class="text-center text-danger">Authorization Error: Invalid or missing admin key.</td></tr>';
+                        alert("Authorization Error fetching properties.");
+                    } else {
+                        propertiesTableBody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">Error: ${response.status} ${response.statusText}</td></tr>`;
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    renderPropertyList(data.properties);
+                } else {
+                    propertiesTableBody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">Error: ${data.error || 'Failed to load properties.'}</td></tr>`;
+                    console.error("Failed to fetch properties:", data.error);
+                }
+            } catch (error) {
+                propertiesTableBody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">Error loading properties: ${error.message}</td></tr>`;
+                console.error("Error fetching properties:", error);
+            }
+        }
+
+        function renderPropertyList(properties) {
+            const propertiesTableBody = document.getElementById('properties-table-body');
+            if (!propertiesTableBody) return;
+
+            if (!properties || properties.length === 0) {
+                propertiesTableBody.innerHTML = '<tr><td colspan="10" class="text-center">No properties found.</td></tr>';
+                return;
+            }
+
+            let tableHtml = '';
+            properties.forEach(prop => {
+                tableHtml += `
+                    <tr>
+                        <td>${prop.id}</td>
+                        <td>${prop.name || 'N/A'}</td>
+                        <td>${prop.owner_name || 'Bank'}</td>
+                        <td>${prop.hotel ? '-' : prop.houses}</td>
+                        <td>${prop.hotel ? 'Yes' : 'No'}</td>
+                        <td>${prop.is_mortgaged ? '<span class="text-danger">Yes</span>' : 'No'}</td>
+                        <td>$${prop.price !== undefined ? prop.price : 'N/A'}</td>
+                        <td>$${prop.current_rent !== undefined ? prop.current_rent : 'N/A'}</td>
+                        <td>
+                            <!-- Placeholder for Action buttons -->
+                            <button class="btn btn-xs btn-outline-primary" disabled>Manage</button> 
+                        </td>
+                    </tr>
+                `;
+            });
+
+            propertiesTableBody.innerHTML = tableHtml;
+        }
+        // --- End Property Tab Functions ---
+    </script>
+</body>
+</html> 

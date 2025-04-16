@@ -1,0 +1,106 @@
+.market-crash-display {
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.market-overview {
+  margin-bottom: 20px;
+}
+
+.market-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.stat {
+  background-color: white;
+  padding: 15px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.stat .label {
+  display: block;
+  font-size: 0.9em;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.stat .value {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #333;
+}
+
+.property-selector {
+  margin: 20px 0;
+}
+
+.property-selector select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1em;
+  margin-top: 10px;
+}
+
+.property-details {
+  margin: 20px 0;
+}
+
+.chart-container {
+  background-color: white;
+  padding: 20px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-top: 15px;
+}
+
+.recent-events {
+  margin-top: 20px;
+}
+
+.recent-events ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.recent-events li {
+  background-color: white;
+  padding: 10px 15px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.recent-events .turn {
+  font-weight: bold;
+  margin-right: 10px;
+  color: #666;
+}
+
+.recent-events .event.crash {
+  border-left: 4px solid #ff4444;
+}
+
+.recent-events .event.recovery {
+  border-left: 4px solid #00C851;
+}
+
+.recent-events .event.volatility {
+  border-left: 4px solid #ffbb33;
+}
+
+.error {
+  color: #ff4444;
+  padding: 10px;
+  background-color: #ffebee;
+  border-radius: 4px;
+  margin: 10px 0;
+} 

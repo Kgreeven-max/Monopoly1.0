@@ -1,0 +1,665 @@
+<!-- Game Modes Administration Tab -->
+<div class="tab-pane fade" id="game-modes" role="tabpanel" aria-labelledby="game-modes-tab">
+    <div class="container-fluid">
+        <!-- Status Alerts -->
+        <div id="mode-alert-container" class="mt-3"></div>
+        <div id="mode-loading-message" class="alert alert-info" style="display: none;">Loading...</div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Game Mode Selection</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <strong>Current Mode:</strong> <span id="current-mode">Unknown</span>
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Game Status:</strong> <span id="game-status">Unknown</span>
+                                </div>
+                                <div id="mode-description" class="alert alert-info">
+                                    Select a game mode to see its description.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h5>Standard Modes</h5>
+                                <div id="standard-modes-container" class="list-group mode-list">
+                                    <!-- Standard modes will be populated here -->
+                                    <div class="list-group-item text-center">Loading modes...</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Specialty Modes</h5>
+                                <div id="specialty-modes-container" class="list-group mode-list">
+                                    <!-- Specialty modes will be populated here -->
+                                    <div class="list-group-item text-center">Loading modes...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary" id="select-mode-btn" disabled>Select Mode</button>
+                        <button class="btn btn-secondary" id="refresh-modes-btn">Refresh Modes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Current Game Mode Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="settings-container">
+                            <div class="alert alert-info">Select a game mode to view settings.</div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary" id="update-settings-btn" disabled>Update Settings</button>
+                        <button class="btn btn-secondary" id="reset-settings-btn" disabled>Reset to Defaults</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Game Mode Instructions</h5>
+                    </div>
+                    <div class="card-body">
+                        <ol>
+                            <li><strong>Select a Mode:</strong> Choose from the available game modes.</li>
+                            <li><strong>Review Settings:</strong> Check the default settings for the selected mode.</li>
+                            <li><strong>Customize (Optional):</strong> Adjust settings as needed for your game.</li>
+                            <li><strong>Apply:</strong> Click "Select Mode" to apply to the current game.</li>
+                            <li><strong>Start Game:</strong> Once configured, start the game from the main controls.</li>
+                        </ol>
+                        <div class="alert alert-warning">
+                            <strong>Note:</strong> Changing game mode will reset all players' cash and may affect current 
+                            game state. It's best to select a mode before starting a new game.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CSS for Game Modes Tab -->
+<style>
+    /* Mode selection */
+    .mode-list .list-group-item {
+        cursor: pointer;
+    }
+    .mode-list .list-group-item.active {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    .mode-list .list-group-item:hover:not(.active) {
+        background-color: #f8f9fa;
+    }
+    
+    /* Settings form */
+    .settings-form .form-group {
+        margin-bottom: 1rem;
+    }
+    .settings-form label {
+        font-weight: 500;
+    }
+    .settings-form .form-text {
+        font-size: 0.8rem;
+    }
+</style>
+
+<!-- JavaScript for Game Modes Tab -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize when tab is shown
+    const gameModesTab = document.getElementById('game-modes-tab');
+    if (gameModesTab) {
+        gameModesTab.addEventListener('shown.bs.tab', function() {
+            if (window.adminKey) {
+                GameModesAdmin.init(window.adminKey);
+            }
+        });
+    }
+});
+
+// Game Modes Admin Module
+const GameModesAdmin = (function() {
+    // State variables
+    let adminKey = null;
+    let gameId = null;
+    let availableModes = null;
+    let selectedMode = null;
+    let currentSettings = null;
+    
+    // Initialize module
+    function init(key) {
+        adminKey = key;
+        gameId = getGameId();
+        
+        // Set up event listeners
+        setupEventListeners();
+        
+        // Load available modes
+        loadAvailableModes();
+        
+        // Load current mode settings
+        loadCurrentModeSettings();
+    }
+    
+    // Setup event listeners
+    function setupEventListeners() {
+        // Mode selection button
+        document.getElementById('select-mode-btn').addEventListener('click', selectMode);
+        
+        // Refresh modes button
+        document.getElementById('refresh-modes-btn').addEventListener('click', loadAvailableModes);
+        
+        // Update settings button
+        document.getElementById('update-settings-btn').addEventListener('click', updateSettings);
+        
+        // Reset settings button
+        document.getElementById('reset-settings-btn').addEventListener('click', resetSettings);
+    }
+    
+    // Load available game modes
+    function loadAvailableModes() {
+        showLoading(true);
+        
+        // Make API request to get modes
+        fetch('/api/game-modes/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    availableModes = data.modes;
+                    renderModes();
+                } else {
+                    showAlert('error', 'Error loading game modes: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                showAlert('error', 'Error loading game modes: ' + error.message);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+    }
+    
+    // Load current game mode settings
+    function loadCurrentModeSettings() {
+        if (!gameId) {
+            document.getElementById('current-mode').textContent = 'No active game';
+            document.getElementById('game-status').textContent = 'Not started';
+            return;
+        }
+        
+        showLoading(true);
+        
+        // Make API request to get current settings
+        fetch(`/api/game-modes/settings/${gameId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('current-mode').textContent = formatModeName(data.mode);
+                    document.getElementById('game-status').textContent = 'Active';
+                    
+                    currentSettings = data.settings;
+                    selectedMode = data.mode;
+                    
+                    // Select the active mode in the list
+                    const modeElements = document.querySelectorAll('.mode-item');
+                    modeElements.forEach(element => {
+                        if (element.dataset.modeId === selectedMode) {
+                            element.classList.add('active');
+                            renderModeDescription(selectedMode);
+                            renderModeSettings(selectedMode, currentSettings);
+                        }
+                    });
+                    
+                    // Enable settings update
+                    document.getElementById('update-settings-btn').disabled = false;
+                    document.getElementById('reset-settings-btn').disabled = false;
+                } else {
+                    document.getElementById('current-mode').textContent = 'Error';
+                    document.getElementById('game-status').textContent = 'Unknown';
+                    showAlert('error', 'Error loading game settings: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                showAlert('error', 'Error loading game settings: ' + error.message);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+    }
+    
+    // Render available modes
+    function renderModes() {
+        if (!availableModes) return;
+        
+        // Standard modes
+        const standardContainer = document.getElementById('standard-modes-container');
+        standardContainer.innerHTML = '';
+        
+        availableModes.standard.forEach(mode => {
+            const modeElement = document.createElement('div');
+            modeElement.className = 'list-group-item mode-item';
+            modeElement.dataset.modeId = mode.id;
+            modeElement.innerHTML = `
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">${mode.name}</h6>
+                    <small>${mode.difficulty}</small>
+                </div>
+                <p class="mb-1">${mode.objective}</p>
+                <small>Estimated Time: ${mode.estimated_time}</small>
+            `;
+            
+            modeElement.addEventListener('click', () => {
+                // Deselect all other modes
+                document.querySelectorAll('.mode-item').forEach(el => {
+                    el.classList.remove('active');
+                });
+                
+                // Select this mode
+                modeElement.classList.add('active');
+                selectedMode = mode.id;
+                
+                // Enable the select button
+                document.getElementById('select-mode-btn').disabled = false;
+                
+                // Show mode description
+                renderModeDescription(mode.id);
+                
+                // Show default settings
+                renderModeSettings(mode.id);
+            });
+            
+            standardContainer.appendChild(modeElement);
+        });
+        
+        // Specialty modes
+        const specialtyContainer = document.getElementById('specialty-modes-container');
+        specialtyContainer.innerHTML = '';
+        
+        availableModes.specialty.forEach(mode => {
+            const modeElement = document.createElement('div');
+            modeElement.className = 'list-group-item mode-item';
+            modeElement.dataset.modeId = mode.id;
+            modeElement.innerHTML = `
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">${mode.name}</h6>
+                    <small>${mode.difficulty}</small>
+                </div>
+                <p class="mb-1">${mode.objective}</p>
+                <small>Estimated Time: ${mode.estimated_time}</small>
+            `;
+            
+            modeElement.addEventListener('click', () => {
+                // Deselect all other modes
+                document.querySelectorAll('.mode-item').forEach(el => {
+                    el.classList.remove('active');
+                });
+                
+                // Select this mode
+                modeElement.classList.add('active');
+                selectedMode = mode.id;
+                
+                // Enable the select button
+                document.getElementById('select-mode-btn').disabled = false;
+                
+                // Show mode description
+                renderModeDescription(mode.id);
+                
+                // Show default settings
+                renderModeSettings(mode.id);
+            });
+            
+            specialtyContainer.appendChild(modeElement);
+        });
+    }
+    
+    // Render mode description
+    function renderModeDescription(modeId) {
+        if (!availableModes) return;
+        
+        let mode = null;
+        
+        // Find the mode
+        availableModes.standard.forEach(m => {
+            if (m.id === modeId) mode = m;
+        });
+        
+        if (!mode) {
+            availableModes.specialty.forEach(m => {
+                if (m.id === modeId) mode = m;
+            });
+        }
+        
+        if (mode) {
+            const description = document.getElementById('mode-description');
+            description.innerHTML = `
+                <h5>${mode.name}</h5>
+                <p>${mode.description}</p>
+                <strong>Objective:</strong> ${mode.objective}<br>
+                <strong>Win Condition:</strong> ${mode.win_condition}<br>
+                <strong>Difficulty:</strong> ${mode.difficulty}<br>
+                <strong>Estimated Time:</strong> ${mode.estimated_time}
+            `;
+        }
+    }
+    
+    // Render mode settings
+    function renderModeSettings(modeId, existingSettings = null) {
+        const settingsContainer = document.getElementById('settings-container');
+        
+        // If we don't have a mode selected, show a message
+        if (!modeId) {
+            settingsContainer.innerHTML = `<div class="alert alert-info">Select a game mode to view settings.</div>`;
+            return;
+        }
+        
+        // Generate settings form based on mode
+        let settingsHTML = `<form class="settings-form" id="mode-settings-form">`;
+        
+        // Common settings for all modes
+        settingsHTML += `
+            <div class="form-group">
+                <label for="setting-starting-cash">Starting Cash</label>
+                <input type="number" class="form-control" id="setting-starting-cash" name="starting_cash" min="500" max="5000" step="100">
+                <small class="form-text text-muted">Initial amount of money for each player</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="setting-go-salary">GO Salary</label>
+                <input type="number" class="form-control" id="setting-go-salary" name="go_salary" min="50" max="1000" step="50">
+                <small class="form-text text-muted">Amount received when passing GO</small>
+            </div>
+            
+            <div class="form-group">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="setting-free-parking" name="free_parking_collects_fees">
+                    <label class="form-check-label" for="setting-free-parking">Free Parking Collects Fees</label>
+                </div>
+                <small class="form-text text-muted">Whether Free Parking collects fees</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="setting-event-frequency">Event Frequency</label>
+                <input type="range" class="form-range" id="setting-event-frequency" name="event_frequency" min="0.05" max="0.5" step="0.01">
+                <div class="d-flex justify-content-between">
+                    <small>Rare</small>
+                    <small>Normal</small>
+                    <small>Frequent</small>
+                </div>
+                <small class="form-text text-muted">Frequency of random events (0.05-0.5)</small>
+            </div>
+        `;
+        
+        // Mode-specific settings
+        if (modeId === 'speed') {
+            settingsHTML += `
+                <div class="form-group">
+                    <label for="setting-max-turns">Maximum Turns</label>
+                    <input type="number" class="form-control" id="setting-max-turns" name="max_turns" min="10" max="50" step="5">
+                    <small class="form-text text-muted">Game ends after this many turns</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="setting-max-time">Maximum Time (minutes)</label>
+                    <input type="number" class="form-control" id="setting-max-time" name="max_time_minutes" min="10" max="120" step="5">
+                    <small class="form-text text-muted">Game ends after this many minutes</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="setting-turn-timer">Turn Timer (seconds)</label>
+                    <input type="number" class="form-control" id="setting-turn-timer" name="turn_timer_seconds" min="10" max="300" step="5">
+                    <small class="form-text text-muted">Time limit for each player's turn</small>
+                </div>
+            `;
+        } else if (modeId === 'cooperative') {
+            settingsHTML += `
+                <div class="form-group">
+                    <label for="setting-go-reduction">GO Salary Reduction per Lap</label>
+                    <input type="number" class="form-control" id="setting-go-reduction" name="go_salary_reduction_per_lap" min="0" max="50" step="5">
+                    <small class="form-text text-muted">Amount GO salary decreases each lap</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="setting-dev-target">Development Target Level</label>
+                    <input type="number" class="form-control" id="setting-dev-target" name="development_target_level" min="1" max="5" step="1">
+                    <small class="form-text text-muted">Property level required to win</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="setting-rent-discount">Allied Rent Discount</label>
+                    <input type="range" class="form-range" id="setting-rent-discount" name="allied_rent_discount" min="0" max="1" step="0.05">
+                    <div class="d-flex justify-content-between">
+                        <small>0% (Full Rent)</small>
+                        <small>50%</small>
+                        <small>100% (No Rent)</small>
+                    </div>
+                    <small class="form-text text-muted">Discount on rent between players</small>
+                </div>
+            `;
+        } else if (modeId === 'market_crash') {
+            settingsHTML += `
+                <div class="form-group">
+                    <label for="setting-volatility">Property Value Volatility</label>
+                    <input type="range" class="form-range" id="setting-volatility" name="property_value_volatility" min="0" max="1" step="0.05">
+                    <div class="d-flex justify-content-between">
+                        <small>None</small>
+                        <small>Medium</small>
+                        <small>High</small>
+                    </div>
+                    <small class="form-text text-muted">How much property values fluctuate (0-1)</small>
+                </div>
+            `;
+        }
+        
+        settingsHTML += `</form>`;
+        
+        // Render the form
+        settingsContainer.innerHTML = settingsHTML;
+        
+        // Populate with existing settings if available
+        if (existingSettings) {
+            const form = document.getElementById('mode-settings-form');
+            for (const [key, value] of Object.entries(existingSettings)) {
+                const element = form.elements[key];
+                if (element) {
+                    if (element.type === 'checkbox') {
+                        element.checked = value;
+                    } else {
+                        element.value = value;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Select mode
+    function selectMode() {
+        if (!selectedMode || !gameId) {
+            showAlert('error', 'No mode selected or game ID not available');
+            return;
+        }
+        
+        showLoading(true);
+        
+        // Make API request to select mode
+        fetch(`/api/game-modes/select/${gameId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Key': adminKey
+            },
+            body: JSON.stringify({
+                mode_id: selectedMode
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', `Game mode set to ${formatModeName(selectedMode)}`);
+                    
+                    // Update displayed current mode
+                    document.getElementById('current-mode').textContent = formatModeName(selectedMode);
+                    document.getElementById('game-status').textContent = 'Active';
+                    
+                    // Update current settings
+                    currentSettings = data.settings;
+                    
+                    // Enable settings update
+                    document.getElementById('update-settings-btn').disabled = false;
+                    document.getElementById('reset-settings-btn').disabled = false;
+                } else {
+                    showAlert('error', 'Error selecting game mode: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                showAlert('error', 'Error selecting game mode: ' + error.message);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+    }
+    
+    // Update settings
+    function updateSettings() {
+        if (!selectedMode || !gameId) {
+            showAlert('error', 'No mode selected or game ID not available');
+            return;
+        }
+        
+        showLoading(true);
+        
+        // Get settings from form
+        const form = document.getElementById('mode-settings-form');
+        const formData = new FormData(form);
+        const settings = {};
+        
+        for (const [key, value] of formData.entries()) {
+            // Convert numerical values
+            if (!isNaN(value) && key !== 'mode') {
+                if (key === 'free_parking_collects_fees') {
+                    settings[key] = value === 'on';
+                } else if (value.includes('.')) {
+                    settings[key] = parseFloat(value);
+                } else {
+                    settings[key] = parseInt(value, 10);
+                }
+            } else {
+                settings[key] = value;
+            }
+        }
+        
+        // Handle checkboxes that are unchecked (not included in FormData)
+        if (!settings.hasOwnProperty('free_parking_collects_fees')) {
+            settings.free_parking_collects_fees = false;
+        }
+        
+        // Make API request to update settings
+        fetch(`/api/game-modes/update-settings/${gameId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Key': adminKey
+            },
+            body: JSON.stringify({
+                settings: settings
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Game settings updated successfully');
+                    
+                    // Update current settings
+                    currentSettings = data.settings;
+                } else {
+                    showAlert('error', 'Error updating settings: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                showAlert('error', 'Error updating settings: ' + error.message);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+    }
+    
+    // Reset settings to defaults
+    function resetSettings() {
+        if (!selectedMode) {
+            showAlert('error', 'No mode selected');
+            return;
+        }
+        
+        // Load the default settings
+        renderModeSettings(selectedMode);
+        
+        showAlert('info', 'Settings reset to defaults. Click "Update Settings" to apply.');
+    }
+    
+    // Utility: Show/hide loading message
+    function showLoading(show) {
+        const loadingMessage = document.getElementById('mode-loading-message');
+        if (loadingMessage) {
+            loadingMessage.style.display = show ? 'block' : 'none';
+        }
+    }
+    
+    // Utility: Show alert
+    function showAlert(type, message) {
+        const alertContainer = document.getElementById('mode-alert-container');
+        if (!alertContainer) return;
+        
+        const alertElement = document.createElement('div');
+        alertElement.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+        alertElement.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        alertContainer.appendChild(alertElement);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            alertElement.classList.remove('show');
+            setTimeout(() => alertElement.remove(), 150);
+        }, 5000);
+    }
+    
+    // Utility: Get game ID
+    function getGameId() {
+        return document.querySelector('meta[name="game-id"]')?.content || null;
+    }
+    
+    // Utility: Format mode name
+    function formatModeName(mode) {
+        if (!mode) return 'Unknown';
+        
+        // Convert snake_case or kebab-case to Title Case
+        return mode
+            .replace(/[-_]/g, ' ')
+            .replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase())));
+    }
+    
+    // Public API
+    return {
+        init: init
+    };
+})();
+</script> 

@@ -1,0 +1,401 @@
+from flask import Flask, jsonify, request, send_from_directory, render_template
+from flask_socketio import SocketIO, emit, join_room, leave_room
+import os
+import logging
+from datetime import datetime
+import eventlet
+from src.models import init_db
+# Import models from their specific files
+from src.models.property import Property 
+from src.models.player import Player
+from src.routes.player_routes import register_player_routes
+from src.routes.game_routes import register_game_routes
+from sqlalchemy.orm import joinedload
+from src.routes.decorators import admin_required
+# from src.routes.property_routes import register_property_routes # File not found
+# from src.routes.auction_routes import register_auction_routes # File not found
+from src.routes.admin.game_admin_routes import game_admin_bp
+from src.routes.admin.player_admin_routes import player_admin_bp
+from src.routes.admin.bot_admin_routes import bot_admin_bp
+from src.routes.admin.event_admin_routes import event_admin_bp
+from src.routes.admin.crime_admin_routes import crime_admin_bp
+# Import the blueprint variable directly
+from src.routes.admin.property_admin_routes import property_admin_bp
+# from src.routes.bot_event_routes import register_bot_event_routes # File not found
+from src.routes.special_space_routes import register_special_space_routes
+from src.routes.finance_routes import register_finance_routes
+from src.routes.community_fund_routes import register_community_fund_routes
+from src.routes.crime_routes import register_crime_routes
+# from src.routes.remote_routes import register_remote_routes # Depends on qrcode/Pillow which failed to install
+from src.routes.game_mode_routes import register_game_mode_routes
+from src.routes.social import register_social_routes
+from src.controllers.socket_controller import register_socket_events
+from src.controllers.adaptive_difficulty_controller import AdaptiveDifficultyController
+from src.controllers.crime_controller import CrimeController
+from src.controllers.remote_controller import RemoteController
+from src.controllers.game_mode_controller import GameModeController
+from src.controllers.social.chat_controller import ChatController
+from src.controllers.social.alliance_controller import AllianceController
+from src.controllers.social.reputation_controller import ReputationController
+# Import core services/models needed for initialization
+from src.models.banker import Banker
+from src.models.community_fund import CommunityFund
+from src.models.event_system import EventSystem
+from src.controllers.special_space_controller import SpecialSpaceController
+from src.models.game_state import GameState # Needed for CommunityFund init
+# Import missing controllers/systems
+from src.controllers.game_controller import GameController
+# Import PlayerController
+from src.controllers.player_controller import PlayerController
+# Import AuthController
+from src.controllers.auth_controller import AuthController
+# Removed: from src.controllers.property_controller import PropertyController
+# Removed: from src.controllers.auction_controller import AuctionController
+# Removed: from src.controllers.bot_controller import BotController
+from src.models.auction_system import AuctionSystem # Assuming this exists
+import uuid # Needed for game_id generation
+# Import route registration functions
+# from src.routes.auth_routes import register_auth_routes # Moved down
+from src.controllers.social import SocialController # Corrected import path
+from src.controllers.property_controller import PropertyController # Import PropertyController
+from src.controllers.auction_controller import AuctionController # Import AuctionController
+from src.controllers.bot_controller import BotController # Import BotController
+from src.game_logic.game_logic import GameLogic # Import GameLogic
+
+# Initialize Flask app
+app = Flask(__name__)
+app.config.update(
+    SECRET_KEY=os.environ.get('SECRET_KEY', 'pinopoly-development-key'),
+    ADMIN_KEY=os.environ.get('ADMIN_KEY', 'pinopoly-admin'),
+    DISPLAY_KEY=os.environ.get('DISPLAY_KEY', 'pinopoly-display'),
+    DATABASE_PATH=os.environ.get('DATABASE_PATH', 'pinopoly.db'),
+    DEBUG=os.environ.get('DEBUG', 'False').lower() == 'true',
+    REMOTE_PLAY_ENABLED=os.environ.get('REMOTE_PLAY_ENABLED', 'False').lower() == 'true',
+    REMOTE_PLAY_TIMEOUT=int(os.environ.get('REMOTE_PLAY_TIMEOUT', 60))
+)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI', 'sqlite:///pinopoly.sqlite')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['ADAPTIVE_DIFFICULTY_ENABLED'] = os.environ.get('ADAPTIVE_DIFFICULTY_ENABLED', 'true').lower() == 'true'
+app.config['ADAPTIVE_DIFFICULTY_INTERVAL'] = int(os.environ.get('ADAPTIVE_DIFFICULTY_INTERVAL', '15'))  # minutes
+app.config['POLICE_PATROL_ENABLED'] = os.environ.get('POLICE_PATROL_ENABLED', 'true').lower() == 'true'
+app.config['POLICE_PATROL_INTERVAL'] = int(os.environ.get('POLICE_PATROL_INTERVAL', '45'))  # minutes
+app.config['PORT'] = int(os.environ.get('PORT', 5000))
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("pinopoly.log"),
+        logging.StreamHandler()
+    ]
+)
+
+# Initialize SocketIO with eventlet
+socketio = SocketIO(
+    app, 
+    cors_allowed_origins="*",
+    async_mode='eventlet',
+    path="/ws"
+)
+
+# Initialize database
+db = init_db(app)
+
+# Initialize core services and controllers
+with app.app_context(): # Use app context to access db/config safely
+    # Create database tables if they don't exist
+    db.create_all()
+    logging.info('Ensured database tables exist.')
+    
+    # Ensure GameState instance exists and has a game_id
+    game_state = GameState.query.first()
+    if not game_state:
+        game_state = GameState(game_id=str(uuid.uuid4()))
+        db.session.add(game_state)
+        db.session.commit()
+    elif not game_state.game_id:
+        game_state.game_id = str(uuid.uuid4())
+        db.session.add(game_state)
+        db.session.commit()
+        
+    # ---- Stage 1: Initialize basic services and controllers ----
+    banker = Banker(socketio)
+    community_fund = CommunityFund(socketio, game_state)
+    event_system = EventSystem(socketio, banker, community_fund)
+    auction_system = AuctionSystem(socketio, banker)
+    special_space_controller = SpecialSpaceController(socketio, banker, community_fund)
+    social_controller = SocialController(socketio, app.config) 
+    remote_controller = RemoteController(app) # Needs app instance
+    player_controller = PlayerController(db) # Pass the db instance
+    auth_controller = AuthController() # Initialize AuthController
+    game_logic = GameLogic(app) # Initialize GameLogic
+    property_controller = PropertyController(db, banker, event_system, socketio) # Assuming these dependencies
+    auction_controller = AuctionController(db, banker, event_system, socketio) # Assuming these dependencies
+
+    # ---- Stage 2: Store ALL initial instances in app config ----
+    app.config['banker'] = banker
+    app.config['community_fund'] = community_fund
+    app.config['event_system'] = event_system
+    app.config['auction_system'] = auction_system
+    app.config['special_space_controller'] = special_space_controller
+    app.config['social_controller'] = social_controller
+    app.config['remote_controller'] = remote_controller
+    app.config['player_controller'] = player_controller
+    app.config['auth_controller'] = auth_controller
+    app.config['game_state_instance'] = game_state
+    app.config['game_logic'] = game_logic # Store GameLogic instance
+    app.config['property_controller'] = property_controller # Store property controller
+    app.config['auction_controller'] = auction_controller # Store auction controller
+    app.config['socketio'] = socketio # Store socketio instance
+
+    # ---- Stage 3: Initialize controllers dependent on stored config ----
+    game_controller = GameController(app.config) # Needs game_logic etc. in app_config
+    app.config['game_controller'] = game_controller # Store game controller
+
+    bot_controller = BotController(app.config) # Needs game_logic, game_controller etc. in app_config
+    app.config['bot_controller'] = bot_controller # Store bot controller
+
+    logging.info('Core services and controllers initialized and stored in app config')
+
+# Security headers
+@app.after_request
+def add_security_headers(response):
+    # Enforce HTTPS with Cloudflare
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    
+    # Content security policy
+    response.headers['Content-Security-Policy'] = "default-src 'self' https: wss:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:;"
+    
+    # Prevent clickjacking
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    
+    # XSS protection
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    
+    return response
+
+# ---- Static file route FIRST ----
+@app.route('/static/<path:path>')
+def serve_static(path):
+    return send_from_directory('static', path)
+
+# ---- Default route for SPA client AFTER specific routes ----
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    # This check might not even be necessary now if serve_static handles it
+    # But we leave it for now in case other files are expected here
+    if path != "" and os.path.exists('static' + '/' + path):
+        # Check if it's trying to access static files directly - should be handled by serve_static
+        # This part might need refinement depending on what 'serve' is truly meant for
+        # For a typical SPA, we usually only serve index.html here.
+        # Let's simplify to just serve index.html for non-API/non-static routes
+        return send_from_directory('static', 'index.html') 
+    else:
+        return send_from_directory('static', 'index.html')
+
+# Basic health check endpoint
+@app.route('/api/health')
+def health_check():
+    # Check if running via Cloudflare Tunnel
+    tunnel_status = remote_controller.get_tunnel_status() if app.config['REMOTE_PLAY_ENABLED'] else None
+    tunnel_running = tunnel_status and tunnel_status.get('running', False) if tunnel_status else False
+    
+    return jsonify({
+        "status": "ok",
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.0.0",
+        "remote_play": {
+            "enabled": app.config['REMOTE_PLAY_ENABLED'],
+            "active": tunnel_running,
+            "url": tunnel_status.get('url') if tunnel_running else None
+        }
+    })
+
+# Register socket events
+register_socket_events(socketio, app.config)
+
+# Register API routes
+# Pass the controller instances directly
+register_player_routes(app, player_controller)
+register_game_routes(app, game_controller)
+# register_property_routes(app) # File not found
+# register_auction_routes(app) # File not found
+app.register_blueprint(game_admin_bp, url_prefix='/api/admin')
+app.register_blueprint(player_admin_bp, url_prefix='/api/admin')
+app.register_blueprint(bot_admin_bp, url_prefix='/api/admin')
+app.register_blueprint(event_admin_bp, url_prefix='/api/admin')
+app.register_blueprint(crime_admin_bp, url_prefix='/api/admin')
+# Register the property admin blueprint directly
+app.register_blueprint(property_admin_bp, url_prefix='/api/admin')
+# register_bot_event_routes(app) # File not found
+register_special_space_routes(app)
+register_finance_routes(app)
+register_community_fund_routes(app)
+register_crime_routes(app, socketio)
+# register_remote_routes(app) # Depends on qrcode/Pillow which failed to install
+register_game_mode_routes(app)
+# Pass the individual social controllers
+register_social_routes(
+    app, 
+    socketio, 
+    app.config['social_controller'].chat_controller,
+    app.config['social_controller'].alliance_controller,
+    app.config['social_controller'].reputation_controller
+    )
+
+# Register auth routes - Import just before use
+from src.routes.auth_routes import register_auth_routes
+register_auth_routes(app, auth_controller)
+
+# --- PERMANENT PROPERTY ADMIN ROUTE --- 
+@app.route('/api/admin/properties', methods=['GET'], strict_slashes=False)
+@admin_required
+def admin_get_properties():
+    """Get a list of all properties with details for the admin panel."""
+    try:
+        # Eager load the owner relationship to avoid N+1 queries
+        properties = Property.query.options(joinedload(Property.owner)).order_by(Property.id).all()
+        
+        properties_data = []
+        for prop in properties:
+            owner_name = prop.owner.username if prop.owner else "Bank"
+            
+            # --- Debugging Log --- 
+            # Use app.logger since we are in app.py context
+            app.logger.debug(f"Inspecting property ID {prop.id} ({prop.name}) before calculate_rent. Attributes: {vars(prop)}")
+            # --- End Debugging Log ---
+            
+            current_rent = prop.calculate_rent() # Assuming calculate_rent exists on Property model
+            
+            # Simplified the returned data to match frontend expectations
+            properties_data.append({
+                'id': prop.id,
+                'name': prop.name,
+                'owner_name': owner_name,
+                'houses': prop.houses,
+                'hotel': prop.hotel,
+                'is_mortgaged': prop.is_mortgaged,
+                'price': prop.price,
+                'current_rent': current_rent
+            })
+            
+        return jsonify({"success": True, "properties": properties_data})
+        
+    except Exception as e:
+        app.logger.error(f"Error fetching all properties for admin: {str(e)}", exc_info=True) # Use app.logger
+        return jsonify({"success": False, "error": "Failed to retrieve property list."}), 500
+# --- END PROPERTY ADMIN ROUTE ---
+
+# --- TEMPORARY TEST ROUTE ---
+@app.route('/api/admin/bots/test')
+def bots_test_route():
+    return jsonify({"message": "Bots test route working!"})
+# --- END TEST ROUTE ---
+
+# Static file routes
+@app.route('/admin')
+def admin():
+    return render_template('admin.html', admin_key=app.config.get('ADMIN_KEY', ''))
+
+@app.route('/board')
+def board():
+    return render_template('board.html')
+
+@app.route('/connect')
+def connect():
+    """Display connection information for remote play"""
+    # Check if remote play is enabled and tunnel is running
+    tunnel_status = remote_controller.get_tunnel_status() if app.config['REMOTE_PLAY_ENABLED'] else None
+    tunnel_running = tunnel_status and tunnel_status.get('running', False) if tunnel_status else False
+    
+    return render_template(
+        'connect.html', 
+        remote_enabled=app.config['REMOTE_PLAY_ENABLED'],
+        tunnel_running=tunnel_running,
+        tunnel_url=tunnel_status.get('url') if tunnel_running else None
+    )
+
+# Scheduled tasks
+def setup_scheduled_tasks():
+    """Set up scheduled background tasks"""
+    if app.config['ADAPTIVE_DIFFICULTY_ENABLED']:
+        # Start adaptive difficulty assessment
+        difficulty_controller = AdaptiveDifficultyController(socketio)
+        
+        def run_difficulty_assessment():
+            while True:
+                # Sleep first to avoid immediate assessment on startup
+                eventlet.sleep(app.config['ADAPTIVE_DIFFICULTY_INTERVAL'] * 60)
+                
+                try:
+                    # Assess game balance
+                    assessment = difficulty_controller.assess_game_balance()
+                    
+                    # If adjustment needed, apply it
+                    if assessment.get('needs_adjustment'):
+                        adjustment_direction = assessment.get('adjustment_direction')
+                        difficulty_controller.adjust_difficulty(adjustment_direction)
+                        
+                        # Log the auto-adjustment
+                        logging.info(f"Auto-adjusted bot difficulty: {adjustment_direction}")
+                except Exception as e:
+                    logging.error(f"Error in scheduled difficulty assessment: {str(e)}")
+        
+        # Start the assessment thread
+        eventlet.spawn(run_difficulty_assessment)
+        logging.info(f"Adaptive difficulty scheduler started with interval of {app.config['ADAPTIVE_DIFFICULTY_INTERVAL']} minutes")
+    
+    if app.config['POLICE_PATROL_ENABLED']:
+        # Start police patrol
+        crime_controller = CrimeController(socketio)
+        
+        def run_police_patrol():
+            while True:
+                # Sleep first to avoid immediate patrol on startup
+                eventlet.sleep(app.config['POLICE_PATROL_INTERVAL'] * 60)
+                
+                try:
+                    # Run police patrol
+                    patrol_result = crime_controller.check_for_police_patrol()
+                    
+                    # Log the patrol results
+                    if patrol_result.get('success'):
+                        logging.info(f"Police patrol completed: {patrol_result.get('message')}")
+                except Exception as e:
+                    logging.error(f"Error in scheduled police patrol: {str(e)}")
+        
+        # Start the patrol thread
+        eventlet.spawn(run_police_patrol)
+        logging.info(f"Police patrol scheduler started with interval of {app.config['POLICE_PATROL_INTERVAL']} minutes")
+    
+    # Setup auto-start of Cloudflare Tunnel if enabled
+    if app.config['REMOTE_PLAY_ENABLED']:
+        def setup_remote_tunnel():
+            # Wait a bit for app to start
+            eventlet.sleep(5)
+            
+            try:
+                # Check if tunnel is configured
+                if remote_controller.check_tunnel_config():
+                    # Try to start tunnel
+                    result = remote_controller.start_tunnel()
+                    if result.get('success'):
+                        app.config['TUNNEL_URL'] = result.get('tunnel_url')
+                        logging.info(f"Remote play tunnel started: {result.get('tunnel_url')}")
+                    else:
+                        logging.warning(f"Failed to start remote play tunnel: {result.get('message')}")
+                else:
+                    logging.info("Remote play is enabled but no tunnel is configured. Use admin interface to create one.")
+            except Exception as e:
+                logging.error(f"Error setting up remote tunnel: {str(e)}")
+        
+        # Start the setup thread
+        eventlet.spawn(setup_remote_tunnel)
+        logging.info("Remote play auto-start scheduler initiated")
+
+# Run the app
+if __name__ == '__main__':
+    setup_scheduled_tasks()
+    socketio.run(app, host='127.0.0.1', port=app.config['PORT'], debug=True) 

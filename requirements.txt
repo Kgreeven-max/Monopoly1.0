@@ -1,0 +1,17 @@
+Flask>=2.3,<3.0
+Flask-SocketIO>=5.3,<6.0
+SQLAlchemy>=2.0,<3.0
+# Loosen eventlet constraint to try newer versions for Python 3.13 compatibility
+eventlet>=0.33 
+python-socketio>=5.10,<6.0
+setuptools>=60.0 # Ensure setuptools is present for distutils replacement
+Flask-SQLAlchemy>=3.0 # Added missing dependency
+Flask-Migrate>=4.0 # Added missing dependency
+requests>=2.28 # Added missing dependency (for remote_controller)
+# Used in models/controllers, add if not covered by Flask/SQLAlchemy
+# Flask-SQLAlchemy might bundle SQLAlchemy, check if needed explicitly
+# Add other known direct dependencies if any
+
+# Note: cloudflared is an external binary, not a pip package.
+#       qrcode and Pillow were noted as problematic for remote_routes; 
+#       they are not strictly required for core local testing. 
