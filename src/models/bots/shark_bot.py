@@ -4,15 +4,30 @@ import random
 from .base_bot import BotPlayer
 from ..player import Player # Relative import
 from ..property import Property # Relative import
+import logging
+
+logger = logging.getLogger(__name__)
 
 class SharkBot(BotPlayer):
     """Shark bot that focuses on predatory strategies and player loans"""
     
-    def __init__(self, player_id, difficulty='normal'):
+    def __init__(self, player_id, difficulty='hard'):
+        # Ensure superclass is initialized first
         super().__init__(player_id, difficulty)
-        # Adjust parameters for predatory focus
-        self.risk_tolerance = min(self.risk_tolerance * 1.4, 0.95)  # High risk tolerance
-        self.value_estimation_error *= 0.7  # More accurate valuation
+        
+        # Aggressively increase risk tolerance after decision_maker is initialized
+        if hasattr(self.decision_maker, 'risk_tolerance'):
+             # Increase risk tolerance significantly, but cap it
+             self.decision_maker.risk_tolerance = min(self.decision_maker.risk_tolerance * 1.4, 0.95)
+        else:
+             logger.warning(f"SharkBot {self.player_id}: Could not adjust risk_tolerance on decision_maker.")
+        
+        # Modify other parameters for shark-like behavior if needed
+        # Example: Lower cash reserve threshold further? Increase development aggression?
+        if hasattr(self.decision_maker, 'value_estimation_error'):
+            self.decision_maker.value_estimation_error *= 0.7  # More accurate valuation
+        else:
+             logger.warning(f"SharkBot {self.player_id}: Could not adjust value_estimation_error on decision_maker.")
     
     def _make_optimal_buy_decision(self, property_obj):
         """Shark buying strategy - focus on blocking others and high-traffic properties"""

@@ -404,12 +404,23 @@ def register_bot_events(socketio, app_config):
         """Handle bot creation request"""
         # Validate admin access
         admin_pin = data.get('admin_pin')
-        # game_state = GameState.query.first() # No longer need game_state just for PIN
         if not admin_pin or admin_pin != current_app.config.get('ADMIN_KEY'):
             emit('auth_error', {
                 'error': 'Invalid admin credentials'
             })
             return
+
+        # --- Get Game State and Starting Money ---
+        game_state = GameState.query.first() # Assuming game_id=1 for now
+        if not game_state:
+            logger.error("Cannot create bot: Game state not found.")
+            emit('event_error', {'error': 'Game state not found'})
+            return
+        
+        # Get starting money from settings, default to 1500 if not found
+        starting_money = game_state.settings.get('starting_money', 1500)
+        logger.info(f"Retrieved starting money for bot creation: {starting_money}")
+        # --- End Get Game State ---
         
         bot_name = data.get('name', f"Bot_{random.randint(1000, 9999)}")
         bot_type = data.get('type', 'conservative')
@@ -420,37 +431,66 @@ def register_bot_events(socketio, app_config):
             username=bot_name,
             is_bot=True,
             in_game=True,
-            money=game_state.starting_money,
-            position=0
+            money=starting_money,
+            position=0,
+            game_id=game_state.id
         )
         
-        # Generate a PIN for the bot
+        # Generate a PIN for the bot (Do this *before* commit if PIN is required)
         bot_player.pin = ''.join([str(random.randint(0, 9)) for _ in range(6)])
-        
-        # Create the bot strategy object
-        if bot_type == 'aggressive':
-            bot = AggressiveBot(bot_player, difficulty)
-        elif bot_type == 'strategic':
-            bot = StrategicBot(bot_player, difficulty)
-        elif bot_type == 'opportunistic':
-            bot = OpportunisticBot(bot_player, difficulty)
-        elif bot_type == 'shark':
-            bot = SharkBot(bot_player, difficulty)
-        elif bot_type == 'investor':
-            bot = InvestorBot(bot_player, difficulty)
-        else:  # default to conservative
-            bot = ConservativeBot(bot_player, difficulty)
-        
-        # Save to database
-        db.session.add(bot_player)
-        db.session.commit()
+
+        # --- Commit the Player to get an ID ---
+        try:
+            db.session.add(bot_player)
+            db.session.commit()
+            logger.info(f"Committed new bot player {bot_player.username} with ID: {bot_player.id}")
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to commit new bot player {bot_name}: {e}", exc_info=True)
+            emit('event_error', {'error': 'Failed to save new bot player'})
+            return
+        # --- End Commit ---
+
+        # Create the bot strategy object, passing the PLAYER ID
+        bot_instance = None
+        try:
+            if bot_type == 'aggressive':
+                bot_instance = AggressiveBot(bot_player.id, difficulty)
+            elif bot_type == 'strategic':
+                bot_instance = StrategicBot(bot_player.id, difficulty)
+            elif bot_type == 'opportunistic':
+                bot_instance = OpportunisticBot(bot_player.id, difficulty)
+            elif bot_type == 'shark':
+                bot_instance = SharkBot(bot_player.id, difficulty)
+            elif bot_type == 'investor':
+                bot_instance = InvestorBot(bot_player.id, difficulty)
+            else:  # default to conservative
+                bot_instance = ConservativeBot(bot_player.id, difficulty)
+        except Exception as e:
+            logger.error(f"Failed to instantiate bot class for type {bot_type}: {e}", exc_info=True)
+            # Consider deleting the committed player if bot instantiation fails?
+            emit('event_error', {'error': f'Failed to create bot instance of type {bot_type}'})
+            return
         
         # Store in active bots dictionary
-        active_bots[bot_player.id] = bot
-        
-        # Start the bot action thread if not running - pass socketio and app_config
-        # Note: start_bot_action_thread needs to be updated to handle app_config
-        start_bot_action_thread(socketio, app_config) 
+        if bot_instance:
+            active_bots[bot_player.id] = bot_instance
+        else:
+            # This case should ideally not be reached due to the try/except above
+            logger.error(f"Bot instance was None after instantiation attempt for bot ID {bot_player.id}")
+            emit('event_error', {'error': 'Failed to store bot instance'})
+            # Optionally delete the player record here as well
+            return
+
+        # Start the bot action thread if not running
+        # --- Get the correct app_config from the BotController instance --- 
+        bot_controller = current_app.config.get('bot_controller') 
+        if not bot_controller or not hasattr(bot_controller, 'app_config'):
+             logger.error("BotController instance or its app_config not found in app config using key 'bot_controller'.")
+             emit('event_error', {'error': 'Internal server error: Cannot start bot thread.'})
+             # We already created the player, maybe don't return? Or log and continue?
+        else:
+             start_bot_action_thread(socketio, bot_controller.app_config) # Use the controller's config
         
         # Broadcast bot created event
         socketio.emit('bot_created', {
@@ -566,17 +606,17 @@ def register_bot_events(socketio, app_config):
             
             # Create new bot with updated settings
             if new_type == 'aggressive':
-                active_bots[bot_id] = AggressiveBot(bot_player, new_difficulty)
+                active_bots[bot_id] = AggressiveBot(bot_player.id, new_difficulty)
             elif new_type == 'strategic':
-                active_bots[bot_id] = StrategicBot(bot_player, new_difficulty)
+                active_bots[bot_id] = StrategicBot(bot_player.id, new_difficulty)
             elif new_type == 'opportunistic':
-                active_bots[bot_id] = OpportunisticBot(bot_player, new_difficulty)
+                active_bots[bot_id] = OpportunisticBot(bot_player.id, new_difficulty)
             elif new_type == 'shark':
-                active_bots[bot_id] = SharkBot(bot_player, new_difficulty)
+                active_bots[bot_id] = SharkBot(bot_player.id, new_difficulty)
             elif new_type == 'investor':
-                active_bots[bot_id] = InvestorBot(bot_player, new_difficulty)
+                active_bots[bot_id] = InvestorBot(bot_player.id, new_difficulty)
             else:  # default to conservative
-                active_bots[bot_id] = ConservativeBot(bot_player, new_difficulty)
+                active_bots[bot_id] = ConservativeBot(bot_player.id, new_difficulty)
         
         # Update database
         db.session.commit()
@@ -726,74 +766,68 @@ def process_bot_actions(socketio, app_config):
     global bot_action_running
     logger.info("Bot action processor started.")
     
-    # Retrieve dependencies from app_config once at the start
-    banker = app_config.get('banker')
-    game_state = app_config.get('game_state_instance') # Assuming it's stored
-    core_socket_controller = app_config.get('socket_controller') # Get core controller
+    # Retrieve necessary app components from app_config
+    flask_app = app_config.get('app') # Get the Flask app instance
+    if not flask_app:
+        logger.error("Flask app instance not found in app_config for bot action thread. Stopping.")
+        bot_action_running = False
+        return
     
-    if not banker:
-        logger.error("Banker not found in app_config for bot action thread. Stopping.")
-        bot_action_running = False
-        return
-    if not game_state:
-        logger.error("GameState not found in app_config for bot action thread. Stopping.")
-        bot_action_running = False
-        return
-    if not core_socket_controller:
-        logger.error("Core SocketController not found in app_config for bot action thread. Stopping.")
-        bot_action_running = False
-        return
+    # ... (retrieve other dependencies like banker, core_socket_controller etc. if needed outside context)
         
     while bot_action_running:
         try:
-            # Use the retrieved instances
-            current_game_state = GameState.query.first() # Refresh or use instance?
-            if not current_game_state or not current_game_state.game_running:
-                logger.info("Game not running, bot actions paused.")
-                time.sleep(10) # Check less frequently if game is off
-                continue
-                
-            # Acquire lock to prevent concurrent modifications
-            with bot_action_lock:
-                # 1. Process whose turn it is
-                current_player_id = current_game_state.current_player_id
-                if current_player_id in active_bots:
-                    bot = active_bots[current_player_id]
-                    # Check if player is connected via core controller
-                    connection_status = core_socket_controller.get_player_connection_status(current_player_id)
-                    if not connection_status.get('success', False): # If bot is not "connected" (e.g., timeout logic)
-                        logger.info(f"Bot {bot.player.username} is currently marked disconnected, skipping turn.")
-                    else:
-                        logger.info(f"Processing turn for bot: {bot.player.username}")
-                        bot.take_turn(current_game_state, banker)
-                        # take_turn should handle emitting actions or returning results
-                        # Ensure Banker methods called by bot use the correct instance
+            # --- Add App Context --- 
+            with flask_app.app_context():
+                current_game_state = GameState.query.first() # Now safe to query
+                if not current_game_state or not current_game_state.game_running:
+                    logger.info("Game not running, bot actions paused.")
+                    # No need for db access here, sleep outside context? Safer inside.
+                    # time.sleep(10) 
+                    # continue # Continue inside context before sleep
+                else: # Only process if game is running
+                    # Acquire lock to prevent concurrent modifications
+                    with bot_action_lock:
+                        # Retrieve dependencies needing context OR pass them if retrieved outside
+                        banker = app_config.get('banker') 
+                        core_socket_controller = app_config.get('socket_controller')
+                        game_controller = app_config.get('game_controller') # Assuming BotPlayer needs this
+                        bot_controller_instance = app_config.get('bot_controller_instance') # If BotController instance is needed
                         
-                        # Example: After turn actions (like ending turn) might be handled here or in take_turn
-                        # if bot.turn_complete:
-                        #     game_controller = app_config.get('game_controller')
-                        #     if game_controller:
-                        #         game_controller.end_turn(current_player_id, bot.player.pin)
-                        #     else:
-                        #         logger.error("GameController needed to end bot turn.")
-                
-                # 2. Process bot responses to auctions (if any active)
-                # process_bot_auctions(socketio) # Needs update for app_config
-                
-                # 3. Process general bot decisions (e.g., property management)
-                for bot_id, bot in list(active_bots.items()): # Iterate copy
-                    # Make decisions based on game state, player status, etc.
-                    # Example: Consider mortgaging/unmortgaging, improving
-                    if bot.player.id != current_player_id: # Don't do management during turn
-                        bot.manage_assets(current_game_state, banker)
-                        
-                # 4. Process scheduled events (if any)
-                # handle_scheduled_event(socketio, app_config) # Needs creation/update
+                        if not all([banker, core_socket_controller, game_controller, bot_controller_instance]):
+                             logger.error("Missing dependencies inside app_context in bot thread.")
+                        else:
+                            # 1. Process whose turn it is
+                            current_player_id = current_game_state.current_player_id
+                            if current_player_id in active_bots:
+                                bot = active_bots[current_player_id]
+                                connection_status = core_socket_controller.get_player_connection_status(current_player_id)
+                                if not connection_status.get('success', False):
+                                    logger.info(f"Bot {bot.player.username} is currently marked disconnected, skipping turn.")
+                                else:
+                                    logger.info(f"Processing turn for bot: {bot.player.username}")
+                                    # --- Pass necessary dependencies to take_turn --- 
+                                    # Assuming BotPlayer's take_turn method is adapted to use these directly
+                                    # or BotController instance has a method that uses them.
+                                    # Example: bot_controller_instance.take_turn(current_player_id, current_game_state.id)
+                                    bot_controller_instance.take_turn(current_player_id, current_game_state.id) # Use the BotController's method
+                                    
+                            # 2. Process bot responses to auctions (if any active)
+                            # process_bot_auctions(socketio) # Needs update for app_config
+                            
+                            # 3. Process general bot decisions (e.g., property management)
+                            # Needs careful context handling if modifying DB
+                            # for bot_id, bot in list(active_bots.items()):
+                            #     if bot.player.id != current_player_id:
+                            #          bot.manage_assets(current_game_state, banker)
+                                    
+                            # 4. Process scheduled events (if any)
+                            # handle_scheduled_event(socketio, app_config)
 
-            # Release lock implicitly by exiting 'with' block
-            
-            # Sleep for a short interval before next cycle
-            sleep_interval = app_config.get('BOT_ACTION_INTERVAL', 5.0) # Configurable interval
+            # --- End App Context ---
+
+            # Sleep outside the context if no context-dependent ops needed here
+            sleep_interval = app_config.get('BOT_ACTION_INTERVAL', 5.0)
             time.sleep(sleep_interval)
             
         except Exception as e:

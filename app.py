@@ -395,6 +395,43 @@ def setup_scheduled_tasks():
         eventlet.spawn(setup_remote_tunnel)
         logging.info("Remote play auto-start scheduler initiated")
 
+# --- SocketIO Event Handlers ---
+
+@socketio.on('get_all_players')
+@admin_required
+def handle_get_all_players(data):
+    """Handles request from admin panel to get all players."""
+    sid = request.sid
+    admin_pin = data.get('admin_pin') # Get pin from data
+    
+    # Secondary check (decorator handles primary)
+    if not admin_pin or admin_pin != current_app.config.get('ADMIN_KEY'):
+        logger.warning(f"Unauthorized attempt to get_all_players from SID {sid}")
+        emit('auth_error', {'error': 'Invalid admin credentials for player list'}, room=sid)
+        return
+        
+    logger.info(f"Admin request for all players from SID {sid}")
+    try:
+        players = Player.query.order_by(Player.id).all()
+        players_data = []
+        for p in players:
+            players_data.append({
+                'id': p.id,
+                'name': p.username,
+                'money': p.money,
+                'is_bot': p.is_bot,
+                'in_game': p.in_game,
+                'position': p.position,
+                'in_jail': p.in_jail
+                # Add other relevant fields as needed
+            })
+        
+        emit('all_players_list', {'success': True, 'players': players_data}, room=sid)
+        
+    except Exception as e:
+        logger.error(f"Error fetching all players for admin: {str(e)}", exc_info=True)
+        emit('event_error', {'error': 'Failed to retrieve player list.'}, room=sid)
+
 # Run the app
 if __name__ == '__main__':
     setup_scheduled_tasks()

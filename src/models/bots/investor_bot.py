@@ -4,6 +4,9 @@ import random
 from .base_bot import BotPlayer
 from ..property import Property # Relative import
 from ..game_state import GameState # Relative import
+import logging # Import logging
+
+logger = logging.getLogger(__name__) # Add logger
 
 class InvestorBot(BotPlayer):
     """Investor bot that focuses on financial instruments over properties"""
@@ -11,8 +14,15 @@ class InvestorBot(BotPlayer):
     def __init__(self, player_id, difficulty='normal'):
         super().__init__(player_id, difficulty)
         # Adjust parameters for financial focus
-        self.value_estimation_error *= 0.6  # Much more accurate valuation
-        self.planning_horizon += 2  # Long-term planning
+        if hasattr(self.decision_maker, 'value_estimation_error'):
+             self.decision_maker.value_estimation_error *= 0.6  # Much more accurate valuation
+        else:
+             logger.warning(f"Bot {self.player_id}: Could not adjust value_estimation_error on decision_maker.")
+             
+        if hasattr(self.decision_maker, 'planning_horizon'):
+             self.decision_maker.planning_horizon += 2  # Long-term planning
+        else:
+             logger.warning(f"Bot {self.player_id}: Could not adjust planning_horizon on decision_maker.")
     
     def _make_optimal_buy_decision(self, property_obj):
         """Investor buying strategy - focus on ROI and property value growth"""

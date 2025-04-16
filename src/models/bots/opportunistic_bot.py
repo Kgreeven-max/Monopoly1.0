@@ -4,16 +4,26 @@ import random
 from .base_bot import BotPlayer
 from ..game_state import GameState # Relative import
 from ..property import Property # Relative import
+import logging
+
+logger = logging.getLogger(__name__)
 
 class OpportunisticBot(BotPlayer):
     """Opportunistic bot that focuses on timing-based strategies and market conditions"""
     
     def __init__(self, player_id, difficulty='normal'):
         super().__init__(player_id, difficulty)
-        # Increase risk tolerance for opportunistic bot
-        self.risk_tolerance = min(self.risk_tolerance * 1.3, 0.9)
-        # Focus on short-term gains
-        self.planning_horizon = max(1, self.planning_horizon - 1)
+        
+        # Adjust parameters based on decision_maker attributes
+        if hasattr(self.decision_maker, 'risk_tolerance'):
+            self.decision_maker.risk_tolerance = min(self.decision_maker.risk_tolerance * 1.3, 0.9)
+        else:
+             logger.warning(f"OpportunisticBot {self.player_id}: Could not adjust risk_tolerance on decision_maker.")
+             
+        if hasattr(self.decision_maker, 'planning_horizon'):
+            self.decision_maker.planning_horizon = max(1, self.decision_maker.planning_horizon - 1) # Focus on short-term gains
+        else:
+             logger.warning(f"OpportunisticBot {self.player_id}: Could not adjust planning_horizon on decision_maker.")
     
     def _make_optimal_buy_decision(self, property_obj):
         """Opportunistic bots base decisions on current game phase and economic state"""

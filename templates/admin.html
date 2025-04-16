@@ -344,13 +344,7 @@
             }
             
             // Listen for bot created/removed events to update list (placeholder)
-            socket.on('bot_created', (data) => {
-                console.log('Bot created:', data);
-                // TODO: Add logic to update the active bots list UI
-                alert(`Bot ${data.name || data.bot_name} created successfully!`); 
-                clearBotForm();
-                fetchActiveBots(); // Refresh list after adding
-            });
+            socket.on('bot_created', handleBotCreated);
 
             socket.on('bot_removed', (data) => {
                 console.log('Bot removed:', data);
@@ -388,6 +382,68 @@
             window.removeBot = removeBot;
             window.fetchActiveBots = fetchActiveBots; // Expose fetch function for button
             window.fetchProperties = fetchProperties; // Expose properties fetch function
+
+            // --- Player Tab Functions ---
+            function fetchAllPlayers() {
+                console.log('Fetching all players...');
+                if (socket && adminKey) {
+                    socket.emit('get_all_players', { admin_pin: adminKey });
+                } else {
+                    console.error('Socket or adminKey not available for fetching players.');
+                    showAdminAlert('Cannot fetch players: Connection or authentication issue.', 'danger');
+                }
+            }
+
+            function renderPlayerList(players) {
+                const playerTableBody = document.getElementById('players-table-body');
+                playerTableBody.innerHTML = ''; // Clear existing rows
+
+                if (!players || players.length === 0) {
+                    playerTableBody.innerHTML = '<tr><td colspan="5" class="text-center">No players found.</td></tr>';
+                    return;
+                }
+
+                players.forEach(player => {
+                    const row = document.createElement('tr');
+                    const playerType = player.is_bot ? 'Bot' : 'Human';
+                    const status = player.in_game ? (player.in_jail ? 'Jailed' : 'Active') : 'Out'; 
+                    // TODO: Add bankruptcy status check
+                    
+                    row.innerHTML = `
+                        <td>${player.name} (ID: ${player.id})</td>
+                        <td>${playerType}</td>
+                        <td>$${player.money}</td>
+                        <td>${status}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info me-1" onclick="alert('View details for player ${player.id} - Not implemented yet')">Details</button>
+                            <button class="btn btn-sm btn-warning me-1" onclick="alert('Modify player ${player.id} - Not implemented yet')">Modify</button>
+                            <button class="btn btn-sm btn-danger" onclick="alert('Remove player ${player.id} - Not implemented yet')">Remove</button>
+                        </td>
+                    `;
+                    playerTableBody.appendChild(row);
+                });
+            }
+
+            // Listen for the player list response
+            if (socket) {
+                socket.on('all_players_list', (data) => {
+                    console.log('Received all players list:', data);
+                    if (data.success) {
+                        renderPlayerList(data.players);
+                    } else {
+                        showAdminAlert(data.error || 'Failed to fetch players.', 'danger');
+                        const playerTableBody = document.getElementById('players-table-body');
+                        playerTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading players.</td></tr>';
+                    }
+                });
+            }
+            
+            // Fetch players when the Players tab is shown
+            const playersTab = document.getElementById('players-tab');
+            if (playersTab) {
+                 playersTab.addEventListener('shown.bs.tab', fetchAllPlayers);
+            }
+            // --- End Player Tab Functions ---
         });
         
         // Game control functions
@@ -713,6 +769,46 @@
             propertiesTableBody.innerHTML = tableHtml;
         }
         // --- End Property Tab Functions ---
+
+        function handleBotCreated(data) {
+            console.log('Bot created:', data);
+            const botList = document.getElementById('active-bots-list');
+            if (botList.querySelector('.no-bots-message')) {
+                botList.innerHTML = ''; // Clear 'No bots found' message
+            }
+
+            // Ensure data has expected properties before creating element
+            if (data && data.bot_id && data.name) {
+                const botItem = document.createElement('li');
+                botItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                botItem.id = `bot-${data.bot_id}`;
+
+                // Extract type and difficulty, provide defaults if missing
+                const botType = data.type || 'unknown'; 
+                const botDifficulty = data.difficulty || 'unknown';
+                const botMoney = data.money !== undefined ? data.money : 'N/A';
+
+                botItem.innerHTML = `
+                    <span>
+                        <strong>${data.name}</strong> (ID: ${data.bot_id}) <br>
+                        <small>Type: ${capitalizeFirstLetter(botType)} | Difficulty: ${capitalizeFirstLetter(botDifficulty)} | Money: $${botMoney}</small>
+                    </span>
+                    <button class="btn btn-danger btn-sm" onclick="handleRemoveBot(${data.bot_id})">Remove</button>
+                `;
+                botList.appendChild(botItem);
+                // Optionally, clear the form fields
+                document.getElementById('add-bot-form').reset();
+            } else {
+                console.error('Received invalid data for bot_created event:', data);
+                showAdminAlert('Failed to add bot to list due to invalid data.', 'danger');
+            }
+        }
+
+        // Add a helper function to capitalize first letter for display
+        function capitalizeFirstLetter(string) {
+            if (!string) return 'Unknown';
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
     </script>
 </body>
 </html> 

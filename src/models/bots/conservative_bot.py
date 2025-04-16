@@ -2,6 +2,9 @@
 
 import random
 from .base_bot import BotPlayer
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ConservativeBot(BotPlayer):
     """Conservative bot that prioritizes cash reserves and safe investments"""
@@ -9,7 +12,12 @@ class ConservativeBot(BotPlayer):
     def __init__(self, player_id, difficulty='normal'):
         super().__init__(player_id, difficulty)
         # Adjust parameters for conservative strategy
-        self.risk_tolerance *= 0.7  # Lower risk tolerance
+        # Modify the risk tolerance within the decision_maker
+        if hasattr(self.decision_maker, 'risk_tolerance'): # Check if attribute exists
+             self.decision_maker.risk_tolerance *= 0.7  # Lower risk tolerance
+        else:
+             # Log a warning if the attribute doesn't exist for some reason
+             logger.warning(f"Bot {self.player_id}: Could not adjust risk_tolerance on decision_maker.")
     
     def _make_optimal_buy_decision(self, property_obj):
         """Conservative buying strategy - more cautious with money"""

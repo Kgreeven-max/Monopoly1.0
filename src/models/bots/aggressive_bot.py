@@ -2,6 +2,9 @@
 
 import random
 from .base_bot import BotPlayer
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AggressiveBot(BotPlayer):
     """Aggressive bot that prioritizes property acquisition and development"""
@@ -9,7 +12,11 @@ class AggressiveBot(BotPlayer):
     def __init__(self, player_id, difficulty='normal'):
         super().__init__(player_id, difficulty)
         # Adjust parameters for aggressive strategy
-        self.risk_tolerance *= 1.3  # Higher risk tolerance
+        # Modify the risk tolerance within the decision_maker
+        if hasattr(self.decision_maker, 'risk_tolerance'):
+             self.decision_maker.risk_tolerance *= 1.3  # Higher risk tolerance
+        else:
+             logger.warning(f"Bot {self.player_id}: Could not adjust risk_tolerance on decision_maker.")
     
     def _make_optimal_buy_decision(self, property_obj):
         """Aggressive buying strategy - focus on acquiring properties"""
