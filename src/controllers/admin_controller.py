@@ -1,5 +1,5 @@
 import logging
-from flask import jsonify
+from flask import jsonify, current_app
 from src.models import db
 from src.models.game_state import GameState
 from src.models.player import Player
@@ -52,6 +52,29 @@ class AdminController:
         except Exception as e:
             logger.error(f"Error getting admin player details for ID {player_id}: {e}", exc_info=True)
             return {"success": False, "error": "Failed to retrieve player details"}
+
+    def reset_game(self):
+        """Resets the game by creating a new game through the GameController."""
+        try:
+            # Get GameController from app_config
+            game_controller = current_app.config.get('game_controller')
+            if not game_controller:
+                logger.error("GameController not found in app config")
+                return {"success": False, "error": "Game controller not initialized"}
+
+            # Use GameController to create a new game with default settings
+            result = game_controller.create_new_game()
+            
+            if result.get('success'):
+                logger.info(f"Game reset successfully. New game ID: {result.get('game_id')}")
+                return result
+            else:
+                logger.error(f"Failed to reset game: {result.get('error')}")
+                return result
+                
+        except Exception as e:
+            logger.error(f"Error resetting game: {e}", exc_info=True)
+            return {"success": False, "error": f"Failed to reset game: {str(e)}"}
 
     # --- Placeholder methods for actions previously defined in routes ---
     # These would need proper implementation if used

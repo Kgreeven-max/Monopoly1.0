@@ -150,6 +150,16 @@ class GameController:
             game_state.ended_at = None
             game_state.status = 'setup'
             
+            # Reset all bots by setting them to not in game
+            bots = Player.query.filter_by(is_bot=True).all()
+            for bot in bots:
+                bot.in_game = False
+                
+            # Clear the active_bots dictionary from bot_controller if it exists
+            from src.controllers.bot_controller import active_bots
+            active_bots.clear()
+            self.logger.info(f"Cleared {len(bots)} bots during game reset")
+            
             db.session.add(game_state)
             db.session.commit()
             

@@ -352,6 +352,14 @@
                 alert(`Bot ${data.name} removed successfully!`);
                 fetchActiveBots(); // Refresh list after removing
             });
+            
+            // Listen for bots_reset event 
+            socket.on('bots_reset', (data) => {
+                console.log('Bots reset event received:', data);
+                // Clear the active bots list in the UI
+                document.getElementById('active-bots-list').innerHTML = '<p>No active bots found.</p>';
+                console.log('All bots have been removed during game reset');
+            });
 
             // Listen for the bot list response
             socket.on('active_bots_list', (data) => {
@@ -499,14 +507,13 @@
                 return;
             }
             
-            fetch('/api/game/new', { // This endpoint is correct for reset
+            fetch('/api/admin/reset', { // Endpoint is already correct, no change needed
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // Add admin key header if your decorator checks headers first
-                    'X-Admin-Key': window.adminKey // Uncommented this line
+                    'X-Admin-Key': window.adminKey
                 },
-                body: JSON.stringify({}) // Explicitly send empty JSON object
+                body: JSON.stringify({}) // Empty JSON body
             })
             .then(response => {
                 if (!response.ok) {
@@ -522,9 +529,10 @@
             })
             .then(data => {
                 if (data.success) {
-                    alert('Game reset successfully! Game ID: ' + data.game_id + '. Properties initialized (if they were missing).');
+                    alert('Game reset successfully! Game ID: ' + data.game_id + '. Properties initialized.');
                     console.log('Game reset response:', data);
-                    // Optionally, fetch updated game state here or rely on socket updates
+                    // Refresh the admin dashboard to show updated game state
+                    window.location.reload(); // Force a page reload to refresh all data
                 } else {
                     alert('Failed to reset game: ' + (data.error || 'Unknown error'));
                     console.error('Game reset failed:', data);

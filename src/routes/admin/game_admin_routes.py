@@ -4,7 +4,7 @@ from src.controllers.admin_controller import AdminController
 from src.routes.decorators import admin_required
 
 logger = logging.getLogger(__name__)
-game_admin_bp = Blueprint('game_admin', __name__, url_prefix='/game')
+game_admin_bp = Blueprint('game_admin', __name__, url_prefix='')
 
 # Assumes AdminController instance is accessible
 admin_controller = AdminController()
@@ -46,15 +46,34 @@ def admin_status():
 @game_admin_bp.route('/reset', methods=['POST'])
 @admin_required
 def admin_reset_game():
-    """Reset the game to initial state (DISABLED)"""
-    # DISABLED FOR SAFETY: Full database reset via API is too risky.
-    # Use offline database management scripts or tools for resets.
-    logger.warning("Attempted use of disabled admin reset route via game_admin_bp.")
-    return jsonify({
-        "success": False,
-        "status": "disabled", 
-        "message": "Game reset via API is disabled for safety. Use offline scripts."
-    }), 403 # Return 403 Forbidden
+    """Reset the game to initial state"""
+    try:
+        # Get game controller from app config
+        from flask import current_app
+        game_controller = current_app.config.get('game_controller')
+        socketio = current_app.config.get('socketio')
+        
+        if not game_controller:
+            logger.error("GameController not found in app config")
+            return jsonify({"success": False, "error": "Game controller not initialized"}), 500
+            
+        # Use game_controller to create a new game (which resets the current one)
+        result = game_controller.create_new_game()
+        
+        logger.info(f"Game reset result: {result}")
+        
+        # Notify clients that bots have been reset
+        if socketio and result.get('success'):
+            socketio.emit('bots_reset', {'message': 'All bots removed during game reset'})
+            logger.info("Emitted bots_reset event to clients")
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        logger.error(f"Error in admin_reset_game: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @game_admin_bp.route('/system-status', methods=['GET'])
 @admin_required
