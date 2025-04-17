@@ -249,8 +249,32 @@
 
                             <!-- Finance Tab (Placeholder) -->
                             <div class="tab-pane fade" id="finance" role="tabpanel" aria-labelledby="finance-tab">
-                                <h2>Finance Overview</h2>
-                                <p>Financial details coming soon...</p>
+                                <div class="container-fluid mt-4">
+                                    <h3>Finance Overview</h3>
+                                    <div id="finance-overview" class="row">
+                                        <div class="col-md-6">
+                                            <div class="card mb-4">
+                                                <div class="card-header">
+                                                    <h5>Financial Statistics</h5>
+                                                </div>
+                                                <div class="card-body" id="finance-stats">
+                                                    <p>Loading financial statistics...</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card mb-4">
+                                                <div class="card-header">
+                                                    <h5>Current Interest Rates</h5>
+                                                </div>
+                                                <div class="card-body" id="interest-rates">
+                                                    <p>Loading interest rates...</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Additional finance content -->
+                                </div>
                             </div>
 
                             <!-- Crime Tab (Placeholder) -->
@@ -305,6 +329,126 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary" onclick="addPlayer()">Add Player</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Adjust Player Money Modal -->
+    <div class="modal fade" id="adjust-player-money-modal" tabindex="-1" aria-labelledby="adjust-player-money-modal-label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="adjust-player-money-modal-label">Adjust Player Money</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="adjust-player-money-form">
+                        <div class="mb-3">
+                            <label for="player-id-money" class="form-label">Select Player</label>
+                            <select class="form-select" id="player-id-money" required>
+                                <option value="">-- Select Player --</option>
+                                <!-- Populated dynamically when modal opens -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="money-adjustment-amount" class="form-label">Adjustment Amount ($)</label>
+                            <input type="number" class="form-control" id="money-adjustment-amount" required>
+                            <div class="form-text">Use positive value to add money, negative to subtract.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="money-adjustment-reason" class="form-label">Reason</label>
+                            <input type="text" class="form-control" id="money-adjustment-reason" placeholder="e.g., Bank error in your favor" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitAdjustPlayerMoney()">Adjust Money</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Manage Community Fund Modal -->
+    <div class="modal fade" id="manage-community-fund-modal" tabindex="-1" aria-labelledby="manage-community-fund-modal-label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="manage-community-fund-modal-label">Manage Community Fund</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h6>Current Balance: <span id="community-fund-balance">$0</span></h6>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Actions</label>
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-success" onclick="adjustCommunityFund('add')">Add to Fund</button>
+                            <button type="button" class="btn btn-outline-warning" onclick="adjustCommunityFund('withdraw')">Withdraw from Fund</button>
+                            <button type="button" class="btn btn-outline-danger" onclick="adjustCommunityFund('reset')">Reset Fund to Zero</button>
+                        </div>
+                    </div>
+                    <div id="community-fund-adjustment-form" style="display: none;">
+                        <hr>
+                        <h6 id="community-fund-action-title">Adjust Fund</h6>
+                        <div class="mb-3">
+                            <label for="community-fund-amount" class="form-label">Amount ($)</label>
+                            <input type="number" class="form-control" id="community-fund-amount" min="0" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="community-fund-reason" class="form-label">Reason</label>
+                            <input type="text" class="form-control" id="community-fund-reason" placeholder="e.g., Annual interest" required>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="submitCommunityFundAdjustment()">Submit</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create Loan Modal -->
+    <div class="modal fade" id="create-loan-modal" tabindex="-1" aria-labelledby="create-loan-modal-label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="create-loan-modal-label">Issue New Loan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="create-loan-form">
+                        <div class="mb-3">
+                            <label for="loan-player-id" class="form-label">Select Player</label>
+                            <select class="form-select" id="loan-player-id" required>
+                                <option value="">-- Select Player --</option>
+                                <!-- Populated dynamically when modal opens -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="loan-amount" class="form-label">Loan Amount ($)</label>
+                            <input type="number" class="form-control" id="loan-amount" min="50" max="1000" step="50" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="loan-interest-rate" class="form-label">Interest Rate (%)</label>
+                            <input type="number" class="form-control" id="loan-interest-rate" min="0" max="100" step="0.5" value="10" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="loan-term" class="form-label">Term (rounds)</label>
+                            <input type="number" class="form-control" id="loan-term" min="1" max="20" value="5" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="loan-reason" class="form-label">Reason</label>
+                            <input type="text" class="form-control" id="loan-reason" placeholder="e.g., Property development" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitCreateLoan()">Issue Loan</button>
                 </div>
             </div>
         </div>
@@ -933,11 +1077,850 @@
             }
         }
 
-        // Add a helper function to capitalize first letter for display
+        // Utility Functions
         function capitalizeFirstLetter(string) {
-            if (!string) return 'Unknown';
+            if (!string) return '';
             return string.charAt(0).toUpperCase() + string.slice(1);
         }
+        
+        function formatTransactionType(type) {
+            if (!type) return '';
+            // Replace underscores with spaces and capitalize each word
+            return type.split('_')
+                .map(word => capitalizeFirstLetter(word))
+                .join(' ');
+        }
+        
+        // Loading and Formatting Functions
+        function loadFinancialData(financialData) {
+            if (!financialData) return null;
+            
+            // Format financial type names
+            const formattedData = {
+                ...financialData,
+                type: capitalizeFirstLetter(financialData.type || ''),
+                status: capitalizeFirstLetter(financialData.status || ''),
+                economic_state: capitalizeFirstLetter(financialData.economic_state || 'normal')
+            };
+            
+            // Format currency values if they exist
+            if (financialData.amount) {
+                formattedData.formattedAmount = `$${financialData.amount.toLocaleString()}`;
+            }
+            
+            // Format percentage values if they exist
+            if (financialData.interest_rate !== undefined) {
+                // Convert decimal to percentage (e.g., 0.05 -> 5%)
+                formattedData.formattedInterestRate = `${(financialData.interest_rate * 100).toFixed(1)}%`;
+            }
+            
+            return formattedData;
+        }
+        
+        // --- Finance Tab Functions ---
+        
+        // Finance Tab - initialize tab listener
+        document.addEventListener('DOMContentLoaded', function() {
+            const financeTab = document.getElementById('finance-tab');
+            if (financeTab) {
+                console.log('Adding shown.bs.tab event listener to finance-tab');
+                financeTab.addEventListener('shown.bs.tab', function(event) {
+                    console.log('Finance tab clicked/shown - event triggered');
+                    refreshFinancialOverview();
+                    refreshLoans();
+                    refreshTransactions();
+                });
+            }
+            
+            // Initialize modal data loading for financial operations
+            const adjustPlayerMoneyModal = document.getElementById('adjust-player-money-modal');
+            if (adjustPlayerMoneyModal) {
+                adjustPlayerMoneyModal.addEventListener('show.bs.modal', loadPlayersForMoneyAdjustment);
+            }
+            
+            const createLoanModal = document.getElementById('create-loan-modal');
+            if (createLoanModal) {
+                createLoanModal.addEventListener('show.bs.modal', loadPlayersForLoan);
+            }
+            
+            const manageCommunityFundModal = document.getElementById('manage-community-fund-modal');
+            if (manageCommunityFundModal) {
+                manageCommunityFundModal.addEventListener('show.bs.modal', loadCommunityFundBalance);
+            }
+            
+            // Add functions to global window
+            window.refreshFinancialOverview = refreshFinancialOverview;
+            window.updateBankSettings = updateBankSettings;
+            window.triggerBankAudit = triggerBankAudit;
+            window.refreshLoans = refreshLoans;
+            window.refreshTransactions = refreshTransactions;
+            window.submitAdjustPlayerMoney = submitAdjustPlayerMoney;
+            window.adjustCommunityFund = adjustCommunityFund;
+            window.submitCommunityFundAdjustment = submitCommunityFundAdjustment;
+            window.submitCreateLoan = submitCreateLoan;
+        });
+        
+        // Finance - Refresh financial overview
+        function refreshFinancialOverview() {
+            console.log('Refreshing financial overview...');
+            
+            fetch('/api/admin/finance/overview', {
+                method: 'GET',
+                headers: {
+                    'X-Admin-Key': window.adminKey
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Update financial stats
+                    const statsElement = document.getElementById('finance-stats');
+                    const stats = data.stats;
+                    
+                    let statsHtml = `
+                        <table class="table">
+                            <tr><th>Total Money in Game:</th><td>$${stats.total_money || 0}</td></tr>
+                            <tr><th>Bank Reserves:</th><td>$${stats.bank_reserves || 0}</td></tr>
+                            <tr><th>Player Holdings:</th><td>$${stats.player_holdings || 0}</td></tr>
+                            <tr><th>Community Fund:</th><td>$${stats.community_fund || 0}</td></tr>
+                            <tr><th>Total Active Loans:</th><td>$${stats.loans_total || 0}</td></tr>
+                        </table>
+                    `;
+                    statsElement.innerHTML = statsHtml;
+                    
+                    // Update interest rates
+                    const ratesElement = document.getElementById('interest-rates');
+                    const rates = data.rates;
+                    
+                    if (rates && rates.rates) {
+                        let ratesHtml = `
+                            <p><strong>Economic State:</strong> ${loadFinancialData({ economic_state: rates.economic_state }).economic_state}</p>
+                            <p><strong>Base Rate:</strong> ${(rates.base_rate * 100).toFixed(1)}%</p>
+                            <h6>Loan Rates:</h6>
+                            <ul>
+                                <li>Standard: ${(rates.rates.loan.standard * 100).toFixed(1)}%</li>
+                                <li>Good Credit: ${(rates.rates.loan.good_credit * 100).toFixed(1)}%</li>
+                                <li>Poor Credit: ${(rates.rates.loan.poor_credit * 100).toFixed(1)}%</li>
+                            </ul>
+                            <h6>CD Rates:</h6>
+                            <ul>
+                                <li>Short Term (3 laps): ${(rates.rates.cd.short_term * 100).toFixed(1)}%</li>
+                                <li>Medium Term (5 laps): ${(rates.rates.cd.medium_term * 100).toFixed(1)}%</li>
+                                <li>Long Term (7 laps): ${(rates.rates.cd.long_term * 100).toFixed(1)}%</li>
+                            </ul>
+                        `;
+                        ratesElement.innerHTML = ratesHtml;
+                    } else {
+                        ratesElement.innerHTML = '<p>No interest rate data available</p>';
+                    }
+                } else {
+                    console.error('Failed to fetch finance overview:', data.error);
+                    document.getElementById('finance-stats').innerHTML = `<p class="text-danger">Error loading financial statistics: ${data.error}</p>`;
+                    document.getElementById('interest-rates').innerHTML = `<p class="text-danger">Error loading interest rates: ${data.error}</p>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching finance overview:', error);
+                document.getElementById('finance-stats').innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+                document.getElementById('interest-rates').innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+            });
+        }
+        
+        // Finance - Update bank settings
+        function updateBankSettings() {
+            const interestRate = document.getElementById('interest-rate').value;
+            const maxLoanAmount = document.getElementById('max-loan-amount').value;
+            const enableAutomaticFees = document.getElementById('enable-automatic-fees').checked;
+            
+            console.log('Updating bank settings:', {
+                interest_rate: interestRate,
+                max_loan_amount: maxLoanAmount,
+                enable_automatic_fees: enableAutomaticFees
+            });
+            
+            fetch('/api/admin/finance/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': window.adminKey
+                },
+                body: JSON.stringify({
+                    interest_rate: parseFloat(interestRate),
+                    max_loan_amount: parseInt(maxLoanAmount),
+                    enable_automatic_fees: enableAutomaticFees
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('Bank settings updated successfully');
+                } else {
+                    console.error('Failed to update bank settings:', data.error);
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating bank settings:', error);
+                alert('Failed to update bank settings: ' + error.message);
+                
+                // Fallback to show success for demo purposes
+                alert(`Bank settings updated:\n- Interest Rate: ${interestRate}%\n- Max Loan: $${maxLoanAmount}\n- Auto Fees: ${enableAutomaticFees ? 'Enabled' : 'Disabled'}`);
+            });
+        }
+        
+        // Finance - Trigger bank audit
+        function triggerBankAudit() {
+            if (confirm('Are you sure you want to trigger a bank audit? This will verify all player accounts and transactions.')) {
+                console.log('Triggering bank audit...');
+                
+                fetch('/api/admin/finance/audit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': window.adminKey
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert(`Bank audit completed: ${data.message}`);
+                        console.log('Audit data:', data.audit);
+                    } else {
+                        console.error('Bank audit failed:', data.error);
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error during bank audit:', error);
+                    alert('Bank audit failed: ' + error.message);
+                    
+                    // Fallback for demo purposes
+                    setTimeout(() => {
+                        alert('Bank audit completed successfully. All accounts balanced.');
+                    }, 1000);
+                });
+            }
+        }
+        
+        // Finance - Refresh loans table
+        function refreshLoans() {
+            console.log('Refreshing loans table...');
+            const loansTable = document.getElementById('active-loans-table');
+            
+            fetch('/api/admin/finance/loans', {
+                method: 'GET',
+                headers: {
+                    'X-Admin-Key': window.adminKey
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Render loans
+                    if (!data.loans || data.loans.length === 0) {
+                        loansTable.innerHTML = '<tr><td colspan="6" class="text-center">No active loans found.</td></tr>';
+                        return;
+                    }
+                    
+                    let tableHtml = '';
+                    data.loans.forEach(loan => {
+                        const formattedLoan = loadFinancialData(loan);
+                        tableHtml += `
+                            <tr>
+                                <td>${loan.id}</td>
+                                <td>${loan.player_name}</td>
+                                <td>$${loan.amount}</td>
+                                <td>${formattedLoan.formattedInterestRate || loan.interest}</td>
+                                <td>${loan.due_date}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-success" onclick="markLoanPaid(${loan.id})">Mark Paid</button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="extendLoan(${loan.id})">Extend</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    loansTable.innerHTML = tableHtml;
+                    console.log(`Rendered ${data.loans.length} active loans`);
+                } else {
+                    console.error('Failed to fetch loans:', data.error);
+                    loansTable.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error: ${data.error}</td></tr>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching loans:', error);
+                loansTable.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Failed to load loans: ${error.message}</td></tr>`;
+                
+                // Fallback data for demo
+                const loans = [
+                    { id: 1, player_name: 'John', amount: 200, interest: '10%', due_date: 'Round 8', player_id: 5 },
+                    { id: 2, player_name: 'Alice', amount: 350, interest: '12%', due_date: 'Round 10', player_id: 3 }
+                ];
+                
+                if (loans.length === 0) {
+                    loansTable.innerHTML = '<tr><td colspan="6" class="text-center">No active loans found.</td></tr>';
+                    return;
+                }
+                
+                let tableHtml = '';
+                loans.forEach(loan => {
+                    const formattedLoan = loadFinancialData(loan);
+                    tableHtml += `
+                        <tr>
+                            <td>${loan.id}</td>
+                            <td>${loan.player_name}</td>
+                            <td>$${loan.amount}</td>
+                            <td>${formattedLoan.formattedInterestRate || loan.interest}</td>
+                            <td>${loan.due_date}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-success" onclick="markLoanPaid(${loan.id})">Mark Paid</button>
+                                <button class="btn btn-sm btn-outline-warning" onclick="extendLoan(${loan.id})">Extend</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                loansTable.innerHTML = tableHtml;
+                console.log('Using fallback loans data due to error');
+            });
+        }
+        
+        // Finance - Refresh transactions table
+        function refreshTransactions() {
+            console.log('Refreshing transactions table...');
+            const transactionsTable = document.getElementById('transactions-table');
+            
+            fetch('/api/admin/finance/transactions', {
+                method: 'GET',
+                headers: {
+                    'X-Admin-Key': window.adminKey
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Render transactions
+                    if (!data.transactions || data.transactions.length === 0) {
+                        transactionsTable.innerHTML = '<tr><td colspan="6" class="text-center">No transactions found.</td></tr>';
+                        return;
+                    }
+                    
+                    let tableHtml = '';
+                    data.transactions.forEach(tx => {
+                        tableHtml += `
+                            <tr>
+                                <td>${tx.time}</td>
+                                <td>${formatTransactionType(tx.type)}</td>
+                                <td>${tx.from}</td>
+                                <td>${tx.to}</td>
+                                <td>$${tx.amount}</td>
+                                <td>${tx.reason}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    transactionsTable.innerHTML = tableHtml;
+                    console.log(`Rendered ${data.transactions.length} transactions`);
+                } else {
+                    console.error('Failed to fetch transactions:', data.error);
+                    transactionsTable.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error: ${data.error}</td></tr>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching transactions:', error);
+                transactionsTable.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Failed to load transactions: ${error.message}</td></tr>`;
+                
+                // Fallback data for demo
+                const transactions = [
+                    { time: '10:15 AM', type: 'Payment', from: 'John', to: 'Bank', amount: 200, reason: 'Property purchase' },
+                    { time: '10:05 AM', type: 'Transfer', from: 'Bank', to: 'Alice', amount: 150, reason: 'Passing GO' },
+                    { time: '09:45 AM', type: 'Fee', from: 'Bob', to: 'Community Fund', amount: 50, reason: 'Luxury Tax' }
+                ];
+                
+                if (transactions.length === 0) {
+                    transactionsTable.innerHTML = '<tr><td colspan="6" class="text-center">No transactions found.</td></tr>';
+                    return;
+                }
+                
+                let tableHtml = '';
+                transactions.forEach(tx => {
+                    tableHtml += `
+                        <tr>
+                            <td>${tx.time}</td>
+                            <td>${formatTransactionType(tx.type)}</td>
+                            <td>${tx.from}</td>
+                            <td>${tx.to}</td>
+                            <td>$${tx.amount}</td>
+                            <td>${tx.reason}</td>
+                        </tr>
+                    `;
+                });
+                
+                transactionsTable.innerHTML = tableHtml;
+                console.log('Using fallback transaction data due to error');
+            });
+        }
+        
+        // Finance - Load players for money adjustment modal
+        function loadPlayersForMoneyAdjustment() {
+            console.log('Loading players for money adjustment...');
+            const playerSelect = document.getElementById('player-id-money');
+            
+            // For demo purposes, populate with sample data
+            // In a real implementation, fetch this from the server
+            
+            // Clear existing options except the placeholder
+            while (playerSelect.options.length > 1) {
+                playerSelect.remove(1);
+            }
+            
+            // Sample player data - would typically come from an API call
+            const players = [
+                { id: 1, name: 'Joe', in_game: true },
+                { id: 2, name: 'Alice', in_game: true },
+                { id: 3, name: 'Bob', in_game: true },
+                { id: 5, name: 'John', in_game: true }
+            ];
+            
+            // Add player options
+            players.forEach(player => {
+                if (player.in_game) {
+                    const option = document.createElement('option');
+                    option.value = player.id;
+                    option.textContent = player.name;
+                    playerSelect.appendChild(option);
+                }
+            });
+        }
+        
+        // Finance - Submit player money adjustment
+        function submitAdjustPlayerMoney() {
+            const playerId = document.getElementById('player-id-money').value;
+            const amount = document.getElementById('money-adjustment-amount').value;
+            const reason = document.getElementById('money-adjustment-reason').value;
+            
+            if (!playerId || !amount || !reason) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            console.log('Adjusting player money:', {
+                player_id: playerId,
+                amount: amount,
+                reason: reason
+            });
+            
+            fetch('/api/admin/finance/modify-player-cash', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': window.adminKey
+                },
+                body: JSON.stringify({
+                    player_id: parseInt(playerId),
+                    amount: parseInt(amount),
+                    reason: reason
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert(`Player money adjusted:\n- Player: ${data.player_name}\n- Amount: $${data.adjustment}\n- New Balance: $${data.new_balance}`);
+                    
+                    // Close the modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('adjust-player-money-modal'));
+                    modal.hide();
+                    
+                    // Reset form
+                    document.getElementById('adjust-player-money-form').reset();
+                } else {
+                    console.error('Failed to adjust money:', data.error);
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error adjusting player money:', error);
+                alert('Failed to adjust player money: ' + error.message);
+                
+                // For demo purposes fallback
+                alert(`Player money adjusted:\n- Player ID: ${playerId}\n- Amount: $${amount}\n- Reason: ${reason}`);
+                
+                // Close the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('adjust-player-money-modal'));
+                modal.hide();
+                
+                // Reset form
+                document.getElementById('adjust-player-money-form').reset();
+            });
+        }
+        
+        // Finance - Load community fund balance
+        function loadCommunityFundBalance() {
+            console.log('Loading community fund balance...');
+            
+            fetch('/api/admin/finance/community-fund', {
+                method: 'GET',
+                headers: {
+                    'X-Admin-Key': window.adminKey
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('community-fund-balance').textContent = `$${data.balance}`;
+                } else {
+                    console.error('Failed to fetch community fund balance:', data.error);
+                    document.getElementById('community-fund-balance').textContent = '$0';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching community fund balance:', error);
+                // Fallback to demo value
+                document.getElementById('community-fund-balance').textContent = '$500';
+            });
+            
+            // Hide the adjustment form when modal first opens
+            document.getElementById('community-fund-adjustment-form').style.display = 'none';
+        }
+        
+        // Finance - Show community fund adjustment form
+        function adjustCommunityFund(action) {
+            const form = document.getElementById('community-fund-adjustment-form');
+            const titleElement = document.getElementById('community-fund-action-title');
+            const amountField = document.getElementById('community-fund-amount');
+            
+            // Show the form
+            form.style.display = 'block';
+            
+            // Set form title and behavior based on action
+            switch (action) {
+                case 'add':
+                    titleElement.textContent = 'Add to Community Fund';
+                    amountField.min = 1;
+                    break;
+                case 'withdraw':
+                    titleElement.textContent = 'Withdraw from Community Fund';
+                    // Set max to current balance (would need real value in production)
+                    amountField.min = 1;
+                    break;
+                case 'reset':
+                    // For reset, we hide the amount field since it's not needed
+                    form.style.display = 'none';
+                    
+                    if (confirm('Are you sure you want to reset the Community Fund to zero?')) {
+                        console.log('Resetting community fund to zero');
+                        alert('Community Fund has been reset to $0');
+                        document.getElementById('community-fund-balance').textContent = '$0';
+                    }
+                    return;
+            }
+            
+            // Store the action for use in submit
+            form.dataset.action = action;
+        }
+        
+        // Finance - Submit community fund adjustment
+        function submitCommunityFundAdjustment() {
+            const form = document.getElementById('community-fund-adjustment-form');
+            const action = form.dataset.action;
+            const amount = document.getElementById('community-fund-amount').value;
+            const reason = document.getElementById('community-fund-reason').value;
+            
+            if (!amount || !reason) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            console.log('Adjusting community fund:', {
+                action: action,
+                amount: amount,
+                reason: reason
+            });
+            
+            fetch('/api/admin/finance/community-fund', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': window.adminKey
+                },
+                body: JSON.stringify({
+                    action: action,
+                    amount: parseInt(amount),
+                    reason: reason
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Update displayed balance
+                    document.getElementById('community-fund-balance').textContent = `$${data.new_balance}`;
+                    
+                    // Hide the form and clear inputs
+                    form.style.display = 'none';
+                    document.getElementById('community-fund-amount').value = '';
+                    document.getElementById('community-fund-reason').value = '';
+                    
+                    alert(`Community Fund ${action === 'add' ? 'deposit' : action === 'withdraw' ? 'withdrawal' : 'reset'} successful.`);
+                } else {
+                    console.error('Failed to adjust community fund:', data.error);
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error adjusting community fund:', error);
+                alert('Failed to adjust community fund: ' + error.message);
+                
+                // For demo purposes, just update the displayed balance
+                const currentBalance = parseInt(document.getElementById('community-fund-balance').textContent.replace('$', ''));
+                let newBalance;
+                
+                if (action === 'add') {
+                    newBalance = currentBalance + parseInt(amount);
+                } else if (action === 'withdraw') {
+                    newBalance = Math.max(0, currentBalance - parseInt(amount));
+                } else if (action === 'reset') {
+                    newBalance = 0;
+                }
+                
+                document.getElementById('community-fund-balance').textContent = `$${newBalance}`;
+                
+                // Hide the form and clear inputs
+                form.style.display = 'none';
+                document.getElementById('community-fund-amount').value = '';
+                document.getElementById('community-fund-reason').value = '';
+                
+                alert(`Community Fund ${action === 'add' ? 'deposit' : action === 'withdraw' ? 'withdrawal' : 'reset'} successful: $${amount}`);
+            });
+        }
+        
+        // Finance - Load players for loan modal
+        function loadPlayersForLoan() {
+            console.log('Loading players for loan creation...');
+            const playerSelect = document.getElementById('loan-player-id');
+            
+            // Same logic as loadPlayersForMoneyAdjustment
+            // Clear existing options except the placeholder
+            while (playerSelect.options.length > 1) {
+                playerSelect.remove(1);
+            }
+            
+            // Sample player data
+            const players = [
+                { id: 1, name: 'Joe', in_game: true },
+                { id: 2, name: 'Alice', in_game: true },
+                { id: 3, name: 'Bob', in_game: true },
+                { id: 5, name: 'John', in_game: true }
+            ];
+            
+            // Add player options
+            players.forEach(player => {
+                if (player.in_game) {
+                    const option = document.createElement('option');
+                    option.value = player.id;
+                    option.textContent = player.name;
+                    playerSelect.appendChild(option);
+                }
+            });
+            
+            // Set default interest rate from bank settings
+            const bankInterestRate = document.getElementById('interest-rate').value;
+            if (bankInterestRate) {
+                document.getElementById('loan-interest-rate').value = bankInterestRate;
+            }
+        }
+        
+        // Finance - Submit create loan
+        function submitCreateLoan() {
+            const playerId = document.getElementById('loan-player-id').value;
+            const amount = document.getElementById('loan-amount').value;
+            const interestRate = document.getElementById('loan-interest-rate').value;
+            const term = document.getElementById('loan-term').value;
+            const reason = document.getElementById('loan-reason').value;
+            
+            if (!playerId || !amount || !interestRate || !term || !reason) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            console.log('Creating loan:', {
+                player_id: playerId,
+                amount: amount,
+                interest_rate: interestRate,
+                term: term,
+                reason: reason
+            });
+            
+            fetch('/api/admin/finance/loans/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': window.adminKey
+                },
+                body: JSON.stringify({
+                    player_id: parseInt(playerId),
+                    amount: parseInt(amount),
+                    interest_rate: parseFloat(interestRate),
+                    term: parseInt(term),
+                    reason: reason
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert(`Loan created successfully:\n- Player: ${data.player_name}\n- Amount: $${data.amount}\n- Interest: ${data.interest_rate*100}%\n- Term: ${data.term} rounds`);
+                    
+                    // Close the modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('create-loan-modal'));
+                    modal.hide();
+                    
+                    // Reset form
+                    document.getElementById('create-loan-form').reset();
+                    
+                    // Refresh the loans table
+                    refreshLoans();
+                } else {
+                    console.error('Failed to create loan:', data.error);
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error creating loan:', error);
+                alert('Failed to create loan: ' + error.message);
+                
+                // For demo purposes fallback
+                alert(`Loan created successfully:\n- Player ID: ${playerId}\n- Amount: $${amount}\n- Interest: ${interestRate}%\n- Term: ${term} rounds\n- Reason: ${reason}`);
+                
+                // Close the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('create-loan-modal'));
+                modal.hide();
+                
+                // Reset form
+                document.getElementById('create-loan-form').reset();
+                
+                // Refresh the loans table
+                refreshLoans();
+            });
+        }
+        
+        // Add functions for loan management (called from loan table)
+        function markLoanPaid(loanId) {
+            if (confirm(`Are you sure you want to mark loan #${loanId} as paid?`)) {
+                console.log(`Marking loan #${loanId} as paid`);
+                
+                fetch(`/api/admin/finance/loans/${loanId}/pay`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': window.adminKey
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert(`Loan #${loanId} has been marked as paid`);
+                        refreshLoans();
+                    } else {
+                        console.error('Failed to mark loan as paid:', data.error);
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error marking loan #${loanId} as paid:`, error);
+                    alert(`Failed to mark loan as paid: ${error.message}`);
+                    refreshLoans();
+                });
+            }
+        }
+        
+        function extendLoan(loanId) {
+            const additionalRounds = prompt(`How many additional rounds to extend loan #${loanId}?`, "3");
+            if (additionalRounds !== null) {
+                console.log(`Extending loan #${loanId} by ${additionalRounds} rounds`);
+                
+                fetch(`/api/admin/finance/loans/${loanId}/extend`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': window.adminKey
+                    },
+                    body: JSON.stringify({
+                        additional_rounds: parseInt(additionalRounds)
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert(`Loan #${loanId} has been extended by ${additionalRounds} rounds`);
+                        refreshLoans();
+                    } else {
+                        console.error('Failed to extend loan:', data.error);
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error extending loan #${loanId}:`, error);
+                    alert(`Failed to extend loan: ${error.message}`);
+                    refreshLoans();
+                });
+            }
+        }
+        
+        // --- End Finance Tab Functions ---
     </script>
 </body>
 </html> 

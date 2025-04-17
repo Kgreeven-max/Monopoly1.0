@@ -19,6 +19,7 @@ from src.routes.admin.player_admin_routes import player_admin_bp
 from src.routes.admin.bot_admin_routes import bot_admin_bp
 from src.routes.admin.event_admin_routes import event_admin_bp
 from src.routes.admin.crime_admin_routes import crime_admin_bp
+from src.routes.admin.finance_admin_routes import finance_admin_bp
 # Import the blueprint variable directly
 from src.routes.admin.property_admin_routes import property_admin_bp
 # from src.routes.bot_event_routes import register_bot_event_routes # File not found
@@ -227,6 +228,7 @@ app.register_blueprint(player_admin_bp, url_prefix='/api/admin')
 app.register_blueprint(bot_admin_bp, url_prefix='/api/admin')
 app.register_blueprint(event_admin_bp, url_prefix='/api/admin')
 app.register_blueprint(crime_admin_bp, url_prefix='/api/admin')
+app.register_blueprint(finance_admin_bp, url_prefix='/api/admin')
 # Register the property admin blueprint directly
 app.register_blueprint(property_admin_bp, url_prefix='/api/admin')
 # register_bot_event_routes(app) # File not found

@@ -1,12 +1,20 @@
 from flask import Blueprint, jsonify, request
+import logging
 from src.controllers.finance_controller import FinanceController
+
+logger = logging.getLogger(__name__)
 
 def register_finance_routes(app):
     """Register finance-related routes with the Flask app"""
     finance_controller = FinanceController(
         socketio=app.config.get('socketio'),
-        banker=app.config.get('banker')
+        banker=app.config.get('banker'),
+        game_state=app.config.get('game_state_instance')
     )
+    
+    logger.info(f"Finance controller initialized with: socketio={finance_controller.socketio is not None}, "
+               f"banker={finance_controller.banker is not None}, "
+               f"game_state={finance_controller.game_state is not None}")
     
     @app.route('/api/finance/loan/new', methods=['POST'])
     def new_loan():

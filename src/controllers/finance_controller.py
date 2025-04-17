@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional, Union, Any, Tuple
 
 from src.models import db
 from src.models.finance.loan import Loan
@@ -8,6 +8,7 @@ from src.models.player import Player
 from src.models.property import Property
 from src.models.game_state import GameState
 from src.models.transaction import Transaction
+from src.utils.errors import GameError
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -15,15 +16,17 @@ logger = logging.getLogger(__name__)
 class FinanceController:
     """Controller for managing financial instruments (loans, CDs, HELOCs)"""
     
-    def __init__(self, socketio=None, banker=None):
+    def __init__(self, socketio=None, banker=None, game_state: GameState = None):
         """Initialize finance controller
         
         Args:
             socketio: Flask-SocketIO instance for real-time communication
             banker: Banker instance for financial transactions
+            game_state: GameState instance for managing game state
         """
         self.socketio = socketio
         self.banker = banker
+        self.game_state = game_state
     
     def create_loan(self, player_id: int, pin: str, amount: int) -> Dict:
         """Create a new loan for a player
@@ -805,4 +808,249 @@ class FinanceController:
         
         max_heloc = int(max_heloc * (1 + development_bonus))
         
-        return max_heloc 
+        return max_heloc
+
+    def get_financial_stats(self) -> Dict[str, Any]:
+        """
+        Get overall financial statistics for the game.
+        """
+        # Calculate total money in the game
+        bank_reserves = self.game_state.bank.money
+        
+        # Calculate total player holdings
+        player_holdings = sum(player.money for player in self.game_state.players.values())
+        
+        # Calculate total community fund
+        community_fund = self.game_state.community_chest_fund
+        
+        # Calculate total active loans
+        loans_total = sum(loan.amount for loan in self.game_state.loans.values())
+        
+        # Calculate total money in the game system
+        total_money = bank_reserves + player_holdings + community_fund
+        
+        return {
+            "total_money": total_money,
+            "bank_reserves": bank_reserves,
+            "player_holdings": player_holdings,
+            "community_fund": community_fund,
+            "loans_total": loans_total
+        }
+    
+    def update_bank_settings(self, interest_rate: float, max_loan_amount: int, 
+                            enable_automatic_fees: bool) -> Dict[str, Any]:
+        """
+        Update bank settings in the game.
+        """
+        # Update bank settings in game state
+        self.game_state.bank.interest_rate = interest_rate
+        self.game_state.bank.max_loan_amount = max_loan_amount
+        self.game_state.bank.automatic_fees_enabled = enable_automatic_fees
+        
+        # Save game state
+        self.game_state.save_game()
+        
+        logger.info(f"Bank settings updated: interest_rate={interest_rate}, "
+                   f"max_loan_amount={max_loan_amount}, "
+                   f"enable_automatic_fees={enable_automatic_fees}")
+        
+        return {
+            "success": True,
+            "message": "Bank settings updated successfully",
+            "settings": {
+                "interest_rate": interest_rate,
+                "max_loan_amount": max_loan_amount,
+                "enable_automatic_fees": enable_automatic_fees
+            }
+        }
+    
+    def perform_bank_audit(self) -> Dict[str, Any]:
+        """
+        Perform a bank audit to verify game finances are correct.
+        """
+        # Initial money in game (from game settings)
+        initial_money = self.game_state.initial_bank_money
+        
+        # Current money calculations
+        bank_money = self.game_state.bank.money
+        player_money = sum(player.money for player in self.game_state.players.values())
+        community_fund = self.game_state.community_chest_fund
+        
+        # Total current money in the system
+        current_total = bank_money + player_money + community_fund
+        
+        # Check if money has been created or destroyed
+        discrepancy = current_total - initial_money
+        
+        # Get transaction history for the audit report
+        transactions = self.get_transaction_history(limit=10)
+        
+        audit_result = {
+            "initial_money": initial_money,
+            "current_total": current_total,
+            "discrepancy": discrepancy,
+            "is_balanced": discrepancy == 0,
+            "bank_money": bank_money,
+            "player_money": player_money,
+            "community_fund": community_fund,
+            "recent_transactions": transactions
+        }
+        
+        logger.info(f"Bank audit performed: balanced={audit_result['is_balanced']}, "
+                   f"discrepancy=${discrepancy}")
+        
+        return {
+            "success": True,
+            "message": f"Audit completed. {'Money is balanced.' if discrepancy == 0 else f'Discrepancy found: ${discrepancy}'}",
+            "audit": audit_result
+        }
+    
+    def get_active_loans(self) -> List[Dict[str, Any]]:
+        """
+        Get a list of all active loans in the game.
+        """
+        active_loans = []
+        
+        for loan_id, loan in self.game_state.loans.items():
+            if loan.active:
+                player = self.game_state.get_player(loan.player_id)
+                if player:
+                    active_loans.append({
+                        "id": loan_id,
+                        "player_id": loan.player_id,
+                        "player_name": player.display_name,
+                        "amount": loan.amount,
+                        "interest": f"{loan.interest_rate}%",
+                        "due_date": f"Round {loan.due_round}" if loan.due_round else "Not specified",
+                        "created_at": loan.created_at.strftime("%m/%d/%Y %H:%M")
+                    })
+        
+        return active_loans
+    
+    def mark_loan_paid(self, loan_id: str) -> Dict[str, Any]:
+        """
+        Mark a loan as paid.
+        """
+        if loan_id not in self.game_state.loans:
+            raise GameError(f"Loan with ID {loan_id} not found")
+        
+        loan = self.game_state.loans[loan_id]
+        loan.active = False
+        loan.paid_at = datetime.now()
+        
+        # Save game state
+        self.game_state.save_game()
+        
+        logger.info(f"Loan {loan_id} marked as paid")
+        
+        return {
+            "success": True,
+            "message": f"Loan {loan_id} marked as paid"
+        }
+    
+    def extend_loan(self, loan_id: str, additional_rounds: int = 3) -> Dict[str, Any]:
+        """
+        Extend a loan's due date.
+        """
+        if loan_id not in self.game_state.loans:
+            raise GameError(f"Loan with ID {loan_id} not found")
+        
+        loan = self.game_state.loans[loan_id]
+        
+        if loan.due_round:
+            loan.due_round += additional_rounds
+        else:
+            loan.due_round = self.game_state.current_round + additional_rounds
+        
+        # Save game state
+        self.game_state.save_game()
+        
+        logger.info(f"Loan {loan_id} extended by {additional_rounds} rounds")
+        
+        return {
+            "success": True,
+            "message": f"Loan extended to round {loan.due_round}"
+        }
+    
+    def adjust_player_cash(self, player_id: int, amount: int, reason: str) -> Dict[str, Any]:
+        """
+        Adjust a player's cash balance. Positive amount adds cash, negative removes it.
+        """
+        player = self.game_state.get_player(player_id)
+        if not player:
+            raise GameError(f"Player with ID {player_id} not found")
+        
+        # Record transaction in history
+        transaction_type = "Credit" if amount >= 0 else "Debit"
+        transaction = Transaction(
+            from_entity="Admin",
+            to_entity=player.display_name,
+            amount=abs(amount),
+            reason=reason,
+            transaction_type=transaction_type
+        )
+        self.game_state.add_transaction(transaction)
+        
+        # Update player balance
+        player.money += amount
+        
+        # Save game state
+        self.game_state.save_game()
+        
+        logger.info(f"Player {player.display_name} cash adjusted by ${amount} for reason: {reason}")
+        
+        return {
+            "success": True,
+            "message": f"Player balance adjusted by ${amount}",
+            "new_balance": player.money
+        }
+    
+    def adjust_community_fund(self, amount: int, reason: str) -> Dict[str, Any]:
+        """
+        Adjust the community fund balance. Positive amount adds money, negative removes it.
+        """
+        # Record transaction in history
+        transaction_type = "Credit" if amount >= 0 else "Debit"
+        transaction = Transaction(
+            from_entity="Admin" if amount >= 0 else "Community Fund",
+            to_entity="Community Fund" if amount >= 0 else "Admin",
+            amount=abs(amount),
+            reason=reason,
+            transaction_type=transaction_type
+        )
+        self.game_state.add_transaction(transaction)
+        
+        # Update community fund balance
+        self.game_state.community_chest_fund += amount
+        
+        # Save game state
+        self.game_state.save_game()
+        
+        logger.info(f"Community fund adjusted by ${amount} for reason: {reason}")
+        
+        return {
+            "success": True,
+            "message": f"Community fund adjusted by ${amount}",
+            "new_balance": self.game_state.community_chest_fund
+        }
+    
+    def get_transaction_history(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Get the transaction history for the game.
+        """
+        transactions = []
+        
+        # Get the most recent transactions first (limited by parameter)
+        recent_transactions = list(self.game_state.transactions)[-limit:] if limit else self.game_state.transactions
+        
+        for tx in recent_transactions:
+            transactions.append({
+                "time": tx.timestamp.strftime("%H:%M:%S"),
+                "type": tx.transaction_type,
+                "from": tx.from_entity,
+                "to": tx.to_entity,
+                "amount": tx.amount,
+                "reason": tx.reason
+            })
+        
+        return transactions 
