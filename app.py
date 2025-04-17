@@ -398,14 +398,16 @@ def setup_scheduled_tasks():
 # --- SocketIO Event Handlers ---
 
 @socketio.on('get_all_players')
-@admin_required
 def handle_get_all_players(data):
     """Handles request from admin panel to get all players."""
     sid = request.sid
     admin_pin = data.get('admin_pin') # Get pin from data
     
-    # Secondary check (decorator handles primary)
-    if not admin_pin or admin_pin != current_app.config.get('ADMIN_KEY'):
+    # Create a local reference to the app logger
+    logger = app.logger
+    
+    # Primary authorization check for socket events
+    if not admin_pin or admin_pin != app.config.get('ADMIN_KEY'):
         logger.warning(f"Unauthorized attempt to get_all_players from SID {sid}")
         emit('auth_error', {'error': 'Invalid admin credentials for player list'}, room=sid)
         return
@@ -413,8 +415,15 @@ def handle_get_all_players(data):
     logger.info(f"Admin request for all players from SID {sid}")
     try:
         players = Player.query.order_by(Player.id).all()
+        logger.info(f"Found {len(players)} players in total for admin list")
+        
         players_data = []
         for p in players:
+            # Get property count for this player
+            property_count = Property.query.filter_by(owner_id=p.id).count()
+            
+            logger.info(f"Adding player to list: ID {p.id}, Name: {p.username}, Is Bot: {p.is_bot}, In Game: {p.in_game}")
+            
             players_data.append({
                 'id': p.id,
                 'name': p.username,
@@ -422,11 +431,15 @@ def handle_get_all_players(data):
                 'is_bot': p.is_bot,
                 'in_game': p.in_game,
                 'position': p.position,
-                'in_jail': p.in_jail
+                'in_jail': p.in_jail,
+                'properties': property_count
                 # Add other relevant fields as needed
             })
         
+        logger.info(f"Emitting all_players_list with {len(players_data)} players to client {sid}")
+        # Emit to the specific client that requested it
         emit('all_players_list', {'success': True, 'players': players_data}, room=sid)
+        logger.info(f"Successfully emitted all_players_list to {sid}")
         
     except Exception as e:
         logger.error(f"Error fetching all players for admin: {str(e)}", exc_info=True)

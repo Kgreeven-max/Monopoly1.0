@@ -132,7 +132,10 @@
                             
                             <!-- Players Tab -->
                             <div class="tab-pane fade" id="players" role="tabpanel" aria-labelledby="players-tab">
-                                <h2>Player Management</h2>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h2 class="mb-0">Player Management</h2>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="fetchAllPlayers()">Refresh Player List</button>
+                                </div>
                                 <div class="table-responsive">
                                     <table class="table table-striped">
                                         <thead>
@@ -145,7 +148,7 @@
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="players-table">
+                                        <tbody id="players-table-body">
                                             <!-- Player rows will be populated dynamically -->
                                         </tbody>
                                     </table>
@@ -315,7 +318,7 @@
         // Connect to Socket.IO
         const socket = io({
             query: {
-                adminKey: window.adminKey,
+                admin_pin: window.adminKey,
                 client: 'admin'
             },
             path: "/ws/socket.io"
@@ -325,11 +328,18 @@
         window.socket = socket;
         
         document.addEventListener('DOMContentLoaded', function() {
+            // Add debug to verify tabs are initialized
+            console.log('DOM Content Loaded - checking tab elements');
+            const tabElements = document.querySelectorAll('[role="tab"]');
+            console.log(`Found ${tabElements.length} tab elements`);
+            tabElements.forEach(el => console.log(`Tab: ${el.id}, Target: ${el.getAttribute('data-bs-target')}`));
+            
             // Initialize admin functionality
             // ... (admin initialization code) ...
             
             // Display admin key for debugging
             console.log('Admin initialized with key:', window.adminKey);
+            console.log('Admin key length:', window.adminKey.length);
 
             // Fetch and populate bot options
             fetchBotOptions(); 
@@ -390,37 +400,56 @@
             window.removeBot = removeBot;
             window.fetchActiveBots = fetchActiveBots; // Expose fetch function for button
             window.fetchProperties = fetchProperties; // Expose properties fetch function
+            window.fetchAllPlayers = fetchAllPlayers; // Expose players fetch function
 
             // --- Player Tab Functions ---
             function fetchAllPlayers() {
-                console.log('Fetching all players...');
+                console.log('fetchAllPlayers called - attempting to fetch all players...');
                 if (socket && adminKey) {
+                    console.log('Socket and adminKey available, emitting get_all_players event');
+                    console.log('Using admin key:', adminKey); 
                     socket.emit('get_all_players', { admin_pin: adminKey });
                 } else {
-                    console.error('Socket or adminKey not available for fetching players.');
+                    console.error('Socket or adminKey not available for fetching players.', { 
+                        socketAvailable: !!socket, 
+                        adminKeyAvailable: !!adminKey,
+                        adminKeyValue: adminKey
+                    });
                     showAdminAlert('Cannot fetch players: Connection or authentication issue.', 'danger');
                 }
             }
 
             function renderPlayerList(players) {
                 const playerTableBody = document.getElementById('players-table-body');
+                console.log('renderPlayerList called', { 
+                    playerCount: players?.length || 0,
+                    playerTableBodyExists: !!playerTableBody,
+                    firstPlayerId: players && players.length > 0 ? players[0].id : null
+                });
+                
+                if (!playerTableBody) {
+                    console.error('players-table-body element not found in the DOM!');
+                    return;
+                }
+                
                 playerTableBody.innerHTML = ''; // Clear existing rows
 
                 if (!players || players.length === 0) {
-                    playerTableBody.innerHTML = '<tr><td colspan="5" class="text-center">No players found.</td></tr>';
+                    console.log('No players found, showing empty message');
+                    playerTableBody.innerHTML = '<tr><td colspan="6" class="text-center">No players found.</td></tr>';
                     return;
                 }
 
                 players.forEach(player => {
                     const row = document.createElement('tr');
-                    const playerType = player.is_bot ? 'Bot' : 'Human';
                     const status = player.in_game ? (player.in_jail ? 'Jailed' : 'Active') : 'Out'; 
-                    // TODO: Add bankruptcy status check
+                    const botBadge = player.is_bot ? ' <span class="badge bg-info">Bot</span>' : '';
                     
                     row.innerHTML = `
-                        <td>${player.name} (ID: ${player.id})</td>
-                        <td>${playerType}</td>
+                        <td>${player.name}${botBadge} (ID: ${player.id})</td>
                         <td>$${player.money}</td>
+                        <td>${player.position}</td>
+                        <td>${player.properties ? player.properties.length : '0'}</td>
                         <td>${status}</td>
                         <td>
                             <button class="btn btn-sm btn-info me-1" onclick="alert('View details for player ${player.id} - Not implemented yet')">Details</button>
@@ -435,13 +464,15 @@
             // Listen for the player list response
             if (socket) {
                 socket.on('all_players_list', (data) => {
-                    console.log('Received all players list:', data);
+                    console.log('Received all_players_list event:', data);
                     if (data.success) {
+                        console.log(`Rendering ${data.players.length} players...`);
                         renderPlayerList(data.players);
                     } else {
+                        console.error("Failed to fetch players:", data.error || 'Unknown error');
                         showAdminAlert(data.error || 'Failed to fetch players.', 'danger');
                         const playerTableBody = document.getElementById('players-table-body');
-                        playerTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading players.</td></tr>';
+                        playerTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading players.</td></tr>';
                     }
                 });
             }
@@ -449,7 +480,13 @@
             // Fetch players when the Players tab is shown
             const playersTab = document.getElementById('players-tab');
             if (playersTab) {
-                 playersTab.addEventListener('shown.bs.tab', fetchAllPlayers);
+                 console.log('Adding shown.bs.tab event listener to players-tab');
+                 playersTab.addEventListener('shown.bs.tab', function(event) {
+                     console.log('Players tab clicked/shown - event triggered', event);
+                     fetchAllPlayers();
+                 });
+            } else {
+                console.error('Could not find players-tab element!');
             }
             // --- End Player Tab Functions ---
         });
