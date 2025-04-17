@@ -109,7 +109,87 @@ class AdminController:
         # TODO: Implement logic from original route
         return {"success": False, "error": "Not Implemented"}
 
-    def remove_player(self, player_id, handle_properties, reason):
-        logger.warning("AdminController.remove_player not fully implemented.")
-        # TODO: Implement logic from original route
-        return {"success": False, "error": "Not Implemented"} 
+    def remove_player(self, player_id, handle_properties='bank', reason='Admin removal'):
+        """
+        Remove a player from the game.
+        
+        Args:
+            player_id: ID of the player to remove
+            handle_properties: How to handle player properties ('bank' or 'auction')
+            reason: Reason for removal
+            
+        Returns:
+            Dict with operation result
+        """
+        try:
+            # 1. Verify player exists
+            player = Player.query.get(player_id)
+            if not player:
+                return {"success": False, "error": "Player not found"}
+            
+            # 2. Handle player properties based on disposition preference
+            if handle_properties == 'bank':
+                # Transfer all properties to bank
+                properties = Property.query.filter_by(owner_id=player_id).all()
+                for prop in properties:
+                    prop.owner_id = None  # Bank ownership
+                    prop.is_mortgaged = False  # Reset mortgage status
+                    prop.houses = 0  # Remove houses
+                    prop.hotel = False  # Remove hotel
+                db.session.commit()
+                logger.info(f"Properties of player {player.username} transferred to bank")
+                
+            elif handle_properties == 'auction':
+                # Queue properties for auction
+                properties = Property.query.filter_by(owner_id=player_id).all()
+                auction_controller = current_app.config.get('auction_controller')
+                if auction_controller:
+                    for prop in properties:
+                        auction_controller.queue_property_for_auction(prop.id, f"Admin removal of player {player.username}")
+                    logger.info(f"Properties of player {player.username} queued for auction")
+                else:
+                    logger.error("Auction controller not available for property auction")
+                    return {"success": False, "error": "Auction controller not available"}
+            
+            # 3. Mark player as not in game
+            player.in_game = False
+            db.session.commit()
+            
+            # 4. Handle socket disconnection if player is connected
+            socket_controller = current_app.config.get('socket_controller')
+            if socket_controller:
+                # Get connection status
+                status = socket_controller.get_player_connection_status(player_id)
+                if status.get('status') == 'connected':
+                    # Disconnect socket
+                    socketio = current_app.config.get('socketio')
+                    if socketio and status.get('socket_id'):
+                        try:
+                            socketio.server.disconnect(status.get('socket_id'))
+                            logger.info(f"Socket for player {player_id} disconnected")
+                        except Exception as e:
+                            logger.warning(f"Could not disconnect socket for player {player_id}: {str(e)}")
+                    
+                    # Cancel reconnect timer and remove from tracking
+                    socket_controller.cancel_reconnect_timer(player_id)
+                    socket_controller.remove_connected_player_entry(player_id)
+                    
+                    # Notify all clients
+                    game_state = GameState.get_instance()
+                    if game_state:
+                        socket_controller.notify_all_player_removed(player_id, player.username, game_state.game_id)
+            
+            # 5. Log the action
+            logger.info(f"Player {player.username} (ID: {player_id}) removed by admin. Reason: {reason}")
+            
+            return {
+                "success": True,
+                "message": f"Player {player.username} removed from game",
+                "player_id": player_id,
+                "username": player.username,
+                "properties_handled": handle_properties
+            }
+            
+        except Exception as e:
+            logger.error(f"Error removing player {player_id}: {str(e)}", exc_info=True)
+            return {"success": False, "error": f"Failed to remove player: {str(e)}"} 

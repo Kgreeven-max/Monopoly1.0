@@ -445,6 +445,107 @@ def handle_get_all_players(data):
         logger.error(f"Error fetching all players for admin: {str(e)}", exc_info=True)
         emit('event_error', {'error': 'Failed to retrieve player list.'}, room=sid)
 
+@socketio.on('remove_bot')
+def handle_remove_bot(data):
+    """Handle bot removal request"""
+    sid = request.sid
+    admin_pin = data.get('admin_pin')
+    logger = app.logger
+    
+    # Validate admin access
+    if not admin_pin or admin_pin != app.config.get('ADMIN_KEY'):
+        logger.warning(f"Unauthorized attempt to remove bot from SID {sid}")
+        emit('auth_error', {'error': 'Invalid admin credentials'}, room=sid)
+        return
+    
+    bot_id = data.get('bot_id')
+    if not bot_id:
+        logger.warning(f"Missing bot_id in remove_bot request from SID {sid}")
+        emit('event_error', {'error': 'Missing bot_id parameter'}, room=sid)
+        return
+    
+    # Verify bot exists
+    bot_player = Player.query.get(bot_id)
+    if not bot_player:
+        logger.warning(f"Bot not found with ID {bot_id} in remove_bot request from SID {sid}")
+        emit('event_error', {'error': 'Bot not found'}, room=sid)
+        return
+        
+    if not bot_player.is_bot:
+        logger.warning(f"Player with ID {bot_id} is not a bot in remove_bot request from SID {sid}")
+        emit('event_error', {'error': 'Player is not a bot'}, room=sid)
+        return
+    
+    try:
+        # Update database to mark bot as not in game
+        bot_player.in_game = False
+        db.session.commit()
+        
+        # Broadcast bot removed event
+        socketio.emit('bot_removed', {
+            'bot_id': bot_id,
+            'name': bot_player.username
+        })
+        
+        logger.info(f"Bot {bot_player.username} (ID: {bot_id}) removed successfully by admin")
+        
+        # Confirm success to the admin who requested it
+        emit('bot_removal_result', {
+            'success': True,
+            'message': f"Bot {bot_player.username} removed from the game"
+        }, room=sid)
+        
+    except Exception as e:
+        logger.error(f"Error removing bot with ID {bot_id}: {str(e)}", exc_info=True)
+        emit('event_error', {'error': f'Failed to remove bot: {str(e)}'}, room=sid)
+
+@socketio.on('reset_all_players')
+def handle_reset_all_players(data):
+    """Reset all players by marking them as not in game"""
+    sid = request.sid
+    admin_pin = data.get('admin_pin')
+    
+    # Create a local reference to the app logger
+    logger = app.logger
+    
+    # Primary authorization check for socket events
+    if not admin_pin or admin_pin != app.config.get('ADMIN_KEY'):
+        logger.warning(f"Unauthorized attempt to reset all players from SID {sid}")
+        emit('auth_error', {'error': 'Invalid admin credentials'}, room=sid)
+        return
+    
+    logger.info(f"Admin request to reset all players from SID {sid}")
+    try:
+        # Get all players and mark them as not in game
+        players = Player.query.all()
+        count = 0
+        
+        for player in players:
+            if player.in_game:
+                player.in_game = False
+                count += 1
+        
+        db.session.commit()
+        
+        # Broadcast an event to notify all clients
+        socketio.emit('all_players_reset', {
+            'count': count,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        logger.info(f"All players reset successfully. {count} players marked as not in game.")
+        
+        # Send success response to the admin
+        emit('reset_players_result', {
+            'success': True,
+            'count': count,
+            'message': f"All players ({count}) marked as not in game"
+        }, room=sid)
+        
+    except Exception as e:
+        logger.error(f"Error resetting all players: {str(e)}", exc_info=True)
+        emit('event_error', {'error': f'Failed to reset players: {str(e)}'}, room=sid)
+
 # Run the app
 if __name__ == '__main__':
     setup_scheduled_tasks()

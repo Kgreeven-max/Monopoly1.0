@@ -134,7 +134,10 @@
                             <div class="tab-pane fade" id="players" role="tabpanel" aria-labelledby="players-tab">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h2 class="mb-0">Player Management</h2>
-                                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="fetchAllPlayers()">Refresh Player List</button>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-danger me-2" type="button" onclick="resetAllPlayers()">Reset All Players</button>
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="fetchAllPlayers()">Refresh Player List</button>
+                                    </div>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-striped">
@@ -402,6 +405,79 @@
             window.fetchProperties = fetchProperties; // Expose properties fetch function
             window.fetchAllPlayers = fetchAllPlayers; // Expose players fetch function
 
+            // Expose player management functions
+            window.viewPlayerDetails = viewPlayerDetails;
+            window.modifyPlayer = modifyPlayer;
+            window.removePlayer = removePlayer;
+            window.resetAllPlayers = resetAllPlayers;
+
+            // Player action functions
+            function resetAllPlayers() {
+                if (confirm('Are you sure you want to reset ALL players? This will mark all players as out of the game.')) {
+                    console.log('Resetting all players...');
+                    
+                    if (socket && adminKey) {
+                        socket.emit('reset_all_players', { admin_pin: adminKey });
+                        alert('Reset request sent - all players will be marked as out of game');
+                        
+                        // Refresh the player list after a short delay
+                        setTimeout(fetchAllPlayers, 1000);
+                    } else {
+                        console.error('Socket or adminKey not available');
+                        alert('Error: Cannot reset players - connection or authentication issue');
+                    }
+                }
+            }
+            
+            function viewPlayerDetails(playerId, playerName, isBot) {
+                console.log(`Viewing details for player ${playerName} (ID: ${playerId}, Is Bot: ${isBot})`);
+                // Create a basic details view for now
+                const playerType = isBot ? 'Bot' : 'Human';
+                alert(`Player Details\n--------------\nID: ${playerId}\nName: ${playerName}\nType: ${playerType}\n\nAdditional details would be shown in a modal dialog.`);
+            }
+
+            function modifyPlayer(playerId, playerName, isBot) {
+                console.log(`Modifying player ${playerName} (ID: ${playerId}, Is Bot: ${isBot})`);
+                const newName = prompt(`Enter new name for ${playerName}:`, playerName);
+                
+                if (newName === null) return; // User cancelled
+                
+                if (newName !== playerName) {
+                    // In a real implementation, you would make an API call here
+                    alert(`Player name would be updated from "${playerName}" to "${newName}"\n\nThis is a placeholder for the API call.`);
+                }
+            }
+
+            function removePlayer(playerId, playerName, isBot) {
+                console.log(`Removing player ${playerName} (ID: ${playerId}, Is Bot: ${isBot})`);
+                
+                const confirmMessage = isBot ? 
+                    `Are you sure you want to remove bot player "${playerName}"?` : 
+                    `Are you sure you want to remove player "${playerName}"?`;
+                    
+                if (confirm(confirmMessage)) {
+                    // Implementation would differ between human players and bots
+                    if (isBot) {
+                        if (socket && adminKey) {
+                            console.log(`Sending remove_bot request for bot ID: ${playerId}`);
+                            socket.emit('remove_bot', { 
+                                bot_id: playerId, 
+                                admin_pin: adminKey 
+                            });
+                            alert(`Bot removal request sent for: ${playerName}`);
+                        } else {
+                            alert('Socket connection not available');
+                        }
+                    } else {
+                        // Human player removal would use a different API
+                        alert(`Human player removal would be implemented here for: ${playerName}`);
+                    }
+                    
+                    // Refresh the player list after a short delay
+                    setTimeout(fetchAllPlayers, 1000);
+                }
+            }
+
             // --- Player Tab Functions ---
             function fetchAllPlayers() {
                 console.log('fetchAllPlayers called - attempting to fetch all players...');
@@ -445,6 +521,12 @@
                     const status = player.in_game ? (player.in_jail ? 'Jailed' : 'Active') : 'Out'; 
                     const botBadge = player.is_bot ? ' <span class="badge bg-info">Bot</span>' : '';
                     
+                    // Add visual styling for removed players/bots
+                    if (!player.in_game) {
+                        row.classList.add('text-muted');
+                        row.style.backgroundColor = '#f8f9fa';  // Light gray background
+                    }
+                    
                     row.innerHTML = `
                         <td>${player.name}${botBadge} (ID: ${player.id})</td>
                         <td>$${player.money}</td>
@@ -452,9 +534,9 @@
                         <td>${player.properties ? player.properties.length : '0'}</td>
                         <td>${status}</td>
                         <td>
-                            <button class="btn btn-sm btn-info me-1" onclick="alert('View details for player ${player.id} - Not implemented yet')">Details</button>
-                            <button class="btn btn-sm btn-warning me-1" onclick="alert('Modify player ${player.id} - Not implemented yet')">Modify</button>
-                            <button class="btn btn-sm btn-danger" onclick="alert('Remove player ${player.id} - Not implemented yet')">Remove</button>
+                            <button class="btn btn-sm btn-info me-1" onclick="viewPlayerDetails(${player.id}, '${player.name}', ${player.is_bot})">Details</button>
+                            <button class="btn btn-sm btn-warning me-1" onclick="modifyPlayer(${player.id}, '${player.name}', ${player.is_bot})">Modify</button>
+                            <button class="btn btn-sm btn-danger" onclick="removePlayer(${player.id}, '${player.name}', ${player.is_bot})" ${!player.in_game ? 'disabled title="Already removed"' : ''}>Remove</button>
                         </td>
                     `;
                     playerTableBody.appendChild(row);
@@ -658,7 +740,7 @@
                 // Alternatively, could add a separate PIN input just for fetching/removing if needed
                 // For now, we proceed assuming PIN might be entered later or is not strictly needed for read-only list
                  console.log("Attempting to fetch bots without PIN..."); // Or prompt if required
-                 socket.emit('get_active_bots', { admin_pin: '' }); // Send empty PIN, backend might reject
+                 socket.emit('get_active_bots', { admin_pin: window.adminKey }); // Use global admin key instead of empty string
             } else {
                 console.log("Fetching active bots...");
                 socket.emit('get_active_bots', { admin_pin: adminPinInput.value });
@@ -671,7 +753,7 @@
             if (!listContainer) return;
 
             if (!bots || bots.length === 0) {
-                listContainer.innerHTML = '<p>No active bots found.</p>';
+                listContainer.innerHTML = '<div class="alert alert-info">No active bots found. All bots have been removed from the game.</div>';
                 return;
             }
 
@@ -691,16 +773,18 @@
             listHtml += '</ul>';
 
             listContainer.innerHTML = listHtml;
+            console.log(`Rendered ${bots.length} active bots in list`);
         }
 
         // Remove Bot Function (Placeholder - requires PIN input)
         function removeBot(botId) {
             const adminPinInput = document.getElementById('admin-pin-bot'); // Reuse PIN from add form
-            const adminPin = adminPinInput ? adminPinInput.value : null;
+            let adminPin = adminPinInput ? adminPinInput.value : null;
 
             if (!adminPin) {
-                alert('Admin PIN is required to remove a bot. Please enter it in the Add Bot form.');
-                return;
+                // Use global admin key if input is empty
+                adminPin = window.adminKey;
+                console.log("Using global admin key for bot removal");
             }
 
             if (confirm(`Are you sure you want to remove bot ID: ${botId}?`)) {

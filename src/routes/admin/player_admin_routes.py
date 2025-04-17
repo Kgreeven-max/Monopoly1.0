@@ -82,10 +82,8 @@ def remove_player():
     if not player_id:
         return jsonify({'success': False, 'error': 'Player ID is required'}), 400
     
-    # TODO: Call the (currently placeholder) admin_controller method
-    # result = admin_controller.remove_player(player_id, handle_properties, reason)
-    # Placeholder response:
-    result = {"success": True, "message": f"Placeholder: Removed player {player_id}"}
+    # Call the implemented admin_controller method
+    result = admin_controller.remove_player(player_id, handle_properties, reason)
     
     if result.get('success'):
         return jsonify(result), 200

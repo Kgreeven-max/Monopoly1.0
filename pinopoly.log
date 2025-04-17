@@ -16565,3 +16565,1156 @@ sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed
 2025-04-16 17:20:09,434 - root - INFO - Police patrol scheduler started with interval of 45 minutes
 2025-04-16 17:20:09,438 - werkzeug - WARNING -  * Debugger is active!
 2025-04-16 17:20:09,443 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:20:10,946 - app - INFO - Admin request for all players from SID cI9mSZDx_B_92G6-AAAB
+2025-04-16 17:20:10,948 - app - INFO - Found 17 players in total for admin list
+2025-04-16 17:20:10,953 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:20:10,954 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:20:10,955 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:20:10,956 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:20:10,956 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:20:10,957 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:20:10,958 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:20:10,958 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:20:10,959 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:20:10,959 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:20:10,960 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:20:10,961 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:20:10,961 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:20:10,962 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:20:10,963 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:20:10,963 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:20:10,964 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: True
+2025-04-16 17:20:10,964 - app - INFO - Emitting all_players_list with 17 players to client cI9mSZDx_B_92G6-AAAB
+2025-04-16 17:20:10,964 - app - INFO - Successfully emitted all_players_list to cI9mSZDx_B_92G6-AAAB
+2025-04-16 17:23:03,175 - werkzeug - INFO -  * Detected change in 'C:\\Monoply\\app.py', reloading
+2025-04-16 17:23:03,384 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:23:04,798 - src.models - INFO - Database models initialized
+2025-04-16 17:23:04,801 - root - INFO - Ensured database tables exist.
+2025-04-16 17:23:04,841 - banker - INFO - Banker initialized.
+2025-04-16 17:23:04,841 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:23:04,841 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:23:04,841 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:23:04,842 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:23:04,842 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:23:04,844 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:23:04,845 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:23:04,845 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:23:04,845 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:23:04,845 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:23:04,846 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:23:04,846 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:23:04,847 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:23:04,847 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:23:04,847 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:23:04,848 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:23:04,848 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:23:04,849 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:23:04,855 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:23:04,855 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:23:04,865 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:23:04,875 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:23:04,876 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:23:04,876 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:23:04,881 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:23:04,888 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:23:05,157 - src.controllers.socket_core - INFO - Client connected: -cSzU2fLLEGoHSVfAAAB
+2025-04-16 17:23:11,216 - src.models - INFO - Database models initialized
+2025-04-16 17:23:11,220 - root - INFO - Ensured database tables exist.
+2025-04-16 17:23:11,258 - banker - INFO - Banker initialized.
+2025-04-16 17:23:11,258 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:23:11,258 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:23:11,259 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:23:11,259 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:23:11,259 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:23:11,261 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:23:11,261 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:23:11,261 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:23:11,261 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:23:11,261 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:23:11,261 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:23:11,262 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:23:11,263 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:23:11,263 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:23:11,264 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:23:11,264 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:23:11,264 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:23:11,266 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:23:11,271 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:23:11,271 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:23:11,281 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:23:11,290 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:23:11,292 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:23:11,292 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:23:11,296 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:23:12,707 - src.models - INFO - Database models initialized
+2025-04-16 17:23:12,710 - root - INFO - Ensured database tables exist.
+2025-04-16 17:23:12,750 - banker - INFO - Banker initialized.
+2025-04-16 17:23:12,750 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:23:12,750 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:23:12,751 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:23:12,751 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:23:12,751 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:23:12,753 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:23:12,753 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:23:12,754 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:23:12,754 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:23:12,754 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:23:12,754 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:23:12,754 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:23:12,755 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:23:12,755 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:23:12,755 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:23:12,755 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:23:12,755 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:23:12,757 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:23:12,762 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:23:12,762 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:23:12,773 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:23:12,782 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:23:12,783 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:23:12,783 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:23:12,788 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:23:12,793 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:24:02,289 - src.models - INFO - Database models initialized
+2025-04-16 17:24:02,293 - root - INFO - Ensured database tables exist.
+2025-04-16 17:24:02,331 - banker - INFO - Banker initialized.
+2025-04-16 17:24:02,332 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:24:02,332 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:24:02,332 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:24:02,332 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:24:02,332 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:24:02,335 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:24:02,335 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:24:02,335 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:24:02,335 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:24:02,336 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:24:02,336 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:24:02,336 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:24:02,338 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:24:02,338 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:24:02,338 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:24:02,338 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:24:02,338 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:24:02,340 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:24:02,346 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:24:02,346 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:24:02,357 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:24:02,366 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:24:02,367 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:24:02,367 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:24:02,373 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:24:03,787 - src.models - INFO - Database models initialized
+2025-04-16 17:24:03,790 - root - INFO - Ensured database tables exist.
+2025-04-16 17:24:03,829 - banker - INFO - Banker initialized.
+2025-04-16 17:24:03,829 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:24:03,829 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:24:03,829 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:24:03,829 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:24:03,830 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:24:03,832 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:24:03,832 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:24:03,833 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:24:03,833 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:24:03,833 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:24:03,833 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:24:03,833 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:24:03,835 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:24:03,835 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:24:03,836 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:24:03,836 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:24:03,836 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:24:03,838 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:24:03,844 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:24:03,844 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:24:03,855 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:24:03,864 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:24:03,866 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:24:03,866 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:24:03,871 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:24:03,876 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:24:05,366 - src.controllers.socket_core - INFO - Client disconnected: -cSzU2fLLEGoHSVfAAAB
+2025-04-16 17:24:05,723 - src.controllers.socket_core - INFO - Client connected: PQvWj_XjFTXhNq4xAAAD
+2025-04-16 17:24:07,787 - app - INFO - Admin request for all players from SID PQvWj_XjFTXhNq4xAAAD
+2025-04-16 17:24:07,789 - app - INFO - Found 17 players in total for admin list
+2025-04-16 17:24:07,794 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:24:07,795 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:24:07,796 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:24:07,797 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:24:07,797 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:24:07,798 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:24:07,799 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:24:07,799 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:24:07,800 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:24:07,800 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:24:07,801 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:24:07,802 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:24:07,803 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:24:07,803 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:24:07,804 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:24:07,804 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:24:07,805 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: True
+2025-04-16 17:24:07,805 - app - INFO - Emitting all_players_list with 17 players to client PQvWj_XjFTXhNq4xAAAD
+2025-04-16 17:24:07,805 - app - INFO - Successfully emitted all_players_list to PQvWj_XjFTXhNq4xAAAD
+2025-04-16 17:24:16,576 - app - INFO - Admin request for all players from SID PQvWj_XjFTXhNq4xAAAD
+2025-04-16 17:24:16,577 - app - INFO - Found 17 players in total for admin list
+2025-04-16 17:24:16,578 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:24:16,579 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:24:16,580 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:24:16,581 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:24:16,582 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:24:16,582 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:24:16,583 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:24:16,584 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:24:16,584 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:24:16,585 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:24:16,586 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:24:16,586 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:24:16,587 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:24:16,588 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:24:16,588 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:24:16,589 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:24:16,590 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: True
+2025-04-16 17:24:16,590 - app - INFO - Emitting all_players_list with 17 players to client PQvWj_XjFTXhNq4xAAAD
+2025-04-16 17:24:16,590 - app - INFO - Successfully emitted all_players_list to PQvWj_XjFTXhNq4xAAAD
+2025-04-16 17:24:19,613 - app - INFO - Bot jhohntrf (ID: 3) removed successfully by admin
+2025-04-16 17:24:28,218 - app - INFO - Admin request for all players from SID PQvWj_XjFTXhNq4xAAAD
+2025-04-16 17:24:28,220 - app - INFO - Found 17 players in total for admin list
+2025-04-16 17:24:28,221 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:24:28,221 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:24:28,222 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:24:28,223 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:24:28,223 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:24:28,224 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:24:28,224 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:24:28,225 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:24:28,225 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:24:28,226 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:24:28,227 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:24:28,227 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:24:28,228 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:24:28,228 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:24:28,229 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:24:28,230 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:24:28,230 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: True
+2025-04-16 17:24:28,230 - app - INFO - Emitting all_players_list with 17 players to client PQvWj_XjFTXhNq4xAAAD
+2025-04-16 17:24:28,231 - app - INFO - Successfully emitted all_players_list to PQvWj_XjFTXhNq4xAAAD
+2025-04-16 17:24:38,925 - app - INFO - Bot SDZ as (ID: 17) removed successfully by admin
+2025-04-16 17:24:40,980 - app - INFO - Admin request for all players from SID PQvWj_XjFTXhNq4xAAAD
+2025-04-16 17:24:40,981 - app - INFO - Found 17 players in total for admin list
+2025-04-16 17:24:40,982 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:24:40,983 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:24:40,983 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:24:40,984 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:24:40,985 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:24:40,985 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:24:40,986 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:24:40,987 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:24:40,987 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:24:40,988 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:24:40,988 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:24:40,989 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:24:40,990 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:24:40,990 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:24:40,991 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:24:40,991 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:24:40,992 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: False
+2025-04-16 17:24:40,992 - app - INFO - Emitting all_players_list with 17 players to client PQvWj_XjFTXhNq4xAAAD
+2025-04-16 17:24:40,992 - app - INFO - Successfully emitted all_players_list to PQvWj_XjFTXhNq4xAAAD
+2025-04-16 17:27:07,735 - werkzeug - INFO -  * Detected change in 'C:\\Monoply\\app.py', reloading
+2025-04-16 17:27:07,911 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:27:08,246 - werkzeug - INFO -  * Detected change in 'C:\\Monoply\\app.py', reloading
+2025-04-16 17:27:08,423 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:27:09,363 - src.models - INFO - Database models initialized
+2025-04-16 17:27:09,375 - root - INFO - Ensured database tables exist.
+2025-04-16 17:27:09,416 - banker - INFO - Banker initialized.
+2025-04-16 17:27:09,416 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:27:09,416 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:27:09,416 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:27:09,417 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:27:09,417 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:27:09,419 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:27:09,419 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:27:09,420 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:27:09,420 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:27:09,420 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:27:09,420 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:27:09,420 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:27:09,421 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:27:09,422 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:27:09,422 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:27:09,422 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:27:09,422 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:27:09,424 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:27:09,430 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:27:09,430 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:27:09,440 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:27:09,448 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:27:09,450 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:27:09,450 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:27:09,455 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:27:09,460 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:27:09,680 - src.controllers.socket_core - INFO - Client connected: -yxkZ6CNPmKCZeX6AAAB
+2025-04-16 17:27:09,918 - src.models - INFO - Database models initialized
+2025-04-16 17:27:09,921 - root - INFO - Ensured database tables exist.
+2025-04-16 17:27:09,959 - banker - INFO - Banker initialized.
+2025-04-16 17:27:09,959 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:27:09,960 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:27:09,960 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:27:09,960 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:27:09,960 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:27:09,963 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:27:09,963 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:27:09,963 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:27:09,964 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:27:09,964 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:27:09,964 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:27:09,964 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:27:09,966 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:27:09,966 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:27:09,966 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:27:09,966 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:27:09,966 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:27:09,968 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:27:09,974 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:27:09,974 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:27:09,986 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:27:09,995 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:27:09,997 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:27:09,997 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:27:10,002 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:27:10,007 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:27:15,609 - werkzeug - INFO -  * Detected change in 'C:\\Monoply\\app.py', reloading
+2025-04-16 17:27:15,797 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:27:16,133 - werkzeug - INFO -  * Detected change in 'C:\\Monoply\\app.py', reloading
+2025-04-16 17:27:16,308 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:27:17,242 - src.models - INFO - Database models initialized
+2025-04-16 17:27:17,247 - root - INFO - Ensured database tables exist.
+2025-04-16 17:27:17,288 - banker - INFO - Banker initialized.
+2025-04-16 17:27:17,288 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:27:17,289 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:27:17,289 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:27:17,289 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:27:17,289 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:27:17,291 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:27:17,292 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:27:17,292 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:27:17,292 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:27:17,292 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:27:17,293 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:27:17,293 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:27:17,295 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:27:17,295 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:27:17,295 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:27:17,296 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:27:17,296 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:27:17,297 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:27:17,306 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:27:17,306 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:27:17,316 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:27:17,326 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:27:17,327 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:27:17,327 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:27:17,331 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:27:17,337 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:27:17,563 - src.controllers.socket_core - INFO - Client connected: vhIl3UICgQMVf3rCAAAB
+2025-04-16 17:27:17,767 - src.models - INFO - Database models initialized
+2025-04-16 17:27:17,771 - root - INFO - Ensured database tables exist.
+2025-04-16 17:27:17,809 - banker - INFO - Banker initialized.
+2025-04-16 17:27:17,809 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:27:17,809 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:27:17,810 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:27:17,810 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:27:17,810 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:27:17,813 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:27:17,814 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:27:17,814 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:27:17,814 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:27:17,814 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:27:17,815 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:27:17,815 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:27:17,817 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:27:17,817 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:27:17,817 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:27:17,817 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:27:17,818 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:27:17,820 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:27:17,826 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:27:17,826 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:27:17,836 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:27:17,846 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:27:17,847 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:27:17,847 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:27:17,853 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:27:17,857 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:27:26,719 - werkzeug - INFO -  * Detected change in 'C:\\Monoply\\kill_server.py', reloading
+2025-04-16 17:27:26,879 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:27:27,258 - werkzeug - INFO -  * Detected change in 'C:\\Monoply\\kill_server.py', reloading
+2025-04-16 17:27:27,422 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:27:28,308 - src.models - INFO - Database models initialized
+2025-04-16 17:27:28,311 - root - INFO - Ensured database tables exist.
+2025-04-16 17:27:28,349 - banker - INFO - Banker initialized.
+2025-04-16 17:27:28,350 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:27:28,350 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:27:28,350 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:27:28,350 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:27:28,350 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:27:28,353 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:27:28,353 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:27:28,353 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:27:28,353 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:27:28,353 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:27:28,354 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:27:28,354 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:27:28,355 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:27:28,355 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:27:28,356 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:27:28,356 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:27:28,356 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:27:28,358 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:27:28,364 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:27:28,364 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:27:28,374 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:27:28,382 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:27:28,383 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:27:28,384 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:27:28,388 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:27:28,393 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:27:28,680 - src.controllers.socket_core - INFO - Client connected: CrQ0Lid3UctHvVJ-AAAB
+2025-04-16 17:27:28,855 - src.models - INFO - Database models initialized
+2025-04-16 17:27:28,859 - root - INFO - Ensured database tables exist.
+2025-04-16 17:27:28,897 - banker - INFO - Banker initialized.
+2025-04-16 17:27:28,897 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:27:28,897 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:27:28,897 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:27:28,897 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:27:28,898 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:27:28,900 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:27:28,900 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:27:28,900 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:27:28,900 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:27:28,901 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:27:28,901 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:27:28,901 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:27:28,902 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:27:28,903 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:27:28,903 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:27:28,903 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:27:28,903 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:27:28,905 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:27:28,911 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:27:28,911 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:27:28,921 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:27:28,930 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:27:28,931 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:27:28,931 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:27:28,936 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:27:28,941 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:33:46,724 - werkzeug - INFO -  * Detected change in 'C:\\Monoply\\src\\controllers\\admin_controller.py', reloading
+2025-04-16 17:33:46,897 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:33:47,230 - werkzeug - INFO -  * Detected change in 'C:\\Monoply\\src\\controllers\\admin_controller.py', reloading
+2025-04-16 17:33:47,393 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:33:48,361 - src.models - INFO - Database models initialized
+2025-04-16 17:33:48,365 - root - INFO - Ensured database tables exist.
+2025-04-16 17:33:48,403 - banker - INFO - Banker initialized.
+2025-04-16 17:33:48,403 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:33:48,404 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:33:48,404 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:33:48,404 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:33:48,404 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:33:48,406 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:33:48,407 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:33:48,407 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:33:48,407 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:33:48,407 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:33:48,408 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:33:48,408 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:33:48,409 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:33:48,410 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:33:48,410 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:33:48,410 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:33:48,410 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:33:48,412 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:33:48,419 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:33:48,419 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:33:48,431 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:33:48,441 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:33:48,442 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:33:48,442 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:33:48,447 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:33:48,452 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:33:48,792 - src.controllers.socket_core - INFO - Client connected: 5jhHVxN71eBroqk0AAAB
+2025-04-16 17:33:48,876 - src.models - INFO - Database models initialized
+2025-04-16 17:33:48,880 - root - INFO - Ensured database tables exist.
+2025-04-16 17:33:48,917 - banker - INFO - Banker initialized.
+2025-04-16 17:33:48,918 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:33:48,918 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:33:48,918 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:33:48,918 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:33:48,918 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:33:48,921 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:33:48,921 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:33:48,921 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:33:48,921 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:33:48,921 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:33:48,922 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:33:48,922 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:33:48,923 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:33:48,923 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:33:48,923 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:33:48,924 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:33:48,924 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:33:48,925 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:33:48,931 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:33:48,931 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:33:48,941 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:33:48,950 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:33:48,952 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:33:48,952 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:33:48,956 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:33:48,961 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:33:57,315 - werkzeug - INFO -  * Detected change in 'C:\\Monoply\\src\\routes\\admin\\player_admin_routes.py', reloading
+2025-04-16 17:33:57,484 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:33:57,805 - werkzeug - INFO -  * Detected change in 'C:\\Monoply\\src\\routes\\admin\\player_admin_routes.py', reloading
+2025-04-16 17:33:57,974 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:33:58,907 - src.models - INFO - Database models initialized
+2025-04-16 17:33:58,911 - root - INFO - Ensured database tables exist.
+2025-04-16 17:33:58,953 - banker - INFO - Banker initialized.
+2025-04-16 17:33:58,953 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:33:58,954 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:33:58,954 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:33:58,954 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:33:58,954 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:33:58,956 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:33:58,957 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:33:58,957 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:33:58,957 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:33:58,957 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:33:58,957 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:33:58,958 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:33:58,959 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:33:58,959 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:33:58,959 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:33:58,959 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:33:58,960 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:33:58,961 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:33:58,967 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:33:58,967 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:33:58,979 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:33:58,988 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:33:58,989 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:33:58,989 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:33:58,994 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:33:58,999 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:33:59,146 - src.controllers.socket_core - INFO - Client connected: eEf1oKRfNj9oathaAAAB
+2025-04-16 17:33:59,425 - src.models - INFO - Database models initialized
+2025-04-16 17:33:59,428 - root - INFO - Ensured database tables exist.
+2025-04-16 17:33:59,466 - banker - INFO - Banker initialized.
+2025-04-16 17:33:59,467 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:33:59,467 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:33:59,467 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:33:59,467 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:33:59,467 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:33:59,470 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:33:59,470 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:33:59,470 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:33:59,471 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:33:59,471 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:33:59,471 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:33:59,471 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:33:59,473 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:33:59,474 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:33:59,474 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:33:59,474 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:33:59,474 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:33:59,476 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:33:59,482 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:33:59,482 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:33:59,492 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:33:59,501 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:33:59,502 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:33:59,503 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:33:59,507 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:33:59,512 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:34:49,938 - werkzeug - INFO -  * Detected change in 'C:\\Monoply\\app.py', reloading
+2025-04-16 17:34:50,106 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:34:50,445 - werkzeug - INFO -  * Detected change in 'C:\\Monoply\\app.py', reloading
+2025-04-16 17:34:50,618 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:34:51,557 - src.models - INFO - Database models initialized
+2025-04-16 17:34:51,560 - root - INFO - Ensured database tables exist.
+2025-04-16 17:34:51,604 - banker - INFO - Banker initialized.
+2025-04-16 17:34:51,604 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:34:51,605 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:34:51,605 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:34:51,605 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:34:51,605 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:34:51,607 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:34:51,608 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:34:51,608 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:34:51,608 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:34:51,608 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:34:51,608 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:34:51,609 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:34:51,610 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:34:51,610 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:34:51,611 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:34:51,611 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:34:51,611 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:34:51,613 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:34:51,618 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:34:51,619 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:34:51,630 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:34:51,640 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:34:51,642 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:34:51,642 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:34:51,647 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:34:51,652 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:34:52,191 - src.models - INFO - Database models initialized
+2025-04-16 17:34:52,194 - root - INFO - Ensured database tables exist.
+2025-04-16 17:34:52,234 - banker - INFO - Banker initialized.
+2025-04-16 17:34:52,234 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:34:52,234 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:34:52,234 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:34:52,234 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:34:52,234 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:34:52,237 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:34:52,237 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:34:52,237 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:34:52,238 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:34:52,238 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:34:52,238 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:34:52,238 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:34:52,239 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:34:52,240 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:34:52,240 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:34:52,240 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:34:52,240 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:34:52,242 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:34:52,248 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:34:52,248 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:34:52,258 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:34:52,267 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:34:52,268 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:34:52,268 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:34:52,272 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:34:52,277 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:34:52,613 - src.controllers.socket_core - INFO - Client connected: F0jphLehDfD7fvuDAAAB
+2025-04-16 17:34:57,941 - src.models - INFO - Database models initialized
+2025-04-16 17:34:57,945 - root - INFO - Ensured database tables exist.
+2025-04-16 17:34:57,982 - banker - INFO - Banker initialized.
+2025-04-16 17:34:57,982 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:34:57,983 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:34:57,983 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:34:57,984 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:34:57,984 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:34:57,986 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:34:57,986 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:34:57,987 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:34:57,987 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:34:57,987 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:34:57,987 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:34:57,987 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:34:57,989 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:34:57,989 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:34:57,990 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:34:57,990 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:34:57,990 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:34:57,991 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:34:57,998 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:34:57,998 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:34:58,009 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:34:58,018 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:34:58,019 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:34:58,019 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:34:58,024 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:34:59,428 - src.models - INFO - Database models initialized
+2025-04-16 17:34:59,431 - root - INFO - Ensured database tables exist.
+2025-04-16 17:34:59,472 - banker - INFO - Banker initialized.
+2025-04-16 17:34:59,472 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:34:59,473 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:34:59,473 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:34:59,473 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:34:59,473 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:34:59,475 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:34:59,476 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:34:59,476 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:34:59,476 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:34:59,476 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:34:59,476 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:34:59,477 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:34:59,478 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:34:59,479 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:34:59,479 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:34:59,479 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:34:59,479 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:34:59,482 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:34:59,488 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:34:59,488 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:34:59,498 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:34:59,507 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:34:59,509 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:34:59,509 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:34:59,513 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:34:59,519 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:36:39,817 - src.models - INFO - Database models initialized
+2025-04-16 17:36:39,820 - root - INFO - Ensured database tables exist.
+2025-04-16 17:36:39,859 - banker - INFO - Banker initialized.
+2025-04-16 17:36:39,860 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:36:39,860 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:36:39,860 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:36:39,860 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:36:39,860 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:36:39,863 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:36:39,864 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:36:39,864 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:36:39,864 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:36:39,864 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:36:39,864 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:36:39,864 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:36:39,866 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:36:39,866 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:36:39,866 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:36:39,867 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:36:39,867 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:36:39,868 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:36:39,874 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:36:39,875 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:36:39,884 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:36:39,893 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:36:39,895 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:36:39,895 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:36:39,900 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:36:41,260 - src.models - INFO - Database models initialized
+2025-04-16 17:36:41,264 - root - INFO - Ensured database tables exist.
+2025-04-16 17:36:41,303 - banker - INFO - Banker initialized.
+2025-04-16 17:36:41,303 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:36:41,303 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:36:41,304 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:36:41,304 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:36:41,304 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:36:41,306 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:36:41,307 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:36:41,307 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:36:41,307 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:36:41,307 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:36:41,307 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:36:41,308 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:36:41,309 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:36:41,309 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:36:41,310 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:36:41,310 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:36:41,310 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:36:41,311 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:36:41,319 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:36:41,319 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:36:41,330 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:36:41,339 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:36:41,340 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:36:41,340 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:36:41,345 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:36:41,350 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:36:44,186 - src.controllers.socket_core - INFO - Client connected: fTtSF8q8ne7sTSwUAAAB
+2025-04-16 17:36:44,555 - src.controllers.socket_core - INFO - Client disconnected: fTtSF8q8ne7sTSwUAAAB
+2025-04-16 17:36:44,898 - src.controllers.socket_core - INFO - Client connected: WHV46m91w2iqyvGUAAAD
+2025-04-16 17:36:48,246 - app - INFO - Admin request for all players from SID WHV46m91w2iqyvGUAAAD
+2025-04-16 17:36:48,248 - app - INFO - Found 17 players in total for admin list
+2025-04-16 17:36:48,253 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:36:48,254 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:36:48,254 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:36:48,255 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:36:48,256 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:36:48,256 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:36:48,257 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:36:48,257 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:36:48,258 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:36:48,259 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:36:48,259 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:36:48,260 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:36:48,261 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:36:48,261 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:36:48,262 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:36:48,263 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:36:48,263 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: False
+2025-04-16 17:36:48,264 - app - INFO - Emitting all_players_list with 17 players to client WHV46m91w2iqyvGUAAAD
+2025-04-16 17:36:48,264 - app - INFO - Successfully emitted all_players_list to WHV46m91w2iqyvGUAAAD
+2025-04-16 17:36:56,124 - app - INFO - Admin request for all players from SID WHV46m91w2iqyvGUAAAD
+2025-04-16 17:36:56,125 - app - INFO - Found 17 players in total for admin list
+2025-04-16 17:36:56,126 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:36:56,127 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:36:56,128 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:36:56,129 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:36:56,129 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:36:56,130 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:36:56,131 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:36:56,131 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:36:56,132 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:36:56,132 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:36:56,133 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:36:56,134 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:36:56,135 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:36:56,136 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:36:56,136 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:36:56,137 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:36:56,138 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: False
+2025-04-16 17:36:56,138 - app - INFO - Emitting all_players_list with 17 players to client WHV46m91w2iqyvGUAAAD
+2025-04-16 17:36:56,138 - app - INFO - Successfully emitted all_players_list to WHV46m91w2iqyvGUAAAD
+2025-04-16 17:37:02,514 - app - INFO - Bot dvsohuvdhuvfdhusacfvdv es (ID: 15) removed successfully by admin
+2025-04-16 17:37:07,784 - app - INFO - Admin request for all players from SID WHV46m91w2iqyvGUAAAD
+2025-04-16 17:37:07,785 - app - INFO - Found 17 players in total for admin list
+2025-04-16 17:37:07,786 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:37:07,787 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:37:07,788 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:37:07,788 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:37:07,789 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:37:07,790 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:37:07,790 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:37:07,791 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:37:07,791 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:37:07,792 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:37:07,792 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:37:07,793 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:37:07,794 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:37:07,794 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:37:07,795 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:37:07,795 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:37:07,796 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: False
+2025-04-16 17:37:07,796 - app - INFO - Emitting all_players_list with 17 players to client WHV46m91w2iqyvGUAAAD
+2025-04-16 17:37:07,796 - app - INFO - Successfully emitted all_players_list to WHV46m91w2iqyvGUAAAD
+2025-04-16 17:42:05,934 - src.models - INFO - Database models initialized
+2025-04-16 17:42:05,938 - root - INFO - Ensured database tables exist.
+2025-04-16 17:42:05,977 - banker - INFO - Banker initialized.
+2025-04-16 17:42:05,977 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:42:05,977 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:42:05,977 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:42:05,978 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:42:05,978 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:42:05,980 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:42:05,980 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:42:05,981 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:42:05,981 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:42:05,981 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:42:05,981 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:42:05,981 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:42:05,982 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:42:05,983 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:42:05,983 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:42:05,983 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:42:05,983 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:42:05,985 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:42:05,991 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:42:05,991 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:42:06,002 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:42:06,012 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:42:06,013 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:42:06,013 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:42:06,040 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:42:07,454 - src.models - INFO - Database models initialized
+2025-04-16 17:42:07,458 - root - INFO - Ensured database tables exist.
+2025-04-16 17:42:07,496 - banker - INFO - Banker initialized.
+2025-04-16 17:42:07,497 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:42:07,497 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:42:07,497 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:42:07,497 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:42:07,498 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:42:07,500 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:42:07,500 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:42:07,500 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:42:07,501 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:42:07,501 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:42:07,501 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:42:07,501 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:42:07,503 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:42:07,503 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:42:07,503 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:42:07,503 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:42:07,503 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:42:07,505 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:42:07,512 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:42:07,512 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:42:07,523 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:42:07,532 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:42:07,534 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:42:07,534 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:42:07,539 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:42:07,543 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:42:09,745 - src.controllers.socket_core - INFO - Client connected: W9v8RtANvKKbk-9UAAAB
+2025-04-16 17:42:14,774 - app - INFO - Bot dvsohuvdhuvfdhusacfvdv es (ID: 15) removed successfully by admin
+2025-04-16 17:42:19,943 - app - INFO - Admin request for all players from SID W9v8RtANvKKbk-9UAAAB
+2025-04-16 17:42:19,945 - app - INFO - Found 17 players in total for admin list
+2025-04-16 17:42:19,950 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:42:19,950 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:42:19,951 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:42:19,952 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:42:19,953 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:42:19,953 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:42:19,954 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:42:19,955 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:42:19,956 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:42:19,957 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:42:19,958 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:42:19,959 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:42:19,959 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:42:19,960 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:42:19,961 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:42:19,962 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:42:19,962 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: False
+2025-04-16 17:42:19,962 - app - INFO - Emitting all_players_list with 17 players to client W9v8RtANvKKbk-9UAAAB
+2025-04-16 17:42:19,963 - app - INFO - Successfully emitted all_players_list to W9v8RtANvKKbk-9UAAAB
+2025-04-16 17:42:23,622 - src.controllers.socket_core - INFO - Client disconnected: W9v8RtANvKKbk-9UAAAB
+2025-04-16 17:42:23,948 - src.controllers.socket_core - INFO - Client connected: JA_kvhuXRzMDXPZQAAAD
+2025-04-16 17:42:26,164 - app - INFO - Admin request for all players from SID JA_kvhuXRzMDXPZQAAAD
+2025-04-16 17:42:26,165 - app - INFO - Found 17 players in total for admin list
+2025-04-16 17:42:26,166 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:42:26,167 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:42:26,168 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:42:26,168 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:42:26,169 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:42:26,169 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:42:26,170 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:42:26,171 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:42:26,171 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:42:26,172 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:42:26,173 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:42:26,173 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:42:26,174 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:42:26,174 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:42:26,175 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:42:26,176 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:42:26,177 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: False
+2025-04-16 17:42:26,177 - app - INFO - Emitting all_players_list with 17 players to client JA_kvhuXRzMDXPZQAAAD
+2025-04-16 17:42:26,177 - app - INFO - Successfully emitted all_players_list to JA_kvhuXRzMDXPZQAAAD
+2025-04-16 17:42:30,050 - app - INFO - Bot dvsohuvdhuvfdhusacfvdv es (ID: 15) removed successfully by admin
+2025-04-16 17:42:34,276 - app - INFO - Admin request for all players from SID JA_kvhuXRzMDXPZQAAAD
+2025-04-16 17:42:34,277 - app - INFO - Found 17 players in total for admin list
+2025-04-16 17:42:34,278 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:42:34,278 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:42:34,279 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:42:34,280 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:42:34,280 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:42:34,281 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:42:34,282 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:42:34,282 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:42:34,283 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:42:34,283 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:42:34,284 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:42:34,285 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:42:34,285 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:42:34,286 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:42:34,286 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:42:34,287 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:42:34,288 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: False
+2025-04-16 17:42:34,288 - app - INFO - Emitting all_players_list with 17 players to client JA_kvhuXRzMDXPZQAAAD
+2025-04-16 17:42:34,288 - app - INFO - Successfully emitted all_players_list to JA_kvhuXRzMDXPZQAAAD
+2025-04-16 17:45:28,870 - src.controllers.socket_core - INFO - Client disconnected: JA_kvhuXRzMDXPZQAAAD
+2025-04-16 17:45:29,216 - src.controllers.socket_core - INFO - Client connected: vk5TRSqR-IkyQpmkAAAF
+2025-04-16 17:45:41,120 - src.models - INFO - Database models initialized
+2025-04-16 17:45:41,123 - root - INFO - Ensured database tables exist.
+2025-04-16 17:45:41,162 - banker - INFO - Banker initialized.
+2025-04-16 17:45:41,162 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:45:41,162 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:45:41,162 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:45:41,162 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:45:41,163 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:45:41,165 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:45:41,165 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:45:41,166 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:45:41,166 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:45:41,166 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:45:41,166 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:45:41,167 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:45:41,168 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:45:41,169 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:45:41,169 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:45:41,169 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:45:41,169 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:45:41,171 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:45:41,177 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:45:41,177 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:45:41,188 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:45:41,197 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:45:41,198 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:45:41,198 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:45:41,203 - werkzeug - INFO -  * Restarting with stat
+2025-04-16 17:45:42,613 - src.models - INFO - Database models initialized
+2025-04-16 17:45:42,616 - root - INFO - Ensured database tables exist.
+2025-04-16 17:45:42,655 - banker - INFO - Banker initialized.
+2025-04-16 17:45:42,656 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:45:42,656 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:45:42,656 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-04-16 17:45:42,656 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-04-16 17:45:42,656 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-04-16 17:45:42,659 - src.controllers.remote_controller - WARNING - cloudflared not found in PATH
+2025-04-16 17:45:42,659 - src.controllers.remote_controller - ERROR - cloudflared binary not found. Please install it first.
+2025-04-16 17:45:42,659 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-04-16 17:45:42,659 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-04-16 17:45:42,659 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-04-16 17:45:42,659 - bot_controller - INFO - BotController initialized.
+2025-04-16 17:45:42,660 - root - INFO - Core services and controllers initialized and stored in app config
+2025-04-16 17:45:42,661 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-04-16 17:45:42,661 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-04-16 17:45:42,662 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-04-16 17:45:42,662 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-04-16 17:45:42,662 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-04-16 17:45:42,664 - src.routes.player_routes - INFO - Player routes registered.
+2025-04-16 17:45:42,670 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-04-16 17:45:42,670 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-04-16 17:45:42,679 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-04-16 17:45:42,689 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-04-16 17:45:42,690 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-04-16 17:45:42,690 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-04-16 17:45:42,695 - werkzeug - WARNING -  * Debugger is active!
+2025-04-16 17:45:42,699 - werkzeug - INFO -  * Debugger PIN: 137-363-902
+2025-04-16 17:45:42,895 - src.controllers.socket_core - INFO - Client connected: 82r26ez8CSWk4XXaAAAB
+2025-04-16 17:45:43,223 - app - INFO - Admin request for all players from SID 82r26ez8CSWk4XXaAAAB
+2025-04-16 17:45:43,226 - app - INFO - Found 17 players in total for admin list
+2025-04-16 17:45:43,231 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:45:43,232 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:45:43,233 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:45:43,234 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:45:43,234 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:45:43,235 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:45:43,235 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:45:43,236 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:45:43,237 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:45:43,237 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:45:43,238 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:45:43,238 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:45:43,239 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:45:43,240 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:45:43,240 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:45:43,241 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:45:43,242 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: False
+2025-04-16 17:45:43,242 - app - INFO - Emitting all_players_list with 17 players to client 82r26ez8CSWk4XXaAAAB
+2025-04-16 17:45:43,242 - app - INFO - Successfully emitted all_players_list to 82r26ez8CSWk4XXaAAAB
+2025-04-16 17:45:49,233 - app - INFO - Admin request for all players from SID 82r26ez8CSWk4XXaAAAB
+2025-04-16 17:45:49,234 - app - INFO - Found 17 players in total for admin list
+2025-04-16 17:45:49,235 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:45:49,236 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:45:49,236 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:45:49,237 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:45:49,238 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:45:49,238 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:45:49,239 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:45:49,240 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:45:49,241 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:45:49,242 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:45:49,242 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:45:49,243 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:45:49,244 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:45:49,244 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:45:49,245 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:45:49,245 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:45:49,246 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: False
+2025-04-16 17:45:49,246 - app - INFO - Emitting all_players_list with 17 players to client 82r26ez8CSWk4XXaAAAB
+2025-04-16 17:45:49,247 - app - INFO - Successfully emitted all_players_list to 82r26ez8CSWk4XXaAAAB
+2025-04-16 17:46:06,727 - src.models.game_state - INFO - Resetting GameState for game_id: 6f44b981-8fb4-499d-b0db-e35fc3ef88da
+2025-04-16 17:46:06,729 - game_controller - INFO - Cleared 16 bots during game reset
+2025-04-16 17:46:06,731 - game_controller - INFO - New game created with difficulty normal
+2025-04-16 17:46:06,737 - game_controller - INFO - Deleted 28 existing properties for game_id 6f44b981-8fb4-499d-b0db-e35fc3ef88da.
+2025-04-16 17:46:06,737 - game_controller - INFO - Initializing standard properties for game_id 6f44b981-8fb4-499d-b0db-e35fc3ef88da...
+2025-04-16 17:46:06,745 - game_controller - INFO - Successfully initialized 30 properties for game 6f44b981-8fb4-499d-b0db-e35fc3ef88da.
+2025-04-16 17:46:06,746 - src.routes.admin.game_admin_routes - INFO - Game reset result: {'success': True, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'message': 'New game created'}
+2025-04-16 17:46:06,746 - src.routes.admin.game_admin_routes - INFO - Emitted bots_reset event to clients
+2025-04-16 17:46:08,265 - src.controllers.socket_core - INFO - Client disconnected: 82r26ez8CSWk4XXaAAAB
+2025-04-16 17:46:08,605 - src.controllers.socket_core - INFO - Client connected: owutCJxG3ZRUPOEbAAAD
+2025-04-16 17:46:10,441 - app - INFO - Admin request for all players from SID owutCJxG3ZRUPOEbAAAD
+2025-04-16 17:46:10,442 - app - INFO - Found 17 players in total for admin list
+2025-04-16 17:46:10,443 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:46:10,444 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:46:10,444 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:46:10,445 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:46:10,446 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:46:10,446 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:46:10,447 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:46:10,447 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:46:10,448 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:46:10,449 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:46:10,449 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:46:10,450 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:46:10,451 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:46:10,451 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:46:10,452 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:46:10,452 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:46:10,453 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: False
+2025-04-16 17:46:10,453 - app - INFO - Emitting all_players_list with 17 players to client owutCJxG3ZRUPOEbAAAD
+2025-04-16 17:46:10,453 - app - INFO - Successfully emitted all_players_list to owutCJxG3ZRUPOEbAAAD
+2025-04-16 17:46:14,721 - app - DEBUG - Inspecting property ID 1 (Mediterranean Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E31370>, 'name': 'Mediterranean Avenue', 'rent_house_3': 90, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 160, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 250, 'hotel': False, 'position': 1, 'mortgage_value': 30, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 60, 'house_cost': 50, 'team_id': None, 'discount_amount': 0, 'rent': 2, 'hotel_cost': 50, 'max_development_level': 3, 'premium_percentage': 0.0, 'rent_house_1': 10, 'color_group': 'Brown', 'has_community_approval': False, 'premium_amount': 0, 'id': 1, 'rent_house_2': 30, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,722 - app - DEBUG - Inspecting property ID 2 (Baltic Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E31670>, 'name': 'Baltic Avenue', 'rent_house_3': 180, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 320, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 450, 'hotel': False, 'position': 3, 'mortgage_value': 30, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 60, 'house_cost': 50, 'team_id': None, 'discount_amount': 0, 'rent': 4, 'hotel_cost': 50, 'max_development_level': 3, 'premium_percentage': 0.0, 'rent_house_1': 20, 'color_group': 'Brown', 'has_community_approval': False, 'premium_amount': 0, 'id': 2, 'rent_house_2': 60, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,722 - app - DEBUG - Inspecting property ID 3 (Reading Railroad) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E33170>, 'name': 'Reading Railroad', 'rent_house_3': None, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': None, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.RAILROAD: 'railroad'>, 'rent_hotel': None, 'hotel': False, 'position': 5, 'mortgage_value': 100, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 200, 'house_cost': 0, 'team_id': None, 'discount_amount': 0, 'rent': 25, 'hotel_cost': 0, 'max_development_level': 0, 'premium_percentage': 0.0, 'rent_house_1': None, 'color_group': 'Railroad', 'has_community_approval': False, 'premium_amount': 0, 'id': 3, 'rent_house_2': None, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,723 - app - DEBUG - Inspecting property ID 4 (Oriental Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E30A70>, 'name': 'Oriental Avenue', 'rent_house_3': 270, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 400, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 550, 'hotel': False, 'position': 6, 'mortgage_value': 50, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 100, 'house_cost': 50, 'team_id': None, 'discount_amount': 0, 'rent': 6, 'hotel_cost': 50, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 30, 'color_group': 'LightBlue', 'has_community_approval': False, 'premium_amount': 0, 'id': 4, 'rent_house_2': 90, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,723 - app - DEBUG - Inspecting property ID 5 (Vermont Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E31490>, 'name': 'Vermont Avenue', 'rent_house_3': 270, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 400, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 550, 'hotel': False, 'position': 8, 'mortgage_value': 50, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 100, 'house_cost': 50, 'team_id': None, 'discount_amount': 0, 'rent': 6, 'hotel_cost': 50, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 30, 'color_group': 'LightBlue', 'has_community_approval': False, 'premium_amount': 0, 'id': 5, 'rent_house_2': 90, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,723 - app - DEBUG - Inspecting property ID 6 (Connecticut Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E306B0>, 'name': 'Connecticut Avenue', 'rent_house_3': 300, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 450, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 600, 'hotel': False, 'position': 9, 'mortgage_value': 60, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 120, 'house_cost': 50, 'team_id': None, 'discount_amount': 0, 'rent': 8, 'hotel_cost': 50, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 40, 'color_group': 'LightBlue', 'has_community_approval': False, 'premium_amount': 0, 'id': 6, 'rent_house_2': 100, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,724 - app - DEBUG - Inspecting property ID 7 (St. Charles Place) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E33B30>, 'name': 'St. Charles Place', 'rent_house_3': 450, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 625, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 750, 'hotel': False, 'position': 11, 'mortgage_value': 70, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 140, 'house_cost': 100, 'team_id': None, 'discount_amount': 0, 'rent': 10, 'hotel_cost': 100, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 50, 'color_group': 'Pink', 'has_community_approval': False, 'premium_amount': 0, 'id': 7, 'rent_house_2': 150, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,724 - app - DEBUG - Inspecting property ID 8 (Electric Company) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E33230>, 'name': 'Electric Company', 'rent_house_3': None, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': None, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.UTILITY: 'utility'>, 'rent_hotel': None, 'hotel': False, 'position': 12, 'mortgage_value': 75, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 150, 'house_cost': 0, 'team_id': None, 'discount_amount': 0, 'rent': 0, 'hotel_cost': 0, 'max_development_level': 0, 'premium_percentage': 0.0, 'rent_house_1': None, 'color_group': 'Utility', 'has_community_approval': False, 'premium_amount': 0, 'id': 8, 'rent_house_2': None, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,724 - app - DEBUG - Inspecting property ID 9 (States Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E31430>, 'name': 'States Avenue', 'rent_house_3': 450, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 625, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 750, 'hotel': False, 'position': 13, 'mortgage_value': 70, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 140, 'house_cost': 100, 'team_id': None, 'discount_amount': 0, 'rent': 10, 'hotel_cost': 100, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 50, 'color_group': 'Pink', 'has_community_approval': False, 'premium_amount': 0, 'id': 9, 'rent_house_2': 150, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,725 - app - DEBUG - Inspecting property ID 10 (Virginia Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E32690>, 'name': 'Virginia Avenue', 'rent_house_3': 500, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 700, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 900, 'hotel': False, 'position': 14, 'mortgage_value': 80, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 160, 'house_cost': 100, 'team_id': None, 'discount_amount': 0, 'rent': 12, 'hotel_cost': 100, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 60, 'color_group': 'Pink', 'has_community_approval': False, 'premium_amount': 0, 'id': 10, 'rent_house_2': 180, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,725 - app - DEBUG - Inspecting property ID 11 (Pennsylvania Railroad) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E32270>, 'name': 'Pennsylvania Railroad', 'rent_house_3': None, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': None, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.RAILROAD: 'railroad'>, 'rent_hotel': None, 'hotel': False, 'position': 15, 'mortgage_value': 100, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 200, 'house_cost': 0, 'team_id': None, 'discount_amount': 0, 'rent': 25, 'hotel_cost': 0, 'max_development_level': 0, 'premium_percentage': 0.0, 'rent_house_1': None, 'color_group': 'Railroad', 'has_community_approval': False, 'premium_amount': 0, 'id': 11, 'rent_house_2': None, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,725 - app - DEBUG - Inspecting property ID 12 (St. James Place) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E31A90>, 'name': 'St. James Place', 'rent_house_3': 550, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 750, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 950, 'hotel': False, 'position': 16, 'mortgage_value': 90, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 180, 'house_cost': 100, 'team_id': None, 'discount_amount': 0, 'rent': 14, 'hotel_cost': 100, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 70, 'color_group': 'Orange', 'has_community_approval': False, 'premium_amount': 0, 'id': 12, 'rent_house_2': 200, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,725 - app - DEBUG - Inspecting property ID 13 (Tennessee Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E31B50>, 'name': 'Tennessee Avenue', 'rent_house_3': 550, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 750, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 950, 'hotel': False, 'position': 18, 'mortgage_value': 90, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 180, 'house_cost': 100, 'team_id': None, 'discount_amount': 0, 'rent': 14, 'hotel_cost': 100, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 70, 'color_group': 'Orange', 'has_community_approval': False, 'premium_amount': 0, 'id': 13, 'rent_house_2': 200, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,726 - app - DEBUG - Inspecting property ID 14 (New York Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E31970>, 'name': 'New York Avenue', 'rent_house_3': 600, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 800, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 1000, 'hotel': False, 'position': 19, 'mortgage_value': 100, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 200, 'house_cost': 100, 'team_id': None, 'discount_amount': 0, 'rent': 16, 'hotel_cost': 100, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 80, 'color_group': 'Orange', 'has_community_approval': False, 'premium_amount': 0, 'id': 14, 'rent_house_2': 220, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,726 - app - DEBUG - Inspecting property ID 15 (Kentucky Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E31070>, 'name': 'Kentucky Avenue', 'rent_house_3': 700, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 875, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 1050, 'hotel': False, 'position': 21, 'mortgage_value': 110, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 220, 'house_cost': 150, 'team_id': None, 'discount_amount': 0, 'rent': 18, 'hotel_cost': 150, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 90, 'color_group': 'Red', 'has_community_approval': False, 'premium_amount': 0, 'id': 15, 'rent_house_2': 250, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,726 - app - DEBUG - Inspecting property ID 16 (Indiana Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E32CF0>, 'name': 'Indiana Avenue', 'rent_house_3': 700, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 875, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 1050, 'hotel': False, 'position': 23, 'mortgage_value': 110, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 220, 'house_cost': 150, 'team_id': None, 'discount_amount': 0, 'rent': 18, 'hotel_cost': 150, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 90, 'color_group': 'Red', 'has_community_approval': False, 'premium_amount': 0, 'id': 16, 'rent_house_2': 250, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,726 - app - DEBUG - Inspecting property ID 17 (Illinois Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E30F50>, 'name': 'Illinois Avenue', 'rent_house_3': 750, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 925, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 1100, 'hotel': False, 'position': 24, 'mortgage_value': 120, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 240, 'house_cost': 150, 'team_id': None, 'discount_amount': 0, 'rent': 20, 'hotel_cost': 150, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 100, 'color_group': 'Red', 'has_community_approval': False, 'premium_amount': 0, 'id': 17, 'rent_house_2': 300, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,727 - app - DEBUG - Inspecting property ID 18 (B. & O. Railroad) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E31DF0>, 'name': 'B. & O. Railroad', 'rent_house_3': None, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': None, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.RAILROAD: 'railroad'>, 'rent_hotel': None, 'hotel': False, 'position': 25, 'mortgage_value': 100, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 200, 'house_cost': 0, 'team_id': None, 'discount_amount': 0, 'rent': 25, 'hotel_cost': 0, 'max_development_level': 0, 'premium_percentage': 0.0, 'rent_house_1': None, 'color_group': 'Railroad', 'has_community_approval': False, 'premium_amount': 0, 'id': 18, 'rent_house_2': None, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,727 - app - DEBUG - Inspecting property ID 19 (Atlantic Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E63FB0>, 'name': 'Atlantic Avenue', 'rent_house_3': 800, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 975, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 1150, 'hotel': False, 'position': 26, 'mortgage_value': 130, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 260, 'house_cost': 150, 'team_id': None, 'discount_amount': 0, 'rent': 22, 'hotel_cost': 150, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 110, 'color_group': 'Yellow', 'has_community_approval': False, 'premium_amount': 0, 'id': 19, 'rent_house_2': 330, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,728 - app - DEBUG - Inspecting property ID 20 (Ventnor Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E62F90>, 'name': 'Ventnor Avenue', 'rent_house_3': 800, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 975, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 1150, 'hotel': False, 'position': 27, 'mortgage_value': 130, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 260, 'house_cost': 150, 'team_id': None, 'discount_amount': 0, 'rent': 22, 'hotel_cost': 150, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 110, 'color_group': 'Yellow', 'has_community_approval': False, 'premium_amount': 0, 'id': 20, 'rent_house_2': 330, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,728 - app - DEBUG - Inspecting property ID 21 (Water Works) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E63AD0>, 'name': 'Water Works', 'rent_house_3': None, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': None, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.UTILITY: 'utility'>, 'rent_hotel': None, 'hotel': False, 'position': 28, 'mortgage_value': 75, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 150, 'house_cost': 0, 'team_id': None, 'discount_amount': 0, 'rent': 0, 'hotel_cost': 0, 'max_development_level': 0, 'premium_percentage': 0.0, 'rent_house_1': None, 'color_group': 'Utility', 'has_community_approval': False, 'premium_amount': 0, 'id': 21, 'rent_house_2': None, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,728 - app - DEBUG - Inspecting property ID 22 (Marvin Gardens) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E61D30>, 'name': 'Marvin Gardens', 'rent_house_3': 850, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 1025, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 1200, 'hotel': False, 'position': 29, 'mortgage_value': 140, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 280, 'house_cost': 150, 'team_id': None, 'discount_amount': 0, 'rent': 24, 'hotel_cost': 150, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 120, 'color_group': 'Yellow', 'has_community_approval': False, 'premium_amount': 0, 'id': 22, 'rent_house_2': 360, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,728 - app - DEBUG - Inspecting property ID 23 (Pacific Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E634D0>, 'name': 'Pacific Avenue', 'rent_house_3': 900, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 1100, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 1275, 'hotel': False, 'position': 31, 'mortgage_value': 150, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 300, 'house_cost': 200, 'team_id': None, 'discount_amount': 0, 'rent': 26, 'hotel_cost': 200, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 130, 'color_group': 'Green', 'has_community_approval': False, 'premium_amount': 0, 'id': 23, 'rent_house_2': 390, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,729 - app - DEBUG - Inspecting property ID 24 (North Carolina Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E637D0>, 'name': 'North Carolina Avenue', 'rent_house_3': 900, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 1100, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 1275, 'hotel': False, 'position': 32, 'mortgage_value': 150, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 300, 'house_cost': 200, 'team_id': None, 'discount_amount': 0, 'rent': 26, 'hotel_cost': 200, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 130, 'color_group': 'Green', 'has_community_approval': False, 'premium_amount': 0, 'id': 24, 'rent_house_2': 390, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,729 - app - DEBUG - Inspecting property ID 25 (Pennsylvania Avenue) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E60B30>, 'name': 'Pennsylvania Avenue', 'rent_house_3': 1000, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 1200, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 1400, 'hotel': False, 'position': 34, 'mortgage_value': 160, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 320, 'house_cost': 200, 'team_id': None, 'discount_amount': 0, 'rent': 28, 'hotel_cost': 200, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 150, 'color_group': 'Green', 'has_community_approval': False, 'premium_amount': 0, 'id': 25, 'rent_house_2': 450, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,729 - app - DEBUG - Inspecting property ID 26 (Short Line) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E62FF0>, 'name': 'Short Line', 'rent_house_3': None, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': None, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.RAILROAD: 'railroad'>, 'rent_hotel': None, 'hotel': False, 'position': 35, 'mortgage_value': 100, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 200, 'house_cost': 0, 'team_id': None, 'discount_amount': 0, 'rent': 25, 'hotel_cost': 0, 'max_development_level': 0, 'premium_percentage': 0.0, 'rent_house_1': None, 'color_group': 'Railroad', 'has_community_approval': False, 'premium_amount': 0, 'id': 26, 'rent_house_2': None, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,730 - app - DEBUG - Inspecting property ID 27 (Park Place) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E635F0>, 'name': 'Park Place', 'rent_house_3': 1100, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 1300, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 1500, 'hotel': False, 'position': 37, 'mortgage_value': 175, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 350, 'house_cost': 200, 'team_id': None, 'discount_amount': 0, 'rent': 35, 'hotel_cost': 200, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 175, 'color_group': 'Blue', 'has_community_approval': False, 'premium_amount': 0, 'id': 27, 'rent_house_2': 500, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:14,730 - app - DEBUG - Inspecting property ID 28 (Boardwalk) before calculate_rent. Attributes: {'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x0000029D63E63170>, 'name': 'Boardwalk', 'rent_house_3': 1400, 'is_mortgaged': False, 'has_environmental_study': False, 'rent_house_4': 1700, 'houses': 0, 'environmental_study_expires': None, 'type': <PropertyType.STREET: 'street'>, 'rent_hotel': 2000, 'hotel': False, 'position': 39, 'mortgage_value': 200, 'game_id': '6f44b981-8fb4-499d-b0db-e35fc3ef88da', 'discount_percentage': 0.0, 'price': 400, 'house_cost': 200, 'team_id': None, 'discount_amount': 0, 'rent': 50, 'hotel_cost': 200, 'max_development_level': 4, 'premium_percentage': 0.0, 'rent_house_1': 200, 'color_group': 'Blue', 'has_community_approval': False, 'premium_amount': 0, 'id': 28, 'rent_house_2': 600, 'owner_id': None, 'owner': None}
+2025-04-16 17:46:31,129 - src.controllers.bot_controller - INFO - Retrieved starting money for bot creation: 1500
+2025-04-16 17:46:31,134 - src.controllers.bot_controller - INFO - Committed new bot player dvsohuvdhuvfdhuadesfddad with ID: 18
+2025-04-16 17:46:31,135 - src.logic.bot_decision_maker - INFO - Initialized BotDecisionMaker for Player 18 with difficulty 'hard'
+2025-04-16 17:46:31,135 - src.models.bots.base_bot - INFO - Initialized BotPlayer for Player 18 (dvsohuvdhuvfdhuadesfddad) with difficulty 'hard'.
+2025-04-16 17:46:31,135 - src.controllers.bot_controller - INFO - Bot action processor started.
+2025-04-16 17:46:31,135 - src.controllers.bot_controller - INFO - Started bot action processing thread.
+2025-04-16 17:46:31,135 - src.controllers.bot_controller - ERROR - Flask app instance not found in app_config for bot action thread. Stopping.
+2025-04-16 17:46:31,136 - src.controllers.bot_controller - INFO - Created new bot: dvsohuvdhuvfdhuadesfddad (ID: 18, Type: opportunistic, Difficulty: hard)
+2025-04-16 17:46:41,118 - app - INFO - Admin request for all players from SID owutCJxG3ZRUPOEbAAAD
+2025-04-16 17:46:41,119 - app - INFO - Found 18 players in total for admin list
+2025-04-16 17:46:41,119 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:46:41,120 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:46:41,121 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:46:41,121 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:46:41,122 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:46:41,122 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:46:41,123 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:46:41,124 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:46:41,125 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:46:41,125 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:46:41,126 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:46:41,127 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:46:41,128 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:46:41,128 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:46:41,129 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:46:41,130 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:46:41,130 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: False
+2025-04-16 17:46:41,131 - app - INFO - Adding player to list: ID 18, Name: dvsohuvdhuvfdhuadesfddad, Is Bot: True, In Game: True
+2025-04-16 17:46:41,131 - app - INFO - Emitting all_players_list with 18 players to client owutCJxG3ZRUPOEbAAAD
+2025-04-16 17:46:41,131 - app - INFO - Successfully emitted all_players_list to owutCJxG3ZRUPOEbAAAD
+2025-04-16 17:46:44,456 - app - INFO - Bot dvsohuvdhuvfdhuadesfddad (ID: 18) removed successfully by admin
+2025-04-16 17:46:47,506 - app - INFO - Admin request for all players from SID owutCJxG3ZRUPOEbAAAD
+2025-04-16 17:46:47,508 - app - INFO - Found 18 players in total for admin list
+2025-04-16 17:46:47,509 - app - INFO - Adding player to list: ID 1, Name: joe, Is Bot: False, In Game: True
+2025-04-16 17:46:47,509 - app - INFO - Adding player to list: ID 2, Name: jhohn, Is Bot: True, In Game: False
+2025-04-16 17:46:47,510 - app - INFO - Adding player to list: ID 3, Name: jhohntrf, Is Bot: True, In Game: False
+2025-04-16 17:46:47,511 - app - INFO - Adding player to list: ID 4, Name: kobe, Is Bot: True, In Game: False
+2025-04-16 17:46:47,511 - app - INFO - Adding player to list: ID 5, Name: john, Is Bot: True, In Game: False
+2025-04-16 17:46:47,512 - app - INFO - Adding player to list: ID 6, Name: lobe, Is Bot: True, In Game: False
+2025-04-16 17:46:47,513 - app - INFO - Adding player to list: ID 7, Name: lobe12, Is Bot: True, In Game: False
+2025-04-16 17:46:47,513 - app - INFO - Adding player to list: ID 8, Name: lobe12234234, Is Bot: True, In Game: False
+2025-04-16 17:46:47,514 - app - INFO - Adding player to list: ID 9, Name: nash, Is Bot: True, In Game: False
+2025-04-16 17:46:47,514 - app - INFO - Adding player to list: ID 10, Name: job, Is Bot: True, In Game: False
+2025-04-16 17:46:47,515 - app - INFO - Adding player to list: ID 11, Name: nrfeuonhbvf, Is Bot: True, In Game: False
+2025-04-16 17:46:47,515 - app - INFO - Adding player to list: ID 12, Name: kobe1213, Is Bot: True, In Game: False
+2025-04-16 17:46:47,516 - app - INFO - Adding player to list: ID 13, Name: jdjfdjdjdjjd, Is Bot: True, In Game: False
+2025-04-16 17:46:47,516 - app - INFO - Adding player to list: ID 14, Name: kooonnn, Is Bot: True, In Game: False
+2025-04-16 17:46:47,517 - app - INFO - Adding player to list: ID 15, Name: dvsohuvdhuvfdhusacfvdv es, Is Bot: True, In Game: False
+2025-04-16 17:46:47,518 - app - INFO - Adding player to list: ID 16, Name: aSDFdf, Is Bot: True, In Game: False
+2025-04-16 17:46:47,519 - app - INFO - Adding player to list: ID 17, Name: SDZ as, Is Bot: True, In Game: False
+2025-04-16 17:46:47,520 - app - INFO - Adding player to list: ID 18, Name: dvsohuvdhuvfdhuadesfddad, Is Bot: True, In Game: False
+2025-04-16 17:46:47,520 - app - INFO - Emitting all_players_list with 18 players to client owutCJxG3ZRUPOEbAAAD
+2025-04-16 17:46:47,520 - app - INFO - Successfully emitted all_players_list to owutCJxG3ZRUPOEbAAAD
