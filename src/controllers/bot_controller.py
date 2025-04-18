@@ -51,6 +51,87 @@ class BotController:
 
         self.logger.info("BotController initialized.")
 
+    def create_bot(self, bot_name, bot_type='conservative', difficulty='medium'):
+        """Create a new bot player
+        
+        Args:
+            bot_name: Name of the bot
+            bot_type: Type of bot strategy (conservative, aggressive, strategic, opportunistic, shark, investor)
+            difficulty: Difficulty level (easy, medium, hard)
+            
+        Returns:
+            Bot player object if creation successful, None otherwise
+        """
+        try:
+            # Get game state and starting money
+            game_state = GameState.query.first()  # Assuming game_id=1 for now
+            if not game_state:
+                self.logger.error("Cannot create bot: Game state not found.")
+                return None
+            
+            # Get starting money from settings, default to 1500 if not found
+            starting_money = game_state.settings.get('starting_money', 1500) if hasattr(game_state, 'settings') else 1500
+            self.logger.info(f"Retrieved starting money for bot creation: {starting_money}")
+            
+            # Create bot player in database
+            bot_player = Player(
+                username=bot_name,
+                is_bot=True,
+                in_game=True,
+                money=starting_money,
+                position=0,
+                game_id=game_state.id
+            )
+            
+            # Generate a PIN for the bot
+            bot_player.pin = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+            
+            # Commit to database to get ID
+            db.session.add(bot_player)
+            db.session.commit()
+            self.logger.info(f"Committed new bot player {bot_player.username} with ID: {bot_player.id}")
+            
+            # Create the bot strategy object
+            bot_instance = None
+            if bot_type == 'aggressive':
+                bot_instance = AggressiveBot(bot_player.id, difficulty)
+            elif bot_type == 'strategic':
+                bot_instance = StrategicBot(bot_player.id, difficulty)
+            elif bot_type == 'opportunistic':
+                bot_instance = OpportunisticBot(bot_player.id, difficulty)
+            elif bot_type == 'shark':
+                bot_instance = SharkBot(bot_player.id, difficulty)
+            elif bot_type == 'investor':
+                bot_instance = InvestorBot(bot_player.id, difficulty)
+            else:  # default to conservative
+                bot_instance = ConservativeBot(bot_player.id, difficulty)
+            
+            # Store in active bots dictionary
+            if bot_instance:
+                active_bots[bot_player.id] = bot_instance
+            
+            # Start the bot action thread if not running
+            start_bot_action_thread(self.socketio, self.app_config)
+            
+            # Broadcast bot created event if socketio is available
+            if self.socketio:
+                self.socketio.emit('bot_created', {
+                    'bot_id': bot_player.id,
+                    'name': bot_player.username,
+                    'type': bot_type,
+                    'difficulty': difficulty,
+                    'money': bot_player.money,
+                    'position': bot_player.position
+                })
+            
+            self.logger.info(f"Created new bot: {bot_player.username} (ID: {bot_player.id}, Type: {bot_type}, Difficulty: {difficulty})")
+            return bot_player
+            
+        except Exception as e:
+            db.session.rollback()
+            self.logger.error(f"Error creating bot: {str(e)}", exc_info=True)
+            return None
+
     def take_turn(self, player_id, game_id=1):
         """Determine and execute the bot's actions for its turn."""
         with self.app_config.get('app').app_context(): # Ensure app context for the whole turn
@@ -410,105 +491,35 @@ def register_bot_events(socketio, app_config):
             })
             return
 
-        # --- Get Game State and Starting Money ---
-        game_state = GameState.query.first() # Assuming game_id=1 for now
-        if not game_state:
-            logger.error("Cannot create bot: Game state not found.")
-            emit('event_error', {'error': 'Game state not found'})
-            return
-        
-        # Get starting money from settings, default to 1500 if not found
-        starting_money = game_state.settings.get('starting_money', 1500)
-        logger.info(f"Retrieved starting money for bot creation: {starting_money}")
-        # --- End Get Game State ---
-        
         bot_name = data.get('name', f"Bot_{random.randint(1000, 9999)}")
         bot_type = data.get('type', 'conservative')
         difficulty = data.get('difficulty', 'medium')
         
-        # Create bot player in database
-        bot_player = Player(
-            username=bot_name,
-            is_bot=True,
-            in_game=True,
-            money=starting_money,
-            position=0,
-            game_id=game_state.id
-        )
-        
-        # Generate a PIN for the bot (Do this *before* commit if PIN is required)
-        bot_player.pin = ''.join([str(random.randint(0, 9)) for _ in range(6)])
-
-        # --- Commit the Player to get an ID ---
-        try:
-            db.session.add(bot_player)
-            db.session.commit()
-            logger.info(f"Committed new bot player {bot_player.username} with ID: {bot_player.id}")
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Failed to commit new bot player {bot_name}: {e}", exc_info=True)
-            emit('event_error', {'error': 'Failed to save new bot player'})
-            return
-        # --- End Commit ---
-
-        # Create the bot strategy object, passing the PLAYER ID
-        bot_instance = None
-        try:
-            if bot_type == 'aggressive':
-                bot_instance = AggressiveBot(bot_player.id, difficulty)
-            elif bot_type == 'strategic':
-                bot_instance = StrategicBot(bot_player.id, difficulty)
-            elif bot_type == 'opportunistic':
-                bot_instance = OpportunisticBot(bot_player.id, difficulty)
-            elif bot_type == 'shark':
-                bot_instance = SharkBot(bot_player.id, difficulty)
-            elif bot_type == 'investor':
-                bot_instance = InvestorBot(bot_player.id, difficulty)
-            else:  # default to conservative
-                bot_instance = ConservativeBot(bot_player.id, difficulty)
-        except Exception as e:
-            logger.error(f"Failed to instantiate bot class for type {bot_type}: {e}", exc_info=True)
-            # Consider deleting the committed player if bot instantiation fails?
-            emit('event_error', {'error': f'Failed to create bot instance of type {bot_type}'})
+        # Get the bot controller from app config
+        bot_controller = current_app.config.get('bot_controller')
+        if not bot_controller:
+            logger.error("Cannot create bot: BotController not found in app config.")
+            emit('event_error', {'error': 'Internal server error: BotController not found'})
             return
         
-        # Store in active bots dictionary
-        if bot_instance:
-            active_bots[bot_player.id] = bot_instance
+        # Use the BotController create_bot method
+        new_bot = bot_controller.create_bot(bot_name, bot_type, difficulty)
+        
+        if new_bot:
+            # Return success response - the broadcast was already handled in create_bot
+            emit('bot_event', {
+                'success': True,
+                'bot': {
+                    'id': new_bot.id,
+                    'name': new_bot.username,
+                    'type': bot_type,
+                    'difficulty': difficulty
+                }
+            })
         else:
-            # This case should ideally not be reached due to the try/except above
-            logger.error(f"Bot instance was None after instantiation attempt for bot ID {bot_player.id}")
-            emit('event_error', {'error': 'Failed to store bot instance'})
-            # Optionally delete the player record here as well
+            # Return failure
+            emit('event_error', {'error': 'Failed to create bot player'})
             return
-
-        # Start the bot action thread if not running
-        # --- Get the correct app_config from the BotController instance --- 
-        bot_controller = current_app.config.get('bot_controller') 
-        if not bot_controller or not hasattr(bot_controller, 'app_config'):
-             logger.error("BotController instance or its app_config not found in app config using key 'bot_controller'.")
-             emit('event_error', {'error': 'Internal server error: Cannot start bot thread.'})
-             # We already created the player, maybe don't return? Or log and continue?
-        else:
-             start_bot_action_thread(socketio, bot_controller.app_config) # Use the controller's config
-        
-        # Broadcast bot created event
-        socketio.emit('bot_created', {
-            'bot_id': bot_player.id,
-            'name': bot_player.username,
-            'type': bot_type,
-            'difficulty': difficulty,
-            'money': bot_player.money,
-            'position': bot_player.position
-        })
-        
-        logger.info(f"Created new bot: {bot_player.username} (ID: {bot_player.id}, Type: {bot_type}, Difficulty: {difficulty})")
-        
-        return {
-            'success': True,
-            'bot_id': bot_player.id,
-            'bot_name': bot_player.username
-        }
     
     @socketio.on('remove_bot')
     def handle_remove_bot(data):

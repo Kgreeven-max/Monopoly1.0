@@ -490,7 +490,7 @@ def direct_create_bot():
                 "error": "Bot controller not initialized"
             }), 500
         
-        # Create the bot
+        # Create the bot using the controller's create_bot method
         new_bot = bot_controller.create_bot(bot_name, bot_type, difficulty)
         
         if new_bot:
