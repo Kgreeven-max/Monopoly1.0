@@ -25,9 +25,15 @@ from src.routes.admin.property_admin_routes import property_admin_bp
 # from src.routes.bot_event_routes import register_bot_event_routes # File not found
 from src.routes.special_space_routes import register_special_space_routes
 from src.routes.finance_routes import register_finance_routes
+from src.routes.player.finance_player_routes import finance_player_bp, init_finance_player_routes  # Import finance player blueprint and initialization function
 from src.routes.community_fund_routes import register_community_fund_routes
 from src.routes.crime_routes import register_crime_routes
-# from src.routes.remote_routes import register_remote_routes # Depends on qrcode/Pillow which failed to install
+# Import remote_routes with error handling
+try:
+    from src.routes.remote_routes import register_remote_routes
+except ImportError as e:
+    logging.warning(f"Could not import remote_routes: {str(e)}. Remote play will be disabled.")
+    register_remote_routes = None
 from src.routes.game_mode_routes import register_game_mode_routes
 from src.routes.social import register_social_routes
 from src.controllers.socket_controller import register_socket_events
@@ -62,20 +68,27 @@ from src.controllers.property_controller import PropertyController # Import Prop
 from src.controllers.auction_controller import AuctionController # Import AuctionController
 from src.controllers.bot_controller import BotController # Import BotController
 from src.game_logic.game_logic import GameLogic # Import GameLogic
+# Import database migration
+from src.migrations.add_free_parking_fund import run_migration
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# Database configuration first, as it may be needed by other configurations
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI', 'sqlite:///pinopoly.sqlite')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Other configuration
 app.config.update(
     SECRET_KEY=os.environ.get('SECRET_KEY', 'pinopoly-development-key'),
     ADMIN_KEY=os.environ.get('ADMIN_KEY', 'pinopoly-admin'),
     DISPLAY_KEY=os.environ.get('DISPLAY_KEY', 'pinopoly-display'),
-    DATABASE_PATH=os.environ.get('DATABASE_PATH', 'pinopoly.db'),
     DEBUG=os.environ.get('DEBUG', 'False').lower() == 'true',
     REMOTE_PLAY_ENABLED=os.environ.get('REMOTE_PLAY_ENABLED', 'False').lower() == 'true',
     REMOTE_PLAY_TIMEOUT=int(os.environ.get('REMOTE_PLAY_TIMEOUT', 60))
 )
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI', 'sqlite:///pinopoly.sqlite')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Game configuration
 app.config['ADAPTIVE_DIFFICULTY_ENABLED'] = os.environ.get('ADAPTIVE_DIFFICULTY_ENABLED', 'true').lower() == 'true'
 app.config['ADAPTIVE_DIFFICULTY_INTERVAL'] = int(os.environ.get('ADAPTIVE_DIFFICULTY_INTERVAL', '15'))  # minutes
 app.config['POLICE_PATROL_ENABLED'] = os.environ.get('POLICE_PATROL_ENABLED', 'true').lower() == 'true'
@@ -109,16 +122,68 @@ with app.app_context(): # Use app context to access db/config safely
     db.create_all()
     logging.info('Ensured database tables exist.')
     
+    # Run migration to add free_parking_fund and other missing columns
+    try:
+        migration_result = run_migration()
+        if migration_result:
+            logging.info('Successfully ran free_parking_fund migration.')
+        else:
+            logging.warning('Failed to run free_parking_fund migration.')
+    except Exception as e:
+        logging.error(f'Error running free_parking_fund migration: {str(e)}', exc_info=True)
+    
     # Ensure GameState instance exists and has a game_id
-    game_state = GameState.query.first()
-    if not game_state:
-        game_state = GameState(game_id=str(uuid.uuid4()))
-        db.session.add(game_state)
-        db.session.commit()
-    elif not game_state.game_id:
-        game_state.game_id = str(uuid.uuid4())
-        db.session.add(game_state)
-        db.session.commit()
+    # Use a direct SQL query instead of ORM to avoid issues with missing columns
+    try:
+        logging.info('Checking for existing GameState using direct SQL')
+        from sqlalchemy import text
+        result = db.session.execute(text("SELECT id, game_id FROM game_state LIMIT 1")).fetchone()
+        
+        if result:
+            game_state_id, game_state_game_id = result
+            logging.info(f'Found existing GameState with ID: {game_state_id} and game_id: {game_state_game_id}')
+            
+            # If game_id is missing, update it
+            if not game_state_game_id:
+                new_game_id = str(uuid.uuid4())
+                db.session.execute(text(f"UPDATE game_state SET game_id = '{new_game_id}' WHERE id = {game_state_id}"))
+                db.session.commit()
+                logging.info(f'Updated game_id to: {new_game_id}')
+                game_state_game_id = new_game_id
+                
+            # Create a GameState instance from the database row
+            game_state = GameState()
+            game_state.id = game_state_id
+            game_state.game_id = game_state_game_id
+        else:
+            # Create a new GameState if one doesn't exist
+            logging.info('No existing GameState found, creating a new one')
+            new_game_id = str(uuid.uuid4())
+            db.session.execute(text(f"INSERT INTO game_state (game_id) VALUES ('{new_game_id}')"))
+            db.session.commit()
+            
+            # Get the newly created GameState
+            result = db.session.execute(text("SELECT id, game_id FROM game_state LIMIT 1")).fetchone()
+            game_state_id, game_state_game_id = result
+            
+            # Create a GameState instance from the database row
+            game_state = GameState()
+            game_state.id = game_state_id
+            game_state.game_id = game_state_game_id
+            
+        logging.info(f'Using GameState with ID: {game_state.id} and game_id: {game_state.game_id}')
+    except Exception as e:
+        logging.error(f'Error checking for existing GameState: {str(e)}', exc_info=True)
+        # Fallback to ORM method
+        game_state = GameState.query.first()
+        if not game_state:
+            game_state = GameState(game_id=str(uuid.uuid4()))
+            db.session.add(game_state)
+            db.session.commit()
+        elif not game_state.game_id:
+            game_state.game_id = str(uuid.uuid4())
+            db.session.add(game_state)
+            db.session.commit()
         
     # ---- Stage 1: Initialize basic services and controllers ----
     banker = Banker(socketio)
@@ -133,6 +198,18 @@ with app.app_context(): # Use app context to access db/config safely
     game_logic = GameLogic(app) # Initialize GameLogic
     property_controller = PropertyController(db, banker, event_system, socketio) # Assuming these dependencies
     auction_controller = AuctionController(db, banker, event_system, socketio) # Assuming these dependencies
+    
+    # Initialize socket controller
+    from src.controllers.socket_controller import SocketController
+    socket_controller = SocketController(socketio, app.config)
+
+    # Initialize social controllers
+    chat_controller = ChatController(socketio, app.config)
+    alliance_controller = AllianceController(socketio, app.config)
+    reputation_controller = ReputationController(socketio, app.config)
+    app.config['chat_controller'] = chat_controller
+    app.config['alliance_controller'] = alliance_controller
+    app.config['reputation_controller'] = reputation_controller
 
     # ---- Stage 2: Store ALL initial instances in app config ----
     app.config['banker'] = banker
@@ -149,6 +226,7 @@ with app.app_context(): # Use app context to access db/config safely
     app.config['property_controller'] = property_controller # Store property controller
     app.config['auction_controller'] = auction_controller # Store auction controller
     app.config['socketio'] = socketio # Store socketio instance
+    app.config['socket_controller'] = socket_controller # Store socket controller
 
     # ---- Stage 3: Initialize controllers dependent on stored config ----
     game_controller = GameController(app.config) # Needs game_logic etc. in app_config
@@ -165,8 +243,8 @@ def add_security_headers(response):
     # Enforce HTTPS with Cloudflare
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     
-    # Content security policy
-    response.headers['Content-Security-Policy'] = "default-src 'self' https: wss:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:;"
+    # Content security policy - updated to allow SVG images and data URIs
+    response.headers['Content-Security-Policy'] = "default-src 'self' https: wss:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:;"
     
     # Prevent clickjacking
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
@@ -221,31 +299,42 @@ register_socket_events(socketio, app.config)
 # Pass the controller instances directly
 register_player_routes(app, player_controller)
 register_game_routes(app, game_controller)
-# register_property_routes(app) # File not found
-# register_auction_routes(app) # File not found
+# register_property_routes(app)  # Property routes - not found, commented out
+# register_auction_routes(app)   # Auction routes - not found, commented out
 app.register_blueprint(game_admin_bp, url_prefix='/api/admin')
 app.register_blueprint(player_admin_bp, url_prefix='/api/admin')
 app.register_blueprint(bot_admin_bp, url_prefix='/api/admin')
 app.register_blueprint(event_admin_bp, url_prefix='/api/admin')
 app.register_blueprint(crime_admin_bp, url_prefix='/api/admin')
 app.register_blueprint(finance_admin_bp, url_prefix='/api/admin')
-# Register the property admin blueprint directly
 app.register_blueprint(property_admin_bp, url_prefix='/api/admin')
 # register_bot_event_routes(app) # File not found
 register_special_space_routes(app)
 register_finance_routes(app)
+app.register_blueprint(init_finance_player_routes(app), url_prefix='/api/finance')  # Initialize and register the blueprint
 register_community_fund_routes(app)
 register_crime_routes(app, socketio)
-# register_remote_routes(app) # Depends on qrcode/Pillow which failed to install
+# Register remote routes only if available
+if register_remote_routes:
+    try:
+        register_remote_routes(app)
+        logging.info("Remote routes registered successfully")
+    except Exception as e:
+        logging.error(f"Failed to register remote routes: {str(e)}", exc_info=True)
+else:
+    logging.warning("Remote routes not available. Remote play is disabled.")
+
 register_game_mode_routes(app)
-# Pass the individual social controllers
-register_social_routes(
-    app, 
-    socketio, 
-    app.config['social_controller'].chat_controller,
-    app.config['social_controller'].alliance_controller,
-    app.config['social_controller'].reputation_controller
+try:
+    register_social_routes(
+        app, 
+        socketio, 
+        app.config.get('chat_controller'),
+        app.config.get('alliance_controller'),
+        app.config.get('reputation_controller')
     )
+except Exception as e:
+    logging.error(f"Error registering social routes: {str(e)}", exc_info=True)
 
 # Register auth routes - Import just before use
 from src.routes.auth_routes import register_auth_routes
@@ -295,6 +384,135 @@ def admin_get_properties():
 def bots_test_route():
     return jsonify({"message": "Bots test route working!"})
 # --- END TEST ROUTE ---
+
+# Add the following test route after this one:
+
+@app.route('/api/admin/bots/types/test', methods=['GET'])
+def bot_types_test():
+    """Test route for bot types that doesn't require admin auth."""
+    return jsonify({
+        "success": True,
+        "bot_types": [
+            {
+                "id": "conservative", "name": "Conservative Bot",
+                "description": "Focuses on safe investments and steady growth. Maintains high cash reserves."
+            },
+            {
+                "id": "aggressive", "name": "Aggressive Bot",
+                "description": "Rapid expansion and high-risk investments. Willing to spend nearly all cash on properties."
+            },
+            {
+                "id": "strategic", "name": "Strategic Bot",
+                "description": "Balanced approach focusing on completing property monopolies and strategic development."
+            }
+        ],
+        "difficulty_levels": [
+            {
+                "id": "easy", "name": "Easy",
+                "description": "70% optimal decisions, 20% property valuation error, shorter planning horizon."
+            },
+            {
+                "id": "medium", "name": "Medium",
+                "description": "85% optimal decisions, 10% property valuation error, moderate planning horizon."
+            },
+            {
+                "id": "hard", "name": "Hard",
+                "description": "95% optimal decisions, 5% property valuation error, extended planning horizon."
+            }
+        ]
+    })
+
+# Add a direct bot types API with no authentication required
+@app.route('/api/bot-types', methods=['GET'])
+def direct_bot_types():
+    """Direct API for bot types that works independently of authentication."""
+    return jsonify({
+        "success": True,
+        "bot_types": [
+            {
+                "id": "conservative", "name": "Conservative Bot",
+                "description": "Focuses on safe investments and steady growth. Maintains high cash reserves."
+            },
+            {
+                "id": "aggressive", "name": "Aggressive Bot",
+                "description": "Rapid expansion and high-risk investments. Willing to spend nearly all cash on properties."
+            },
+            {
+                "id": "strategic", "name": "Strategic Bot",
+                "description": "Balanced approach focusing on completing property monopolies and strategic development."
+            },
+            {
+                "id": "opportunistic", "name": "Opportunistic Bot",
+                "description": "Uses market timing strategy to buy during recession and sell during boom cycles."
+            }
+        ],
+        "difficulty_levels": [
+            {
+                "id": "easy", "name": "Easy",
+                "description": "70% optimal decisions, 20% property valuation error, shorter planning horizon."
+            },
+            {
+                "id": "medium", "name": "Medium",
+                "description": "85% optimal decisions, 10% property valuation error, moderate planning horizon."
+            },
+            {
+                "id": "hard", "name": "Hard",
+                "description": "95% optimal decisions, 5% property valuation error, extended planning horizon."
+            }
+        ]
+    })
+
+# Add direct API endpoint for bot creation:
+@app.route('/api/create-bot', methods=['POST'])
+def direct_create_bot():
+    """Direct API for creating a bot without requiring the blueprint."""
+    try:
+        data = request.json
+        admin_pin = data.get('admin_pin')
+        
+        # Validate admin PIN
+        if admin_pin != app.config.get('ADMIN_KEY'):
+            return jsonify({
+                "success": False,
+                "error": "Invalid admin PIN"
+            }), 401
+        
+        # Extract bot data
+        bot_name = data.get('name')
+        bot_type = data.get('type', 'conservative')
+        difficulty = data.get('difficulty', 'medium')
+        
+        # Get bot controller
+        bot_controller = app.config.get('bot_controller')
+        if not bot_controller:
+            return jsonify({
+                "success": False,
+                "error": "Bot controller not initialized"
+            }), 500
+        
+        # Create the bot
+        new_bot = bot_controller.create_bot(bot_name, bot_type, difficulty)
+        
+        if new_bot:
+            return jsonify({
+                "success": True,
+                "bot_id": new_bot.id,
+                "name": new_bot.username,
+                "type": bot_type,
+                "difficulty": difficulty
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Failed to create bot"
+            }), 500
+            
+    except Exception as e:
+        app.logger.error(f"Error creating bot via direct API: {str(e)}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 # Static file routes
 @app.route('/admin')
@@ -548,7 +766,102 @@ def handle_reset_all_players(data):
         logger.error(f"Error resetting all players: {str(e)}", exc_info=True)
         emit('event_error', {'error': f'Failed to reset players: {str(e)}'}, room=sid)
 
+@socketio.on('finance_update')
+def handle_finance_update(data):
+    """Handle financial updates and broadcast to relevant players"""
+    sid = request.sid
+    logger = app.logger
+    
+    try:
+        update_type = data.get('type')
+        player_id = data.get('player_id')
+        
+        if not update_type or not player_id:
+            logger.warning(f"Missing required data in finance_update from SID {sid}")
+            emit('event_error', {'error': 'Missing required parameters'}, room=sid)
+            return
+        
+        # Create appropriate notification based on update type
+        message = "Your financial status has been updated."
+        
+        if update_type == 'loan_created':
+            message = "A new loan has been created for your account."
+        elif update_type == 'loan_payment':
+            message = "Your loan payment has been processed."
+        elif update_type == 'cd_created':
+            message = "A new Certificate of Deposit has been created."
+        elif update_type == 'cd_matured':
+            message = "Your Certificate of Deposit has matured."
+        elif update_type == 'heloc_created':
+            message = "A new Home Equity Line of Credit has been established."
+        elif update_type == 'bankruptcy':
+            message = "Your bankruptcy status has been updated."
+        
+        # Broadcast to the specific player's room
+        socketio.emit('financial_update', {
+            'type': update_type,
+            'message': message,
+            'timestamp': datetime.now().isoformat(),
+            'details': data.get('details', {})
+        }, room=f"player_{player_id}")
+        
+        logger.info(f"Financial update '{update_type}' sent to player {player_id}")
+        
+    except Exception as e:
+        logger.error(f"Error handling finance update: {str(e)}", exc_info=True)
+        emit('event_error', {'error': f'Failed to process finance update: {str(e)}'}, room=sid)
+
+@socketio.on('create_bot')
+def handle_create_bot(data):
+    """Handle creating a new bot player"""
+    admin_pin = data.get('admin_pin')
+    if admin_pin != app.config['ADMIN_KEY']:
+        socketio.emit('bot_event', {'error': 'Invalid admin PIN'}, room=request.sid)
+        return
+    
+    try:
+        # Get the bot controller from app config
+        bot_controller = app.config.get('bot_controller')
+        if not bot_controller:
+            raise ValueError("Bot controller not initialized")
+        
+        # Extract bot data from request
+        bot_name = data.get('name')
+        bot_type = data.get('type', 'conservative')
+        difficulty = data.get('difficulty', 'medium')
+        
+        # Check if username already exists
+        existing_player = Player.query.filter_by(username=bot_name).first()
+        if existing_player:
+            # Generate a unique username by appending a random suffix
+            import random
+            random_suffix = str(random.randint(1000, 9999))
+            unique_bot_name = f"{bot_name}_{random_suffix}"
+            app.logger.info(f"Bot name '{bot_name}' already exists, using '{unique_bot_name}' instead")
+            bot_name = unique_bot_name
+        
+        # Create the bot
+        new_bot = bot_controller.create_bot(bot_name, bot_type, difficulty)
+        
+        if new_bot:
+            # Return success with bot details
+            socketio.emit('bot_event', {
+                'success': True,
+                'bot': {
+                    'id': new_bot.id,
+                    'name': new_bot.username,
+                    'type': bot_type,
+                    'difficulty': difficulty
+                }
+            }, room=request.sid)
+        else:
+            # Return failure
+            socketio.emit('bot_event', {'error': 'Failed to create bot player'}, room=request.sid)
+    except Exception as e:
+        app.logger.error(f"Error creating bot: {str(e)}", exc_info=True)
+        socketio.emit('bot_event', {'error': f'Failed to save new bot player: {str(e)}'}, room=request.sid)
+
 # Run the app
 if __name__ == '__main__':
     setup_scheduled_tasks()
-    socketio.run(app, host='127.0.0.1', port=app.config['PORT'], debug=True) 
+    socketio.run(app, host='0.0.0.0', port=app.config['PORT'], debug=True, allow_unsafe_werkzeug=True) 

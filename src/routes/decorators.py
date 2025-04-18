@@ -41,4 +41,42 @@ def display_required(f):
     return decorated_function
 # --- End Decorator ---
 
+# --- Player Authentication Decorator ---
+def player_required(f):
+    """Decorator to ensure the request is accessing their own player data.
+    
+    Extracts the player_id from the route parameters and validates it against the 
+    player_id in the request payload or query parameters.
+    
+    The player_id parameter must be included in the function's route parameters.
+    """
+    @wraps(f)
+    def decorated_function(player_id, *args, **kwargs):
+        # Get authentication details from request
+        data = request.json if request.is_json else None
+        auth_player_id = data.get('player_id') if data else None
+        
+        # If not in JSON body, check query parameters
+        if auth_player_id is None:
+            auth_player_id = request.args.get('player_id')
+            
+        # Convert to integers for comparison if both are provided
+        try:
+            if auth_player_id:
+                auth_player_id = int(auth_player_id)
+            player_id = int(player_id)
+        except ValueError:
+            logger.warning(f"Invalid player ID format in request to {request.path}")
+            return jsonify({"success": False, "error": "Invalid player ID format"}), 400
+            
+        # Check if auth_player_id matches route player_id or if no auth_player_id was provided
+        # This allows both player-authenticated routes and admin routes that specify player_id
+        if auth_player_id is not None and auth_player_id != player_id:
+            logger.warning(f"Player ID mismatch in request to {request.path}: {auth_player_id} vs {player_id}")
+            return jsonify({"success": False, "error": "Unauthorized: Player ID mismatch"}), 401
+            
+        return f(player_id, *args, **kwargs)
+    return decorated_function
+# --- End Decorator ---
+
 # Add other shared decorators here if needed (e.g., player_auth_required) 

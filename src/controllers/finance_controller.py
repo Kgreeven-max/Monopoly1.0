@@ -543,45 +543,147 @@ class FinanceController:
             }
         }
     
-    def get_player_loans(self, player_id: int, pin: str) -> Dict:
-        """Get all financial instruments for a player
+    def get_player_loans(self, player_id: int, pin: str = None) -> Dict:
+        """Get all loans for a player
         
         Args:
             player_id: ID of the player
-            pin: Player's PIN for authentication
+            pin: Player's PIN for authentication (optional if using player_required decorator)
             
         Returns:
-            Dictionary with player's loans, CDs, and HELOCs
+            Dictionary with player's loans
         """
-        # Validate player
-        player = Player.query.get(player_id)
-        if not player or player.pin != pin:
-            return {
-                "success": False,
-                "error": "Invalid player credentials"
-            }
-            
-        # Get all financial instruments
-        loans = Loan.get_active_loans_for_player(player_id)
-        cds = Loan.get_active_cds_for_player(player_id)
-        helocs = Loan.get_active_helocs_for_player(player_id)
+        # Validate player if PIN is provided
+        if pin:
+            player = Player.query.get(player_id)
+            if not player or player.pin != pin:
+                return {
+                    "success": False,
+                    "error": "Invalid player credentials"
+                }
         
-        # Calculate totals
-        loan_total = sum(loan.calculate_current_value() for loan in loans)
-        cd_total = sum(cd.calculate_current_value() for cd in cds)
-        heloc_total = sum(heloc.calculate_current_value() for heloc in helocs)
+        # Get all loans for this player
+        loans = Loan.query.filter_by(player_id=player_id, loan_type="loan").all()
         
         return {
             "success": True,
-            "player_id": player_id,
-            "loans": [loan.to_dict() for loan in loans],
-            "cds": [cd.to_dict() for cd in cds],
-            "helocs": [heloc.to_dict() for heloc in helocs],
-            "totals": {
-                "loans": loan_total,
-                "cds": cd_total,
-                "helocs": heloc_total,
-                "net_debt": loan_total + heloc_total - cd_total
+            "loans": [loan.to_dict() for loan in loans]
+        }
+    
+    def get_player_cds(self, player_id: int, pin: str = None) -> Dict:
+        """Get all certificates of deposit for a player
+        
+        Args:
+            player_id: ID of the player
+            pin: Player's PIN for authentication (optional if using player_required decorator)
+            
+        Returns:
+            Dictionary with player's CDs
+        """
+        # Validate player if PIN is provided
+        if pin:
+            player = Player.query.get(player_id)
+            if not player or player.pin != pin:
+                return {
+                    "success": False,
+                    "error": "Invalid player credentials"
+                }
+        
+        # Get all CDs for this player
+        cds = Loan.query.filter_by(player_id=player_id, loan_type="cd").all()
+        
+        return {
+            "success": True,
+            "cds": [cd.to_dict() for cd in cds]
+        }
+    
+    def get_player_helocs(self, player_id: int, pin: str = None) -> Dict:
+        """Get all home equity lines of credit for a player
+        
+        Args:
+            player_id: ID of the player
+            pin: Player's PIN for authentication (optional if using player_required decorator)
+            
+        Returns:
+            Dictionary with player's HELOCs
+        """
+        # Validate player if PIN is provided
+        if pin:
+            player = Player.query.get(player_id)
+            if not player or player.pin != pin:
+                return {
+                    "success": False,
+                    "error": "Invalid player credentials"
+                }
+        
+        # Get all HELOCs for this player
+        helocs = Loan.query.filter_by(player_id=player_id, loan_type="heloc").all()
+        
+        return {
+            "success": True,
+            "helocs": [heloc.to_dict() for heloc in helocs]
+        }
+    
+    def get_player_financial_summary(self, player_id: int, pin: str = None) -> Dict:
+        """Get a comprehensive financial summary for a player
+        
+        Args:
+            player_id: ID of the player
+            pin: Player's PIN for authentication (optional if using player_required decorator)
+            
+        Returns:
+            Dictionary with player's financial summary
+        """
+        # Validate player if PIN is provided
+        if pin:
+            player = Player.query.get(player_id)
+            if not player or player.pin != pin:
+                return {
+                    "success": False,
+                    "error": "Invalid player credentials"
+                }
+        else:
+            player = Player.query.get(player_id)
+            if not player:
+                return {
+                    "success": False,
+                    "error": "Player not found"
+                }
+        
+        # Get player properties
+        properties = Property.query.filter_by(owner_id=player_id).all()
+        property_value = sum(prop.price for prop in properties)
+        
+        # Get player loans
+        loans = Loan.query.filter_by(player_id=player_id, loan_type="loan").all()
+        loan_debt = sum(loan.calculate_current_value() for loan in loans)
+        
+        # Get player CDs
+        cds = Loan.query.filter_by(player_id=player_id, loan_type="cd").all()
+        cd_value = sum(cd.calculate_current_value() for cd in cds)
+        
+        # Get player HELOCs
+        helocs = Loan.query.filter_by(player_id=player_id, loan_type="heloc").all()
+        heloc_debt = sum(heloc.calculate_current_value() for heloc in helocs)
+        
+        # Calculate net worth
+        net_worth = player.cash + property_value + cd_value - loan_debt - heloc_debt
+        
+        return {
+            "success": True,
+            "summary": {
+                "player_id": player_id,
+                "player_name": player.username,
+                "cash": player.cash,
+                "property_value": property_value,
+                "property_count": len(properties),
+                "loan_debt": loan_debt,
+                "loan_count": len(loans),
+                "cd_value": cd_value,
+                "cd_count": len(cds),
+                "heloc_debt": heloc_debt,
+                "heloc_count": len(helocs),
+                "net_worth": net_worth
             }
         }
     
