@@ -14,16 +14,14 @@ admin_controller = AdminController()
 def add_bot():
     """Add an AI player to the game"""
     data = request.json
-    bot_type = data.get('bot_type', 'Strategic') # Default type if not provided
+    bot_type = data.get('bot_type', 'strategic') # Default type if not provided
     bot_name = data.get('bot_name')
     
     if not bot_name:
         return jsonify({'success': False, 'error': 'Bot name is required'}), 400
     
-    # TODO: Call the (currently placeholder) admin_controller method
-    # result = admin_controller.add_bot_player(bot_name, bot_type)
-    # Placeholder response:
-    result = {"success": True, "message": f"Placeholder: Added bot {bot_name} ({bot_type})"}
+    # Call the implemented admin_controller method
+    result = admin_controller.add_bot_player(bot_name, bot_type)
         
     if result.get('success'):
         return jsonify(result), 201

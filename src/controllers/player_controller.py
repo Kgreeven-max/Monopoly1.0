@@ -2,6 +2,7 @@ import logging
 from flask import jsonify
 from src.models.player import Player
 from src.models import db
+from flask import current_app
 
 logger = logging.getLogger(__name__)
 
@@ -102,4 +103,81 @@ class PlayerController:
         properties = player.get_properties() # Assuming Player model has this method
         logger.info(f"Player {player_id} requested properties.")
         # Placeholder response
-        return {'success': True, 'properties': [prop.to_dict() for prop in properties]} 
+        return {'success': True, 'properties': [prop.to_dict() for prop in properties]}
+        
+    def handle_bankruptcy(self, player_id, pin):
+        """
+        Handle player bankruptcy by calling the FinanceController's declare_bankruptcy method
+        and updating game state.
+        
+        Args:
+            player_id (int): The ID of the player declaring bankruptcy
+            pin (str): The player's PIN for authentication
+            
+        Returns:
+            dict: A dictionary with the results of the bankruptcy process
+        """
+        logger.info(f"Player {player_id} requesting bankruptcy declaration")
+        
+        # Validate player credentials
+        player = self._authenticate_player(player_id, pin)
+        if not player:
+            logger.warning(f"Bankruptcy authentication failed for player {player_id}")
+            return {'success': False, 'error': 'Authentication failed'}
+        
+        # Get finance controller from app config
+        finance_controller = current_app.config.get('finance_controller')
+        if not finance_controller:
+            logger.error("Finance controller not found in app config")
+            return {'success': False, 'error': 'Server configuration error'}
+        
+        # Call finance controller to declare bankruptcy
+        result = finance_controller.declare_bankruptcy(player_id, pin)
+        
+        if result.get('success'):
+            logger.info(f"Player {player_id} successfully declared bankruptcy. Properties lost: {result.get('properties_lost', 0)}")
+            
+            # Get game controller to update game state
+            game_controller = current_app.config.get('game_controller')
+            if game_controller:
+                # Check if the player can continue playing
+                game_state = GameState.query.filter_by(current_player_id=player_id).first()
+                if game_state:
+                    # Set expected action to end turn
+                    game_state.expected_actions = [{
+                        "player_id": player_id,
+                        "action": "end_turn"
+                    }]
+                    self.db.session.commit()
+                    logger.info(f"Updated expected actions to end_turn for bankrupt player {player_id}")
+            
+            # Update player state to reflect bankruptcy in the UI
+            player_data = {
+                'id': player.id,
+                'username': player.username,
+                'bankrupt': True,
+                'bankruptcy_count': player.bankruptcy_count,
+                'credit_score': player.credit_score
+            }
+            
+            # Emit bankruptcy event for real-time UI updates if SocketIO available
+            socketio = current_app.config.get('socketio')
+            if socketio:
+                socketio.emit('player_updated', {
+                    'player': player_data
+                })
+            
+            return {
+                'success': True,
+                'player': player_data,
+                'message': 'Bankruptcy processed successfully',
+                'debt_forgiven': result.get('total_debt_forgiven', 0),
+                'properties_lost': result.get('properties_lost', 0),
+                'new_balance': result.get('new_cash_balance', 0)
+            }
+        else:
+            logger.warning(f"Bankruptcy declaration failed for player {player_id}: {result.get('error', 'Unknown error')}")
+            return {
+                'success': False,
+                'error': result.get('error', 'Failed to process bankruptcy')
+            } 

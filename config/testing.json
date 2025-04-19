@@ -1,0 +1,11 @@
+{
+    "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+    "DEBUG": false,
+    "SECRET_KEY": "pinopoly-testing-key",
+    "ADMIN_KEY": "admin-test",
+    "DISPLAY_KEY": "display-test",
+    "REMOTE_PLAY_ENABLED": false,
+    "ECONOMIC_CYCLE_ENABLED": false,
+    "ADAPTIVE_DIFFICULTY_ENABLED": false,
+    "POLICE_PATROL_ENABLED": false
+} 

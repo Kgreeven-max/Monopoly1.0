@@ -37,6 +37,28 @@ socket.on('game_error', (error) => {
   console.error('Game error:', error);
 });
 
+// Property action helpers
+const mortgageProperty = (playerId, propertyId, gameId = 1, pin = null) => {
+  socket.emit('mortgage_property', { playerId, propertyId, gameId, pin });
+};
+
+const unmortgageProperty = (playerId, propertyId, gameId = 1, pin = null) => {
+  socket.emit('unmortgage_property', { playerId, propertyId, gameId, pin });
+};
+
+const improveProperty = (playerId, propertyId, gameId = 1, improvementType = 'house') => {
+  socket.emit('improve_property', { playerId, propertyId, gameId, improvementType });
+};
+
+const sellImprovement = (playerId, propertyId, gameId = 1, improvementType = 'house') => {
+  socket.emit('sell_improvement', { playerId, propertyId, gameId, improvementType });
+};
+
+// Market fluctuation handling
+const handleMarketFluctuation = (playerId, gameId = 1) => {
+  socket.emit('handle_market_fluctuation', { playerId, gameId });
+};
+
 // Export socket instance and helper functions
 export default {
   socket,
@@ -45,4 +67,11 @@ export default {
   emit: (...args) => socket.emit(...args),
   on: (event, callback) => socket.on(event, callback),
   off: (event, callback) => socket.off(event, callback),
+  // Property Actions
+  mortgageProperty,
+  unmortgageProperty,
+  improveProperty,
+  sellImprovement,
+  // Special Space Actions
+  handleMarketFluctuation
 }; 

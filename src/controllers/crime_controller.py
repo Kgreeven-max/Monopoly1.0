@@ -21,6 +21,18 @@ class CrimeController:
         """
         self.socketio = socketio
         self.last_police_patrol = datetime.now()
+        # Default settings
+        self.crime_probability = 0.2  # 20% chance of a player committing a crime
+        self.police_patrol_enabled = True  # Enable police patrols
+        self.police_patrol_interval = 45  # Minutes between police patrols
+        self.police_catch_probability = 0.3  # 30% base chance to catch criminals
+        self.jail_turns = 3  # Default jail time in turns
+        self.fine_multiplier = 1.5  # Multiplier for fines
+        # Crime types that are enabled
+        self.crime_types = ['theft', 'property_vandalism', 'rent_evasion', 'forgery', 'tax_evasion']
+        
+        # Try to load settings from configuration if available
+        self._load_settings_from_config()
         
     def commit_crime(self, player_id, crime_type, **params):
         """Commit a crime
@@ -342,4 +354,58 @@ class CrimeController:
                 
         except Exception as e:
             logger.error(f"Error processing property damage repair: {str(e)}")
-            return False 
+            return False
+            
+    def get_settings(self):
+        """Get current crime system settings
+        
+        Returns:
+            dict: Current crime settings
+        """
+        return {
+            "crime_probability": self.crime_probability,
+            "police_patrol_enabled": self.police_patrol_enabled,
+            "police_patrol_interval": self.police_patrol_interval,
+            "police_catch_probability": self.police_catch_probability,
+            "jail_turns": self.jail_turns,
+            "fine_multiplier": self.fine_multiplier,
+            "crime_types": self.crime_types,
+            "last_police_patrol": self.last_police_patrol.isoformat() if self.last_police_patrol else None
+        }
+    
+    def save_settings(self):
+        """Save current settings to persistent storage if available
+        
+        Returns:
+            bool: Whether settings were successfully saved
+        """
+        try:
+            # Try to save to Flask app config
+            from flask import current_app
+            if current_app:
+                # Save selected settings to app config for persistence across restarts
+                config = current_app.config
+                config['POLICE_PATROL_ENABLED'] = self.police_patrol_enabled
+                config['POLICE_PATROL_INTERVAL'] = self.police_patrol_interval
+                
+                # Log the update
+                logger.info(f"Saved crime controller settings to app config")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Error saving crime controller settings: {str(e)}")
+            return False
+    
+    def _load_settings_from_config(self):
+        """Load settings from Flask app config if available"""
+        try:
+            from flask import current_app
+            if current_app:
+                config = current_app.config
+                # Load settings with fallbacks
+                self.police_patrol_enabled = config.get('POLICE_PATROL_ENABLED', self.police_patrol_enabled)
+                self.police_patrol_interval = config.get('POLICE_PATROL_INTERVAL', self.police_patrol_interval)
+                
+                logger.debug(f"Loaded crime controller settings from app config")
+        except Exception as e:
+            logger.warning(f"Could not load crime controller settings from config: {str(e)}") 

@@ -77,6 +77,7 @@ def import_models():
     from .finance.loan import Loan
     from .game_mode import GameMode
     from .game import Game # Add this import
+    from .game_settings import GameSettings # Add the GameSettings model
 
     # logger.info("Database models initialized") # Duplicate log, removed 
 

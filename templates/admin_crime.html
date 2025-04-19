@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi-nopoly Admin - Crime Management</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .crime-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .crime-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .crime-stat {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .crime-label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .crime-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .crime-table th, .crime-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .crime-table th {
+            background-color: #f2f2f2;
+        }
+        
+        .crime-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .crime-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .detected {
+            color: #d9534f;
+        }
+        
+        .undetected {
+            color: #5cb85c;
+        }
+        
+        .severity-LOW {
+            background-color: #d9edf7;
+        }
+        
+        .severity-MEDIUM {
+            background-color: #fcf8e3;
+        }
+        
+        .severity-HIGH {
+            background-color: #f2dede;
+        }
+        
+        .jail-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .jail-list li {
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .settings-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .settings-form input, .settings-form select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .settings-form fieldset {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .settings-form legend {
+            padding: 0 10px;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .tabs {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+        }
+        
+        .tabs button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+        }
+        
+        .tabs button:hover {
+            background-color: #ddd;
+        }
+        
+        .tabs button.active {
+            background-color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-shield-alt"></i> Pi-nopoly Admin - Crime Management</h1>
+            <nav>
+                <a href="/admin" class="button"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <a href="/admin_crime" class="button active"><i class="fas fa-shield-alt"></i> Crime</a>
+                <a href="/admin_game_modes" class="button"><i class="fas fa-gamepad"></i> Game Modes</a>
+                <a href="/admin_remote_play" class="button"><i class="fas fa-wifi"></i> Remote Play</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="tabs">
+                <button class="tablink active" onclick="openTab(event, 'statistics')">Statistics</button>
+                <button class="tablink" onclick="openTab(event, 'settings')">Settings</button>
+                <button class="tablink" onclick="openTab(event, 'history')">Crime History</button>
+                <button class="tablink" onclick="openTab(event, 'jail')">Jail Management</button>
+                <button class="tablink" onclick="openTab(event, 'actions')">Admin Actions</button>
+            </div>
+            
+            <!-- Crime Statistics Tab -->
+            <div id="statistics" class="tab-content active">
+                <h2>Crime Statistics</h2>
+                <div class="crime-grid">
+                    <div class="crime-card">
+                        <div class="crime-label">Total Crimes</div>
+                        <div class="crime-stat" id="total-crimes">-</div>
+                    </div>
+                    <div class="crime-card">
+                        <div class="crime-label">Detected Crimes</div>
+                        <div class="crime-stat" id="detected-crimes">-</div>
+                    </div>
+                    <div class="crime-card">
+                        <div class="crime-label">Successful Crimes</div>
+                        <div class="crime-stat" id="successful-crimes">-</div>
+                    </div>
+                    <div class="crime-card">
+                        <div class="crime-label">Detection Rate</div>
+                        <div class="crime-stat" id="detection-rate">-</div>
+                    </div>
+                </div>
+                
+                <div class="crime-grid">
+                    <div class="crime-card">
+                        <h3>Crime Types</h3>
+                        <canvas id="crime-types-chart"></canvas>
+                    </div>
+                    <div class="crime-card">
+                        <h3>Time Distribution</h3>
+                        <canvas id="time-distribution-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Crime Settings Tab -->
+            <div id="settings" class="tab-content">
+                <h2>Crime System Settings</h2>
+                <form class="settings-form" id="crime-settings-form">
+                    <fieldset>
+                        <legend>Probability Settings</legend>
+                        <div>
+                            <label for="crime-probability">Crime Probability</label>
+                            <input type="range" id="crime-probability" min="0" max="1" step="0.1" value="0.2">
+                            <span id="crime-probability-value">20%</span>
+                            <div class="crime-label">Chance of a player committing a crime when possible</div>
+                        </div>
+                        
+                        <div>
+                            <label for="police-catch-probability">Police Catch Probability</label>
+                            <input type="range" id="police-catch-probability" min="0" max="1" step="0.1" value="0.3">
+                            <span id="police-catch-probability-value">30%</span>
+                            <div class="crime-label">Base chance for police to catch criminals</div>
+                        </div>
+                    </fieldset>
+                    
+                    <fieldset>
+                        <legend>Police Patrol Settings</legend>
+                        <div>
+                            <label for="police-patrol-enabled">Police Patrol Enabled</label>
+                            <select id="police-patrol-enabled">
+                                <option value="true">Enabled</option>
+                                <option value="false">Disabled</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="police-patrol-interval">Police Patrol Interval (minutes)</label>
+                            <input type="number" id="police-patrol-interval" min="1" value="45">
+                        </div>
+                    </fieldset>
+                    
+                    <fieldset>
+                        <legend>Punishment Settings</legend>
+                        <div>
+                            <label for="jail-turns">Default Jail Time (turns)</label>
+                            <input type="number" id="jail-turns" min="1" max="10" value="3">
+                        </div>
+                        
+                        <div>
+                            <label for="fine-multiplier">Fine Multiplier</label>
+                            <input type="number" id="fine-multiplier" min="1" step="0.1" value="1.5">
+                        </div>
+                    </fieldset>
+                    
+                    <fieldset>
+                        <legend>Enabled Crime Types</legend>
+                        <div>
+                            <label><input type="checkbox" name="crime-type" value="theft" checked> Theft</label>
+                            <label><input type="checkbox" name="crime-type" value="property_vandalism" checked> Property Vandalism</label>
+                            <label><input type="checkbox" name="crime-type" value="rent_evasion" checked> Rent Evasion</label>
+                            <label><input type="checkbox" name="crime-type" value="forgery" checked> Forgery</label>
+                            <label><input type="checkbox" name="crime-type" value="tax_evasion" checked> Tax Evasion</label>
+                        </div>
+                    </fieldset>
+                    
+                    <button type="submit" class="button primary-button">Save Settings</button>
+                </form>
+            </div>
+            
+            <!-- Crime History Tab -->
+            <div id="history" class="tab-content">
+                <h2>Crime History</h2>
+                <div class="filters">
+                    <label for="player-filter">Filter by Player:</label>
+                    <select id="player-filter">
+                        <option value="">All Players</option>
+                        <!-- Will be populated by JavaScript -->
+                    </select>
+                    
+                    <label for="start-date">Start Date:</label>
+                    <input type="date" id="start-date">
+                    
+                    <label for="end-date">End Date:</label>
+                    <input type="date" id="end-date">
+                    
+                    <button id="apply-filters" class="button">Apply Filters</button>
+                </div>
+                
+                <table class="crime-table" id="crime-history-table">
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>Crime Type</th>
+                            <th>Criminal</th>
+                            <th>Target</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Jail Management Tab -->
+            <div id="jail" class="tab-content">
+                <h2>Jail Management</h2>
+                <h3>Currently Jailed Players</h3>
+                <ul class="jail-list" id="jail-list">
+                    <!-- Will be populated by JavaScript -->
+                </ul>
+                
+                <h3>Send Player to Jail</h3>
+                <form id="send-to-jail-form">
+                    <div>
+                        <label for="player-to-jail">Player:</label>
+                        <select id="player-to-jail" required>
+                            <option value="">Select Player</option>
+                            <!-- Will be populated by JavaScript -->
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="jail-turns-count">Number of Turns:</label>
+                        <input type="number" id="jail-turns-count" min="1" max="10" value="3">
+                    </div>
+                    
+                    <div>
+                        <label for="jail-reason">Reason:</label>
+                        <input type="text" id="jail-reason" value="Admin action">
+                    </div>
+                    
+                    <button type="submit" class="button warning-button">Send to Jail</button>
+                </form>
+            </div>
+            
+            <!-- Admin Actions Tab -->
+            <div id="actions" class="tab-content">
+                <h2>Admin Actions</h2>
+                <div class="crime-grid">
+                    <div class="crime-card">
+                        <h3>Trigger Random Crime</h3>
+                        <p>Force a random crime to occur with specified severity.</p>
+                        <form id="trigger-crime-form">
+                            <div>
+                                <label for="crime-severity">Severity:</label>
+                                <select id="crime-severity">
+                                    <option value="">Random</option>
+                                    <option value="LOW">Low</option>
+                                    <option value="MEDIUM">Medium</option>
+                                    <option value="HIGH">High</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label for="crime-target">Target Player (optional):</label>
+                                <select id="crime-target">
+                                    <option value="">Random</option>
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            
+                            <button type="submit" class="button warning-button">Trigger Crime</button>
+                        </form>
+                    </div>
+                    
+                    <div class="crime-card">
+                        <h3>Trigger Police Patrol</h3>
+                        <p>Force an immediate police patrol to check for criminal activity.</p>
+                        <button id="trigger-patrol" class="button primary-button">Start Patrol</button>
+                        <div id="patrol-results"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        // Global variables
+        let crimeTypesChart = null;
+        let timeDistributionChart = null;
+        let socket = null;
+        const ADMIN_KEY = localStorage.getItem('admin_key') || '';
+        
+        // Check if admin key is set
+        if (!ADMIN_KEY) {
+            alert('Admin key not found. Please log in first.');
+            window.location.href = '/admin';
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set up tabs
+            document.querySelector('.tablink.active').click();
+            
+            // Load data
+            loadCrimeStatistics();
+            loadCrimeSettings();
+            loadJailStatus();
+            loadCrimeHistory();
+            loadPlayers();
+            
+            // Set up event handlers
+            document.getElementById('crime-settings-form').addEventListener('submit', saveCrimeSettings);
+            document.getElementById('send-to-jail-form').addEventListener('submit', sendToJail);
+            document.getElementById('trigger-crime-form').addEventListener('submit', triggerRandomCrime);
+            document.getElementById('trigger-patrol').addEventListener('click', triggerPolicePatrol);
+            document.getElementById('apply-filters').addEventListener('click', loadCrimeHistory);
+            
+            // Set up range input display values
+            document.getElementById('crime-probability').addEventListener('input', updateRangeValue);
+            document.getElementById('police-catch-probability').addEventListener('input', updateRangeValue);
+            
+            // Set up socket connection for real-time updates
+            setupSocketConnection();
+        });
+        
+        // Tab functionality
+        function openTab(evt, tabName) {
+            const tabcontents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabcontents.length; i++) {
+                tabcontents[i].classList.remove('active');
+            }
+            
+            const tablinks = document.getElementsByClassName('tablink');
+            for (let i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove('active');
+            }
+            
+            document.getElementById(tabName).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+        
+        // Load crime statistics
+        function loadCrimeStatistics() {
+            fetch('/api/admin/crime/statistics?admin_key=' + ADMIN_KEY)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update stats
+                        document.getElementById('total-crimes').textContent = data.total_crimes;
+                        document.getElementById('detected-crimes').textContent = data.detected_crimes;
+                        document.getElementById('successful-crimes').textContent = data.successful_crimes;
+                        document.getElementById('detection-rate').textContent = data.detection_rate + '%';
+                        
+                        // Create/update charts
+                        createCrimeTypesChart(data.crime_types);
+                        createTimeDistributionChart(data.time_distribution);
+                    } else {
+                        console.error('Error loading statistics:', data.error);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+        
+        // Load crime settings
+        function loadCrimeSettings() {
+            fetch('/api/admin/crime/settings?admin_key=' + ADMIN_KEY)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const settings = data.settings;
+                        
+                        // Update form values
+                        document.getElementById('crime-probability').value = settings.crime_probability;
+                        document.getElementById('crime-probability-value').textContent = 
+                            Math.round(settings.crime_probability * 100) + '%';
+                            
+                        document.getElementById('police-catch-probability').value = settings.police_catch_probability;
+                        document.getElementById('police-catch-probability-value').textContent = 
+                            Math.round(settings.police_catch_probability * 100) + '%';
+                            
+                        document.getElementById('police-patrol-enabled').value = settings.police_patrol_enabled;
+                        document.getElementById('police-patrol-interval').value = settings.police_patrol_interval;
+                        document.getElementById('jail-turns').value = settings.jail_turns;
+                        document.getElementById('fine-multiplier').value = settings.fine_multiplier;
+                        
+                        // Update crime type checkboxes
+                        const checkboxes = document.querySelectorAll('input[name="crime-type"]');
+                        checkboxes.forEach(checkbox => {
+                            checkbox.checked = settings.crime_types.includes(checkbox.value);
+                        });
+                    } else {
+                        console.error('Error loading settings:', data.error);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+        
+        // Save crime settings
+        function saveCrimeSettings(event) {
+            event.preventDefault();
+            
+            // Collect form values
+            const crimeProbability = parseFloat(document.getElementById('crime-probability').value);
+            const policeCatchProbability = parseFloat(document.getElementById('police-catch-probability').value);
+            const policePatrolEnabled = document.getElementById('police-patrol-enabled').value === 'true';
+            const policePatrolInterval = parseInt(document.getElementById('police-patrol-interval').value);
+            const jailTurns = parseInt(document.getElementById('jail-turns').value);
+            const fineMultiplier = parseFloat(document.getElementById('fine-multiplier').value);
+            
+            // Collect crime types
+            const crimeTypeElements = document.querySelectorAll('input[name="crime-type"]:checked');
+            const crimeTypes = Array.from(crimeTypeElements).map(el => el.value);
+            
+            // Create settings object
+            const settings = {
+                crime_probability: crimeProbability,
+                police_catch_probability: policeCatchProbability,
+                police_patrol_enabled: policePatrolEnabled,
+                police_patrol_interval: policePatrolInterval,
+                jail_turns: jailTurns,
+                fine_multiplier: fineMultiplier,
+                crime_types: crimeTypes
+            };
+            
+            // Send to server
+            fetch('/api/admin/crime/settings', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': ADMIN_KEY
+                },
+                body: JSON.stringify(settings)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Settings saved successfully');
+                } else {
+                    alert('Error saving settings: ' + data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+        
+        // Load jail status
+        function loadJailStatus() {
+            fetch('/api/admin/crime/jail/status?admin_key=' + ADMIN_KEY)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const jailList = document.getElementById('jail-list');
+                        jailList.innerHTML = '';
+                        
+                        if (data.jailed_players.length === 0) {
+                            jailList.innerHTML = '<li>No players currently in jail</li>';
+                            return;
+                        }
+                        
+                        data.jailed_players.forEach(player => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `
+                                <div>
+                                    <strong>${player.name}</strong> 
+                                    <span>Turns remaining: ${player.turns_remaining}</span>
+                                    ${player.has_jail_card ? '<span class="badge">Has Jail Card</span>' : ''}
+                                </div>
+                                <button class="button" onclick="releaseFromJail(${player.id})">Release</button>
+                            `;
+                            jailList.appendChild(li);
+                        });
+                    } else {
+                        console.error('Error loading jail status:', data.error);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+        
+        // Release player from jail
+        function releaseFromJail(playerId) {
+            fetch(`/api/admin/crime/jail/release/${playerId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': ADMIN_KEY
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`${data.player_name} has been released from jail`);
+                    loadJailStatus();
+                } else {
+                    alert('Error releasing player: ' + data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+        
+        // Send player to jail
+        function sendToJail(event) {
+            event.preventDefault();
+            
+            const playerId = document.getElementById('player-to-jail').value;
+            const turns = document.getElementById('jail-turns-count').value;
+            const reason = document.getElementById('jail-reason').value;
+            
+            if (!playerId) {
+                alert('Please select a player');
+                return;
+            }
+            
+            fetch(`/api/admin/crime/jail/send/${playerId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': ADMIN_KEY
+                },
+                body: JSON.stringify({
+                    turns: turns,
+                    reason: reason
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`${data.player_name} has been sent to jail for ${data.turns} turns`);
+                    loadJailStatus();
+                } else {
+                    alert('Error sending player to jail: ' + data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+        
+        // Load crime history
+        function loadCrimeHistory() {
+            // Get filter values
+            const playerId = document.getElementById('player-filter').value;
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            
+            // Build query string
+            let queryString = `?admin_key=${ADMIN_KEY}`;
+            if (playerId) queryString += `&player_id=${playerId}`;
+            if (startDate) queryString += `&start_date=${startDate}`;
+            if (endDate) queryString += `&end_date=${endDate}`;
+            
+            fetch('/api/admin/crime/history' + queryString)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const tableBody = document.querySelector('#crime-history-table tbody');
+                        tableBody.innerHTML = '';
+                        
+                        if (data.crimes.length === 0) {
+                            tableBody.innerHTML = '<tr><td colspan="7">No crimes found</td></tr>';
+                            return;
+                        }
+                        
+                        data.crimes.forEach(crime => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${new Date(crime.timestamp).toLocaleString()}</td>
+                                <td>${formatCrimeType(crime.crime_type)}</td>
+                                <td>${crime.player_name || `Player ${crime.player_id}`}</td>
+                                <td>${getTargetName(crime)}</td>
+                                <td>${crime.amount ? '$' + crime.amount : '-'}</td>
+                                <td class="${crime.detected ? 'detected' : 'undetected'}">
+                                    ${crime.detected ? 'Detected' : 'Undetected'}
+                                </td>
+                                <td>${crime.details || '-'}</td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    } else {
+                        console.error('Error loading crime history:', data.error);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+        
+        // Trigger random crime
+        function triggerRandomCrime(event) {
+            event.preventDefault();
+            
+            const severity = document.getElementById('crime-severity').value;
+            const targetPlayerId = document.getElementById('crime-target').value;
+            
+            // Build request body
+            const requestBody = {};
+            if (severity) requestBody.severity = severity;
+            if (targetPlayerId) requestBody.target_player_id = targetPlayerId;
+            
+            fetch('/api/admin/crime/trigger-random', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': ADMIN_KEY
+                },
+                body: JSON.stringify(requestBody)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Crime triggered: ${formatCrimeType(data.crime.crime_type)} by ${data.criminal_name}\n` +
+                          `Detected: ${data.detected ? 'Yes' : 'No'}\n` +
+                          `Details: ${data.message}`);
+                    
+                    // Refresh crime history
+                    loadCrimeHistory();
+                    loadCrimeStatistics();
+                } else {
+                    alert('Error triggering crime: ' + data.error);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+        
+        // Trigger police patrol
+        function triggerPolicePatrol() {
+            const resultsElement = document.getElementById('patrol-results');
+            resultsElement.textContent = 'Police patrol in progress...';
+            
+            fetch('/api/crime/police-patrol', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': ADMIN_KEY
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resultsElement.innerHTML = `
+                        <div class="success-message">
+                            <p>${data.message}</p>
+                            <p>Crimes detected: ${data.detected_crimes}</p>
+                        </div>
+                    `;
+                    
+                    // Refresh data
+                    loadCrimeHistory();
+                    loadCrimeStatistics();
+                    loadJailStatus();
+                } else {
+                    resultsElement.innerHTML = `
+                        <div class="error-message">
+                            <p>Error: ${data.message}</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resultsElement.innerHTML = `
+                    <div class="error-message">
+                        <p>Error: ${error.message}</p>
+                    </div>
+                `;
+            });
+        }
+        
+        // Load players for dropdowns
+        function loadPlayers() {
+            fetch('/api/get_all_players', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    admin_pin: ADMIN_KEY
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.players) {
+                    // Populate player filter dropdown
+                    const playerFilter = document.getElementById('player-filter');
+                    // Populate player to jail dropdown
+                    const playerToJail = document.getElementById('player-to-jail');
+                    // Populate crime target dropdown
+                    const crimeTarget = document.getElementById('crime-target');
+                    
+                    // Clear existing options except the first one
+                    playerFilter.innerHTML = '<option value="">All Players</option>';
+                    playerToJail.innerHTML = '<option value="">Select Player</option>';
+                    crimeTarget.innerHTML = '<option value="">Random</option>';
+                    
+                    // Add options for each player
+                    data.players.forEach(player => {
+                        if (player.in_game) {
+                            const option1 = document.createElement('option');
+                            option1.value = player.id;
+                            option1.textContent = player.username;
+                            playerFilter.appendChild(option1);
+                            
+                            const option2 = document.createElement('option');
+                            option2.value = player.id;
+                            option2.textContent = player.username;
+                            playerToJail.appendChild(option2);
+                            
+                            const option3 = document.createElement('option');
+                            option3.value = player.id;
+                            option3.textContent = player.username;
+                            crimeTarget.appendChild(option3);
+                        }
+                    });
+                }
+            })
+            .catch(error => console.error('Error loading players:', error));
+        }
+        
+        // Setup socket connection
+        function setupSocketConnection() {
+            try {
+                socket = io();
+                
+                // Listen for game events
+                socket.on('game_event', (data) => {
+                    if (data.event_type === 'crime_detected') {
+                        // Refresh crime data
+                        loadCrimeStatistics();
+                        loadCrimeHistory();
+                    } else if (data.event_type === 'jail_status_change') {
+                        // Refresh jail status
+                        loadJailStatus();
+                    }
+                });
+                
+                socket.on('admin_action', (data) => {
+                    if (data.action === 'crime_settings_updated') {
+                        loadCrimeSettings();
+                    }
+                });
+            } catch (error) {
+                console.error('Socket connection error:', error);
+            }
+        }
+        
+        // Helper functions
+        function createCrimeTypesChart(crimeTypes) {
+            const ctx = document.getElementById('crime-types-chart').getContext('2d');
+            
+            if (crimeTypesChart) {
+                crimeTypesChart.destroy();
+            }
+            
+            crimeTypesChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(crimeTypes).map(type => formatCrimeType(type)),
+                    datasets: [{
+                        data: Object.values(crimeTypes),
+                        backgroundColor: [
+                            '#FF6384',
+                            '#36A2EB',
+                            '#FFCE56',
+                            '#4BC0C0',
+                            '#9966FF'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+        
+        function createTimeDistributionChart(timeDistribution) {
+            const ctx = document.getElementById('time-distribution-chart').getContext('2d');
+            
+            if (timeDistributionChart) {
+                timeDistributionChart.destroy();
+            }
+            
+            timeDistributionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Today', 'This Week', 'This Month', 'All Time'],
+                    datasets: [{
+                        label: 'Crimes',
+                        data: [
+                            timeDistribution.today,
+                            timeDistribution.this_week,
+                            timeDistribution.this_month,
+                            timeDistribution.all_time
+                        ],
+                        backgroundColor: '#36A2EB'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function formatCrimeType(type) {
+            return type
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+        
+        function getTargetName(crime) {
+            if (crime.target_player_name) {
+                return crime.target_player_name;
+            } else if (crime.target_property_name) {
+                return `Property: ${crime.target_property_name}`;
+            } else {
+                return '-';
+            }
+        }
+        
+        function updateRangeValue(event) {
+            const value = event.target.value;
+            const displayElement = document.getElementById(`${event.target.id}-value`);
+            displayElement.textContent = Math.round(value * 100) + '%';
+        }
+    </script>
+</body>
+</html> 

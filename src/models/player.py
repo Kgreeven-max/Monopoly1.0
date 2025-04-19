@@ -24,6 +24,8 @@ class Player(db.Model):
     criminal_record = db.Column(db.Integer, default=0)  # Number of detected crimes
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    credit_score = db.Column(db.Integer, default=700)  # Credit score range: 300-850
     
     # Foreign Key to link Player to a Game
     game_id = db.Column(db.Integer, db.ForeignKey('games.id'), nullable=True)
@@ -133,6 +135,8 @@ class Player(db.Model):
             'game_id': self.game_id,
             'last_seen': self.last_seen.isoformat() if self.last_seen else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'credit_score': self.credit_score,
         }
         if include_properties:
             player_dict['properties'] = [prop.to_dict() for prop in self.properties]
@@ -236,4 +240,86 @@ class Player(db.Model):
             # Apply consequences
             crime.apply_consequences()
         
-        return crime 
+        return crime
+    
+    def update_credit_score(self, action_type, amount=None, success=True):
+        """Update credit score based on financial activities
+        
+        Args:
+            action_type: Type of financial action (loan_payment, cd_creation, bankruptcy, etc.)
+            amount: Amount of transaction (if applicable)
+            success: Whether the action was successful
+            
+        Returns:
+            New credit score
+        """
+        # Save original credit score to check for changes
+        original_score = self.credit_score
+        
+        # Credit score adjustment factors
+        adjustments = {
+            'loan_payment': 5,      # Regular loan payment (positive)
+            'loan_payment_late': -15,  # Late loan payment (negative)
+            'loan_default': -75,    # Loan default (very negative)
+            'cd_creation': 3,       # Creating a CD (slightly positive)
+            'heloc_creation': 2,    # Creating a HELOC (slightly positive)
+            'bankruptcy': -150,     # Declaring bankruptcy (severely negative)
+            'mortgage_payment': 5,  # Regular mortgage payment (positive)
+            'property_purchase': 2, # Purchasing property (slightly positive)
+            'sell_property': 0,     # Neutral action
+        }
+        
+        # Base adjustment
+        adjustment = adjustments.get(action_type, 0)
+        
+        # Adjust based on success/failure
+        if not success:
+            adjustment = -abs(adjustment) * 2  # Double negative impact for failures
+            
+        # Adjust based on amount (for large transactions)
+        if amount and amount > 1000:
+            # Larger amounts have slightly more impact (max 20% increase)
+            scale_factor = min(1.2, 1 + (amount - 1000) / 10000)
+            adjustment = int(adjustment * scale_factor)
+            
+        # Apply adjustment with bounds checking
+        self.credit_score += adjustment
+        self.credit_score = max(300, min(850, self.credit_score))  # Enforce 300-850 range
+        
+        # Emit a socket event if the score changed
+        if self.credit_score != original_score:
+            try:
+                from flask import current_app
+                socketio = current_app.config.get('socketio')
+                if socketio:
+                    socketio.emit('credit_score_updated', {
+                        'player_id': self.id,
+                        'player_name': self.username,
+                        'old_score': original_score,
+                        'new_score': self.credit_score,
+                        'change': self.credit_score - original_score,
+                        'action_type': action_type,
+                        'rating': self.get_credit_rating()
+                    })
+            except Exception as e:
+                # Log error but don't fail the method
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error emitting credit_score_updated event: {str(e)}")
+        
+        return self.credit_score
+        
+    def get_credit_rating(self):
+        """Get credit rating category based on credit score
+        
+        Returns:
+            String representing credit rating (poor, fair, good, excellent)
+        """
+        if self.credit_score < 550:
+            return "poor"
+        elif self.credit_score < 650:
+            return "fair"
+        elif self.credit_score < 750:
+            return "good"
+        else:
+            return "excellent" 

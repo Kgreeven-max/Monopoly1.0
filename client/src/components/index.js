@@ -9,6 +9,8 @@ export { default as AdminBotManager } from './AdminBotManager';
 export { default as BotActionDisplay } from './BotActionDisplay';
 export { default as BotEventDisplay } from './BotEventDisplay';
 export { default as GameStats } from './GameStats';
+export { default as MarketFluctuationModal } from './MarketFluctuationModal';
+export { default as MarketCrashDisplay } from './MarketCrashDisplay';
 
 // Financial Components
 export { default as FinancialDashboard } from './FinancialDashboard';
@@ -19,6 +21,7 @@ export { default as BankruptcyModal } from './BankruptcyModal';
 export { default as PropertyCard } from './PropertyCard';
 export { default as PropertyList } from './PropertyList';
 export { default as PropertyDevelopmentModal } from './PropertyDevelopmentModal';
+export { default as PropertyMortgageModal } from './PropertyMortgageModal';
 
 // Chat components
 export { default as ChatWindow } from './Chat/ChatWindow';

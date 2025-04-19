@@ -12,7 +12,7 @@ from src.routes.player_routes import register_player_routes
 from src.routes.game_routes import register_game_routes
 from sqlalchemy.orm import joinedload
 from src.routes.decorators import admin_required
-# from src.routes.property_routes import register_property_routes # File not found
+from src.routes.property_routes import register_property_routes
 # from src.routes.auction_routes import register_auction_routes # File not found
 from src.routes.admin.game_admin_routes import game_admin_bp
 from src.routes.admin.player_admin_routes import player_admin_bp
@@ -22,6 +22,9 @@ from src.routes.admin.crime_admin_routes import crime_admin_bp
 from src.routes.admin.finance_admin_routes import finance_admin_bp
 # Import the blueprint variable directly
 from src.routes.admin.property_admin_routes import property_admin_bp
+from src.routes.admin.economic_admin_routes import economic_admin_bp
+from src.routes.admin.auction_admin_routes import auction_admin_bp
+from src.routes.admin_routes import register_admin_routes
 # from src.routes.bot_event_routes import register_bot_event_routes # File not found
 from src.routes.special_space_routes import register_special_space_routes
 from src.routes.finance_routes import register_finance_routes
@@ -68,36 +71,33 @@ from src.controllers.property_controller import PropertyController # Import Prop
 from src.controllers.auction_controller import AuctionController # Import AuctionController
 from src.controllers.bot_controller import BotController # Import BotController
 from src.game_logic.game_logic import GameLogic # Import GameLogic
+from src.controllers.economic_cycle_controller import EconomicCycleController, register_economic_events # Import EconomicCycleController
 # Import database migration
 from src.migrations.add_free_parking_fund import run_migration
+from src.migrations.add_credit_score import run_migration as run_credit_score_migration
+from src.migrations.add_updated_at_column import run_migration as run_updated_at_migration
+from src.controllers.trade_controller import TradeController # Import TradeController
+from src.routes.trade_routes import trade_routes # Import trade routes
+
+# Import our new configuration system
+from src.utils.flask_config import (
+    configure_flask_app, 
+    get_environment, 
+    get_secret_key,
+    is_debug_mode,
+    get_port
+)
 
 # Initialize Flask app
 app = Flask(__name__)
 
-# Database configuration first, as it may be needed by other configurations
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI', 'sqlite:///pinopoly.sqlite')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Other configuration
-app.config.update(
-    SECRET_KEY=os.environ.get('SECRET_KEY', 'pinopoly-development-key'),
-    ADMIN_KEY=os.environ.get('ADMIN_KEY', 'pinopoly-admin'),
-    DISPLAY_KEY=os.environ.get('DISPLAY_KEY', 'pinopoly-display'),
-    DEBUG=os.environ.get('DEBUG', 'False').lower() == 'true',
-    REMOTE_PLAY_ENABLED=os.environ.get('REMOTE_PLAY_ENABLED', 'False').lower() == 'true',
-    REMOTE_PLAY_TIMEOUT=int(os.environ.get('REMOTE_PLAY_TIMEOUT', 60))
-)
-
-# Game configuration
-app.config['ADAPTIVE_DIFFICULTY_ENABLED'] = os.environ.get('ADAPTIVE_DIFFICULTY_ENABLED', 'true').lower() == 'true'
-app.config['ADAPTIVE_DIFFICULTY_INTERVAL'] = int(os.environ.get('ADAPTIVE_DIFFICULTY_INTERVAL', '15'))  # minutes
-app.config['POLICE_PATROL_ENABLED'] = os.environ.get('POLICE_PATROL_ENABLED', 'true').lower() == 'true'
-app.config['POLICE_PATROL_INTERVAL'] = int(os.environ.get('POLICE_PATROL_INTERVAL', '45'))  # minutes
-app.config['PORT'] = int(os.environ.get('PORT', 5000))
+# Use our configuration system to configure the Flask app
+environment = get_environment()
+configure_flask_app(app, environment)
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.INFO if is_debug_mode() else logging.WARNING,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler("pinopoly.log"),
@@ -131,6 +131,26 @@ with app.app_context(): # Use app context to access db/config safely
             logging.warning('Failed to run free_parking_fund migration.')
     except Exception as e:
         logging.error(f'Error running free_parking_fund migration: {str(e)}', exc_info=True)
+    
+    # Run migration to add credit_score
+    try:
+        credit_score_migration_result = run_credit_score_migration()
+        if credit_score_migration_result:
+            logging.info('Successfully ran credit_score migration.')
+        else:
+            logging.warning('Failed to run credit_score migration.')
+    except Exception as e:
+        logging.error(f'Error running credit_score migration: {str(e)}', exc_info=True)
+    
+    # Run migration to add updated_at column to players table
+    try:
+        updated_at_migration_result = run_updated_at_migration()
+        if updated_at_migration_result:
+            logging.info('Successfully ran updated_at column migration.')
+        else:
+            logging.warning('Failed to run updated_at column migration.')
+    except Exception as e:
+        logging.error(f'Error running updated_at column migration: {str(e)}', exc_info=True)
     
     # Ensure GameState instance exists and has a game_id
     # Use a direct SQL query instead of ORM to avoid issues with missing columns
@@ -190,7 +210,8 @@ with app.app_context(): # Use app context to access db/config safely
     community_fund = CommunityFund(socketio, game_state)
     event_system = EventSystem(socketio, banker, community_fund)
     auction_system = AuctionSystem(socketio, banker)
-    special_space_controller = SpecialSpaceController(socketio, banker, community_fund)
+    economic_controller = EconomicCycleController(socketio) # Initialize EconomicCycleController first
+    special_space_controller = SpecialSpaceController(socketio=socketio, game_controller=None, economic_controller=economic_controller)
     social_controller = SocialController(socketio, app.config) 
     remote_controller = RemoteController(app) # Needs app instance
     player_controller = PlayerController(db) # Pass the db instance
@@ -211,6 +232,19 @@ with app.app_context(): # Use app context to access db/config safely
     app.config['alliance_controller'] = alliance_controller
     app.config['reputation_controller'] = reputation_controller
 
+    # Initialize trade controller with app config
+    trade_controller = TradeController(app.config)
+    app.config['trade_controller'] = trade_controller
+
+    # Register the trade routes
+    app.register_blueprint(trade_routes, url_prefix='/api/trade')
+    # Set the trade controller in the trade routes
+    trade_routes_controller = trade_controller
+    
+    # Initialize economic cycle manager
+    from src.models.economic_cycle_manager import EconomicCycleManager
+    economic_manager = EconomicCycleManager(socketio, banker)
+    
     # ---- Stage 2: Store ALL initial instances in app config ----
     app.config['banker'] = banker
     app.config['community_fund'] = community_fund
@@ -227,6 +261,8 @@ with app.app_context(): # Use app context to access db/config safely
     app.config['auction_controller'] = auction_controller # Store auction controller
     app.config['socketio'] = socketio # Store socketio instance
     app.config['socket_controller'] = socket_controller # Store socket controller
+    app.config['economic_manager'] = economic_manager # Store economic cycle manager
+    app.config['economic_controller'] = economic_controller # Store economic cycle controller
 
     # ---- Stage 3: Initialize controllers dependent on stored config ----
     game_controller = GameController(app.config) # Needs game_logic etc. in app_config
@@ -294,20 +330,19 @@ def health_check():
 
 # Register socket events
 register_socket_events(socketio, app.config)
+register_economic_events(socketio, app.config)  # Register economic events
+# Register trade socket events
+from src.controllers.trade_controller import register_trade_socket_events
+register_trade_socket_events(socketio, app.config)  # Register trade events
 
 # Register API routes
 # Pass the controller instances directly
 register_player_routes(app, player_controller)
 register_game_routes(app, game_controller)
-# register_property_routes(app)  # Property routes - not found, commented out
+register_property_routes(app)
 # register_auction_routes(app)   # Auction routes - not found, commented out
-app.register_blueprint(game_admin_bp, url_prefix='/api/admin')
-app.register_blueprint(player_admin_bp, url_prefix='/api/admin')
-app.register_blueprint(bot_admin_bp, url_prefix='/api/admin')
-app.register_blueprint(event_admin_bp, url_prefix='/api/admin')
-app.register_blueprint(crime_admin_bp, url_prefix='/api/admin')
-app.register_blueprint(finance_admin_bp, url_prefix='/api/admin')
-app.register_blueprint(property_admin_bp, url_prefix='/api/admin')
+# Use centralized admin routes registration instead of individual blueprints
+register_admin_routes(app, app.config)
 # register_bot_event_routes(app) # File not found
 register_special_space_routes(app)
 register_finance_routes(app)
@@ -537,9 +572,35 @@ def connect():
         tunnel_url=tunnel_status.get('url') if tunnel_running else None
     )
 
+@app.route('/admin_crime')
+def admin_crime():
+    return render_template('admin_crime.html')
+
+@app.route('/admin_player')
+def admin_player():
+    return render_template('admin_player.html')
+
+@app.route('/admin_bot')
+def admin_bot():
+    return render_template('admin_bot.html')
+
+@app.route('/admin_game_modes')
+def admin_game_modes():
+    # Implementation of this route is not provided in the original file or the code block
+    # This route should be implemented based on the requirements of the application
+    return jsonify({"error": "This route is not implemented"}), 501
+
+def run_delayed_task(task_func, delay_seconds):
+    """Run a task after the specified delay and repeat it if the task schedules itself."""
+    # Sleep for the initial delay
+    eventlet.sleep(delay_seconds)
+    
+    # Execute the task
+    task_func()
+
 # Scheduled tasks
 def setup_scheduled_tasks():
-    """Set up scheduled background tasks"""
+    """Set up background tasks to run on a schedule."""
     if app.config['ADAPTIVE_DIFFICULTY_ENABLED']:
         # Start adaptive difficulty assessment
         difficulty_controller = AdaptiveDifficultyController(socketio)
@@ -570,6 +631,8 @@ def setup_scheduled_tasks():
     if app.config['POLICE_PATROL_ENABLED']:
         # Start police patrol
         crime_controller = CrimeController(socketio)
+        # Register in app config so it's available to other components
+        app.config['crime_controller'] = crime_controller
         
         def run_police_patrol():
             while True:
@@ -614,6 +677,118 @@ def setup_scheduled_tasks():
         # Start the setup thread
         eventlet.spawn(setup_remote_tunnel)
         logging.info("Remote play auto-start scheduler initiated")
+    
+    # Setup economic cycle updates
+    # Get the economic cycle manager from app config
+    economic_controller = app.config.get('economic_controller')
+    if economic_controller and app.config['ECONOMIC_CYCLE_ENABLED']:
+        def run_economic_cycle():
+            """Update economic state, interest rates, and property values."""
+            if app.config['ECONOMIC_CYCLE_ENABLED']:
+                logging.info("Running scheduled economic cycle update")
+                try:
+                    # Use the EconomicCycleController instead of the EconomicCycleManager
+                    game_state = app.config.get('game_state_instance')
+                    
+                    if game_state:
+                        result = economic_controller.process_economic_cycle(game_state.game_id)
+                        if result.get('success'):
+                            logging.info(f"Economic cycle updated: {result.get('previous_state')} -> {result.get('new_state')}")
+                        else:
+                            logging.warning(f"Economic cycle update failed: {result.get('error')}")
+                    else:
+                        logging.error("Game state not found in app config")
+                except Exception as e:
+                    logging.error(f"Error in economic cycle update: {str(e)}", exc_info=True)
+                    
+                # Schedule the next run
+                if not app.testing:  # Don't reschedule in testing mode
+                    interval = app.config.get('ECONOMIC_CYCLE_INTERVAL', 5) * 60  # Convert minutes to seconds
+                    socketio.start_background_task(
+                        run_delayed_task, 
+                        run_economic_cycle, 
+                        interval
+                    )
+            else:
+                logging.info("Economic cycle updates are disabled")
+        
+        # Setup random economic events
+        if app.config.get('RANDOM_ECONOMIC_EVENTS_ENABLED', True):
+            def trigger_random_economic_event():
+                """Trigger random economic events in active games."""
+                logging.info("Running scheduled random economic event")
+                try:
+                    # Get all active games
+                    active_games = GameState.query.filter_by(game_active=True).all()
+                    
+                    if not active_games:
+                        logging.info("No active games found for random economic event")
+                        return
+                    
+                    # Select a random game to affect
+                    game = random.choice(active_games)
+                    
+                    # Trigger a random economic event for this game
+                    admin_key = app.config.get('ADMIN_KEY')
+                    result = economic_controller.trigger_economic_event(game.game_id, admin_key)
+                    
+                    if result.get('success'):
+                        logging.info(f"Random economic event triggered for game {game.game_id}: {result.get('event_type')}")
+                    else:
+                        logging.warning(f"Failed to trigger random economic event: {result.get('error')}")
+                except Exception as e:
+                    logging.error(f"Error triggering random economic event: {str(e)}", exc_info=True)
+                
+                # Schedule the next event
+                if not app.testing:  # Don't reschedule in testing mode
+                    # Use a different interval for random events (30-60 minutes)
+                    min_interval = app.config.get('MIN_ECONOMIC_EVENT_INTERVAL', 30) * 60  # Convert minutes to seconds
+                    max_interval = app.config.get('MAX_ECONOMIC_EVENT_INTERVAL', 60) * 60  # Convert minutes to seconds
+                    random_interval = random.randint(min_interval, max_interval)
+                    
+                    socketio.start_background_task(
+                        run_delayed_task, 
+                        trigger_random_economic_event, 
+                        random_interval
+                    )
+                
+        # Initial scheduling of tasks
+        if app.config['ADAPTIVE_DIFFICULTY_ENABLED']:
+            socketio.start_background_task(
+                run_delayed_task, 
+                run_difficulty_assessment, 
+                app.config.get('ADAPTIVE_DIFFICULTY_INTERVAL', 15) * 60  # Convert minutes to seconds
+            )
+            
+        if app.config['POLICE_PATROL_ENABLED']:
+            socketio.start_background_task(
+                run_delayed_task, 
+                run_police_patrol, 
+                app.config.get('POLICE_PATROL_INTERVAL', 45) * 60  # Convert minutes to seconds
+            )
+            
+        if app.config['REMOTE_PLAY_ENABLED']:
+            socketio.start_background_task(setup_remote_tunnel)
+            
+        if app.config['ECONOMIC_CYCLE_ENABLED']:
+            socketio.start_background_task(
+                run_delayed_task, 
+                run_economic_cycle, 
+                app.config.get('ECONOMIC_CYCLE_INTERVAL', 5) * 60  # Convert minutes to seconds
+            )
+            
+        # Schedule random economic events if enabled
+        if app.config.get('RANDOM_ECONOMIC_EVENTS_ENABLED', True):
+            socketio.start_background_task(
+                run_delayed_task, 
+                trigger_random_economic_event, 
+                app.config.get('INITIAL_ECONOMIC_EVENT_DELAY', 15) * 60  # Convert minutes to seconds
+            )
+    else:
+        if not economic_controller:
+            logging.warning("Economic cycle controller not found in app config. Economic updates will not run automatically.")
+        else:
+            logging.info("Economic cycle updates are disabled by configuration.")
 
 # --- SocketIO Event Handlers ---
 
@@ -864,4 +1039,7 @@ def handle_create_bot(data):
 # Run the app
 if __name__ == '__main__':
     setup_scheduled_tasks()
-    socketio.run(app, host='0.0.0.0', port=app.config['PORT'], debug=True, allow_unsafe_werkzeug=True) 
+    port = get_port()
+    debug_mode = is_debug_mode()
+    logging.info(f"Starting server on port {port} with debug mode {'enabled' if debug_mode else 'disabled'}")
+    socketio.run(app, host='0.0.0.0', port=port, debug=debug_mode, allow_unsafe_werkzeug=True) 

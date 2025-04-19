@@ -92,10 +92,44 @@ export const property = {
     return handleResponse(response);
   },
 
-  mortgage: async (propertyId) => {
-    const response = await fetch(`${API_BASE_URL}/property/${propertyId}/mortgage`, {
+  mortgage: async (propertyId, playerId) => {
+    const response = await fetch(`${API_BASE_URL}/property/mortgage`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        property_id: propertyId, 
+        player_id: playerId 
+      }),
     });
+    return handleResponse(response);
+  },
+  
+  unmortgage: async (propertyId, playerId) => {
+    const response = await fetch(`${API_BASE_URL}/property/unmortgage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        property_id: propertyId, 
+        player_id: playerId 
+      }),
+    });
+    return handleResponse(response);
+  },
+  
+  sellImprovement: async (propertyId, improvementType = 'house') => {
+    const response = await fetch(`${API_BASE_URL}/property/sell-improvement`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        property_id: propertyId, 
+        improvement_type: improvementType 
+      }),
+    });
+    return handleResponse(response);
+  },
+  
+  getDetails: async (propertyId) => {
+    const response = await fetch(`${API_BASE_URL}/property/${propertyId}/details`);
     return handleResponse(response);
   },
 };

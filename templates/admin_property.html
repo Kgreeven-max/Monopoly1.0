@@ -1,0 +1,3005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi-nopoly Admin - Property Management</title>
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .container-fluid {
+            padding: 20px;
+        }
+        .admin-header {
+            background-color: #343a40;
+            color: white;
+            padding: 15px 0;
+            margin-bottom: 20px;
+        }
+        .admin-title {
+            font-weight: 700;
+            font-size: 24px;
+        }
+        .card {
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: none;
+        }
+        .card-header {
+            font-weight: 600;
+            background-color: #f1f5f9;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .property-card {
+            transition: transform 0.2s ease;
+            cursor: pointer;
+        }
+        .property-card:hover {
+            transform: translateY(-5px);
+        }
+        .nav-tabs .nav-link {
+            font-weight: 500;
+        }
+        .nav-tabs .nav-link.active {
+            font-weight: 700;
+            border-bottom: 3px solid #007bff;
+        }
+        .tab-content {
+            padding: 20px 0;
+        }
+        .tab-pane {
+            display: none;
+        }
+        .tab-pane.active {
+            display: block;
+        }
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-active {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+        .status-inactive {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+        .status-warning {
+            background-color: #fff3cd;
+            color: #664d03;
+        }
+        .status-info {
+            background-color: #cff4fc;
+            color: #055160;
+        }
+        .filter-section {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .quick-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            flex: 1 0 200px;
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin-top: 5px;
+        }
+        .property-group-brown { background-color: #8B4513; color: white; }
+        .property-group-lightblue { background-color: #87CEEB; color: black; }
+        .property-group-pink { background-color: #FF69B4; color: white; }
+        .property-group-orange { background-color: #FFA500; color: black; }
+        .property-group-red { background-color: #FF0000; color: white; }
+        .property-group-yellow { background-color: #FFFF00; color: black; }
+        .property-group-green { background-color: #008000; color: white; }
+        .property-group-darkblue { background-color: #00008B; color: white; }
+        .property-group-railroad { background-color: #000000; color: white; }
+        .property-group-utility { background-color: #708090; color: white; }
+        .modal-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .pointer {
+            cursor: pointer;
+        }
+        #alertContainer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-header">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col">
+                    <div class="admin-title">Pi-nopoly Admin Dashboard</div>
+                </div>
+                <div class="col-auto">
+                    <a href="/admin" class="btn btn-outline-light btn-sm">Back to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <div id="alertContainer"></div>
+        
+        <div class="row mb-4">
+            <div class="col">
+                <h1>Property Management</h1>
+                <p class="text-muted">Configure, monitor, and manage all properties in the game system.</p>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs" id="propertyTabs">
+            <li class="nav-item">
+                <a class="nav-link tab-link active" data-tab="propertyOverview" href="#">Overview</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link tab-link" data-tab="propertyDetails" href="#">Property Details</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link tab-link" data-tab="propertyGroups" href="#">Property Groups</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link tab-link" data-tab="marketAnalysis" href="#">Market Analysis</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link tab-link" data-tab="propertySettings" href="#">Settings</a>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Property Overview Tab -->
+            <div id="propertyOverview" class="tab-content tab-pane active">
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="quick-stats">
+                            <div class="stat-card">
+                                <div class="text-muted">Total Properties</div>
+                                <div id="totalProperties" class="stat-value">0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="text-muted">Owned Properties</div>
+                                <div id="ownedProperties" class="stat-value">0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="text-muted">Mortgaged Properties</div>
+                                <div id="mortgagedProperties" class="stat-value">0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="text-muted">Developed Properties</div>
+                                <div id="developedProperties" class="stat-value">0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="text-muted">Total Value</div>
+                                <div id="totalValue" class="stat-value">$0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>Property Filters</span>
+                            </div>
+                            <div class="card-body filter-section">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label for="propertyGroupFilter" class="form-label">Property Group</label>
+                                        <select id="propertyGroupFilter" class="form-select">
+                                            <option value="">All Groups</option>
+                                            <option value="brown">Brown</option>
+                                            <option value="lightblue">Light Blue</option>
+                                            <option value="pink">Pink</option>
+                                            <option value="orange">Orange</option>
+                                            <option value="red">Red</option>
+                                            <option value="yellow">Yellow</option>
+                                            <option value="green">Green</option>
+                                            <option value="darkblue">Dark Blue</option>
+                                            <option value="railroad">Railroad</option>
+                                            <option value="utility">Utility</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="ownershipFilter" class="form-label">Ownership</label>
+                                        <select id="ownershipFilter" class="form-select">
+                                            <option value="">All Ownership</option>
+                                            <option value="owned">Player Owned</option>
+                                            <option value="unowned">Bank Owned</option>
+                                            <option value="mortgaged">Mortgaged</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="developmentFilter" class="form-label">Development</label>
+                                        <select id="developmentFilter" class="form-select">
+                                            <option value="">All Development</option>
+                                            <option value="undeveloped">Undeveloped</option>
+                                            <option value="houses">Has Houses</option>
+                                            <option value="hotels">Has Hotels</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="valueFilter" class="form-label">Value Range</label>
+                                        <select id="valueFilter" class="form-select">
+                                            <option value="">All Values</option>
+                                            <option value="low">Low (≤$100)</option>
+                                            <option value="medium">Medium ($101-$300)</option>
+                                            <option value="high">High (>$300)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end mt-3">
+                                    <button id="applyFilters" class="btn btn-primary">Apply Filters</button>
+                                    <button id="resetFilters" class="btn btn-outline-secondary ms-2">Reset</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>Properties</span>
+                                <div>
+                                    <button id="refreshProperties" class="btn btn-sm btn-outline-primary me-2">
+                                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                                    </button>
+                                    <button id="adjustAllValues" class="btn btn-sm btn-outline-warning">
+                                        Adjust All Values
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover" id="propertiesTable">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Name</th>
+                                                <th>Group</th>
+                                                <th>Value</th>
+                                                <th>Owner</th>
+                                                <th>Development</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="propertiesTableBody">
+                                            <!-- Properties will be populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Property Details Tab -->
+            <div id="propertyDetails" class="tab-content tab-pane">
+                <div class="row mt-4">
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-header">
+                                Select Property
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="propertySelector" class="form-label">Choose Property</label>
+                                    <select id="propertySelector" class="form-select">
+                                        <option value="">-- Select Property --</option>
+                                        <!-- Property options will be populated here -->
+                                    </select>
+                                </div>
+                                <hr>
+                                <div id="propertySelectionDetails" class="d-none">
+                                    <h5 id="selectedPropertyName">Property Name</h5>
+                                    <p class="mb-1">ID: <span id="selectedPropertyId"></span></p>
+                                    <p class="mb-1">Group: <span id="selectedPropertyGroup" class="badge"></span></p>
+                                    <p class="mb-1">Owner: <span id="selectedPropertyOwner"></span></p>
+                                    <p class="mb-1">Status: <span id="selectedPropertyStatus" class="status-badge"></span></p>
+                                    <div class="d-grid gap-2 mt-3">
+                                        <button id="editSelectedProperty" class="btn btn-primary btn-sm">Edit Property</button>
+                                        <button id="transferSelectedProperty" class="btn btn-warning btn-sm">Transfer Property</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <div class="card" id="propertyDetailCard">
+                            <div class="card-header">
+                                Property Details
+                            </div>
+                            <div class="card-body">
+                                <div id="noPropertySelected">
+                                    <p class="text-center text-muted my-5">Select a property from the dropdown to view its details.</p>
+                                </div>
+                                <div id="propertyDetailsContent" class="d-none">
+                                    <!-- Tabs for property details -->
+                                    <ul class="nav nav-tabs" id="propertyDetailTabs">
+                                        <li class="nav-item">
+                                            <a class="nav-link active" id="basic-tab" data-toggle="tab" href="#basic">Basic Info</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link" id="financial-tab" data-toggle="tab" href="#financial">Financial</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link" id="development-tab" data-toggle="tab" href="#development">Development</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link" id="history-tab" data-toggle="tab" href="#history">History</a>
+                                        </li>
+                                    </ul>
+                                    
+                                    <div class="tab-content p-3" id="propertyDetailTabContent">
+                                        <!-- Basic Info Tab -->
+                                        <div class="tab-pane fade show active" id="basic">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h5>Property Information</h5>
+                                                    <table class="table table-sm">
+                                                        <tr>
+                                                            <th>ID:</th>
+                                                            <td id="detailPropertyId"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Name:</th>
+                                                            <td id="detailPropertyName"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Group:</th>
+                                                            <td id="detailPropertyGroup"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Position:</th>
+                                                            <td id="detailPropertyPosition"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Special Rules:</th>
+                                                            <td id="detailPropertyRules"></td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h5>Ownership Details</h5>
+                                                    <table class="table table-sm">
+                                                        <tr>
+                                                            <th>Owner:</th>
+                                                            <td id="detailPropertyOwner"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Acquisition Date:</th>
+                                                            <td id="detailPropertyAcquisitionDate"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Acquisition Method:</th>
+                                                            <td id="detailPropertyAcquisitionMethod"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Status:</th>
+                                                            <td id="detailPropertyStatus"></td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Financial Tab -->
+                                        <div class="tab-pane fade" id="financial">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h5>Value Information</h5>
+                                                    <table class="table table-sm">
+                                                        <tr>
+                                                            <th>Base Value:</th>
+                                                            <td id="detailPropertyBaseValue"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Current Value:</th>
+                                                            <td id="detailPropertyCurrentValue"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Purchase Price:</th>
+                                                            <td id="detailPropertyPurchasePrice"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Mortgage Value:</th>
+                                                            <td id="detailPropertyMortgageValue"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Unmortgage Cost:</th>
+                                                            <td id="detailPropertyUnmortgageCost"></td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h5>Rent Information</h5>
+                                                    <table class="table table-sm">
+                                                        <tr>
+                                                            <th>Base Rent:</th>
+                                                            <td id="detailPropertyBaseRent"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>With 1 House:</th>
+                                                            <td id="detailPropertyRent1"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>With 2 Houses:</th>
+                                                            <td id="detailPropertyRent2"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>With 3 Houses:</th>
+                                                            <td id="detailPropertyRent3"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>With 4 Houses:</th>
+                                                            <td id="detailPropertyRent4"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>With Hotel:</th>
+                                                            <td id="detailPropertyRentHotel"></td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Development Tab -->
+                                        <div class="tab-pane fade" id="development">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h5>Development Status</h5>
+                                                    <table class="table table-sm">
+                                                        <tr>
+                                                            <th>Houses:</th>
+                                                            <td id="detailPropertyHouses"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Hotel:</th>
+                                                            <td id="detailPropertyHotel"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Development Level:</th>
+                                                            <td id="detailPropertyDevLevel"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>House Cost:</th>
+                                                            <td id="detailPropertyHouseCost"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th>Hotel Cost:</th>
+                                                            <td id="detailPropertyHotelCost"></td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h5>Development Actions</h5>
+                                                    <div class="d-grid gap-2">
+                                                        <button id="addHouseBtn" class="btn btn-success btn-sm mt-2">Add House</button>
+                                                        <button id="removeHouseBtn" class="btn btn-warning btn-sm">Remove House</button>
+                                                        <button id="upgradeToHotelBtn" class="btn btn-primary btn-sm">Upgrade to Hotel</button>
+                                                        <button id="downgradeFromHotelBtn" class="btn btn-secondary btn-sm">Downgrade from Hotel</button>
+                                                        <button id="resetDevBtn" class="btn btn-danger btn-sm">Reset Development</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row mt-4">
+                                                <div class="col">
+                                                    <h5>Group Development</h5>
+                                                    <p>Properties in the same group:</p>
+                                                    <div id="groupPropertiesList" class="list-group">
+                                                        <!-- Group properties will be listed here -->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- History Tab -->
+                                        <div class="tab-pane fade" id="history">
+                                            <h5>Ownership History</h5>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm" id="ownershipHistoryTable">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Date</th>
+                                                            <th>Previous Owner</th>
+                                                            <th>New Owner</th>
+                                                            <th>Transaction Type</th>
+                                                            <th>Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="ownershipHistoryBody">
+                                                        <!-- History will be populated here -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            
+                                            <h5 class="mt-4">Development History</h5>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm" id="developmentHistoryTable">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Date</th>
+                                                            <th>Action</th>
+                                                            <th>From</th>
+                                                            <th>To</th>
+                                                            <th>Cost</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="developmentHistoryBody">
+                                                        <!-- History will be populated here -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            
+                                            <h5 class="mt-4">Auction History</h5>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm" id="auctionHistoryTable">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Date</th>
+                                                            <th>Auction ID</th>
+                                                            <th>Starting Bid</th>
+                                                            <th>Final Bid</th>
+                                                            <th>Winner</th>
+                                                            <th>Participants</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="auctionHistoryBody">
+                                                        <!-- History will be populated here -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Property Groups Tab -->
+            <div id="propertyGroups" class="tab-content tab-pane">
+                <div class="row mt-4">
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-header">
+                                Select Group
+                            </div>
+                            <div class="card-body">
+                                <div class="list-group" id="groupsList">
+                                    <a href="#" class="list-group-item list-group-item-action property-group-brown text-center" data-group="brown">
+                                        Brown
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action property-group-lightblue text-center" data-group="lightblue">
+                                        Light Blue
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action property-group-pink text-center" data-group="pink">
+                                        Pink
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action property-group-orange text-center" data-group="orange">
+                                        Orange
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action property-group-red text-center" data-group="red">
+                                        Red
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action property-group-yellow text-center" data-group="yellow">
+                                        Yellow
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action property-group-green text-center" data-group="green">
+                                        Green
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action property-group-darkblue text-center" data-group="darkblue">
+                                        Dark Blue
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action property-group-railroad text-center" data-group="railroad">
+                                        Railroads
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action property-group-utility text-center" data-group="utility">
+                                        Utilities
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span id="selectedGroupName">Select a Property Group</span>
+                                <div id="groupActions" class="d-none">
+                                    <button id="adjustGroupValues" class="btn btn-sm btn-outline-warning me-2">
+                                        Adjust Group Values
+                                    </button>
+                                    <button id="editGroupSettings" class="btn btn-sm btn-outline-primary">
+                                        Edit Group Settings
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="noGroupSelected">
+                                    <p class="text-center text-muted my-5">Select a property group from the left panel to view details.</p>
+                                </div>
+                                <div id="groupDetailsContent" class="d-none">
+                                    <div class="row mb-4">
+                                        <div class="col-md-4">
+                                            <div class="card">
+                                                <div class="card-body text-center">
+                                                    <h6 class="text-muted">Properties in Group</h6>
+                                                    <div id="groupPropertyCount" class="stat-value">0</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card">
+                                                <div class="card-body text-center">
+                                                    <h6 class="text-muted">Total Value</h6>
+                                                    <div id="groupTotalValue" class="stat-value">$0</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card">
+                                                <div class="card-body text-center">
+                                                    <h6 class="text-muted">Monopoly Status</h6>
+                                                    <div id="groupMonopolyStatus" class="stat-value">No Monopoly</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <h5>Properties in Group</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover" id="groupPropertiesTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>Name</th>
+                                                    <th>Value</th>
+                                                    <th>Owner</th>
+                                                    <th>Development</th>
+                                                    <th>Status</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="groupPropertiesTableBody">
+                                                <!-- Group properties will be listed here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <div class="row mt-4">
+                                        <div class="col-md-6">
+                                            <h5>Group Development</h5>
+                                            <div class="progress mb-2">
+                                                <div id="groupDevelopmentProgress" class="progress-bar bg-success" style="width: 0%"></div>
+                                            </div>
+                                            <p id="groupDevelopmentText" class="small text-muted">No properties developed</p>
+                                            
+                                            <h6 class="mt-3">Development Details</h6>
+                                            <table class="table table-sm">
+                                                <tr>
+                                                    <th>Average Development:</th>
+                                                    <td id="avgGroupDevelopment">0.0</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Total Houses:</th>
+                                                    <td id="totalGroupHouses">0</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Total Hotels:</th>
+                                                    <td id="totalGroupHotels">0</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Development Potential:</th>
+                                                    <td id="groupDevelopmentPotential">0%</td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h5>Group Financial</h5>
+                                            <table class="table table-sm">
+                                                <tr>
+                                                    <th>Base Purchase Cost:</th>
+                                                    <td id="groupBaseCost">$0</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>House Cost:</th>
+                                                    <td id="groupHouseCost">$0</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Avg. Rent (Undeveloped):</th>
+                                                    <td id="groupBaseRent">$0</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Avg. Rent (Fully Developed):</th>
+                                                    <td id="groupMaxRent">$0</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>ROI Potential:</th>
+                                                    <td id="groupROI">0%</td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Market Analysis Tab -->
+            <div id="marketAnalysis" class="tab-content tab-pane">
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>Market Overview</span>
+                                <button id="refreshMarketAnalysis" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-arrow-clockwise"></i> Refresh Analysis
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-4">
+                                    <div class="col-md-3">
+                                        <div class="card">
+                                            <div class="card-body text-center">
+                                                <h6 class="text-muted">Average Property Value</h6>
+                                                <div id="avgPropertyValue" class="stat-value">$0</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card">
+                                            <div class="card-body text-center">
+                                                <h6 class="text-muted">Market Status</h6>
+                                                <div id="marketStatus" class="stat-value">Stable</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card">
+                                            <div class="card-body text-center">
+                                                <h6 class="text-muted">Most Valuable Group</h6>
+                                                <div id="mostValuableGroup" class="stat-value">-</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card">
+                                            <div class="card-body text-center">
+                                                <h6 class="text-muted">Market Activity</h6>
+                                                <div id="marketActivity" class="stat-value">Low</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h5>Value Distribution</h5>
+                                        <canvas id="valueDistributionChart" height="250"></canvas>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5>Ownership Distribution</h5>
+                                        <canvas id="ownershipDistributionChart" height="250"></canvas>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mt-4">
+                                    <div class="col-md-6">
+                                        <h5>Development Distribution</h5>
+                                        <canvas id="developmentDistributionChart" height="250"></canvas>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5>Group Value Comparison</h5>
+                                        <canvas id="groupValueChart" height="250"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <span>Value Trends</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Time Period</label>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-primary period-btn active" data-period="week">Last Week</button>
+                                        <button type="button" class="btn btn-outline-primary period-btn" data-period="month">Last Month</button>
+                                        <button type="button" class="btn btn-outline-primary period-btn" data-period="game">Current Game</button>
+                                        <button type="button" class="btn btn-outline-primary period-btn" data-period="all">All Time</button>
+                                    </div>
+                                </div>
+                                <canvas id="valueTrendChart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <span>Transaction Analysis</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h5>Recent Transactions</h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover" id="recentTransactionsTable">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Date</th>
+                                                        <th>Property</th>
+                                                        <th>Type</th>
+                                                        <th>From</th>
+                                                        <th>To</th>
+                                                        <th>Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="recentTransactionsBody">
+                                                    <!-- Recent transactions will be listed here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5>Transaction Volume</h5>
+                                        <canvas id="transactionVolumeChart" height="250"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Property Settings Tab -->
+            <div id="propertySettings" class="tab-content tab-pane">
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <span>Global Property Settings</span>
+                            </div>
+                            <div class="card-body">
+                                <form id="globalPropertySettingsForm">
+                                    <div class="mb-3">
+                                        <label for="propertyValueCoefficientInput" class="form-label">Property Value Coefficient</label>
+                                        <input type="number" class="form-control" id="propertyValueCoefficientInput" min="0.1" max="5.0" step="0.1" value="1.0">
+                                        <div class="form-text">Multiplier for all property values. Default is 1.0.</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="rentMultiplierInput" class="form-label">Rent Multiplier</label>
+                                        <input type="number" class="form-control" id="rentMultiplierInput" min="0.1" max="5.0" step="0.1" value="1.0">
+                                        <div class="form-text">Multiplier for all property rents. Default is 1.0.</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="mortgageInterestRateInput" class="form-label">Mortgage Interest Rate (%)</label>
+                                        <input type="number" class="form-control" id="mortgageInterestRateInput" min="0" max="100" step="1" value="10">
+                                        <div class="form-text">Interest rate for unmortgaging properties. Default is 10%.</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="houseLimitInput" class="form-label">House Limit</label>
+                                        <input type="number" class="form-control" id="houseLimitInput" min="0" max="100" step="1" value="32">
+                                        <div class="form-text">Maximum number of houses available in the bank. Default is 32.</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="hotelLimitInput" class="form-label">Hotel Limit</label>
+                                        <input type="number" class="form-control" id="hotelLimitInput" min="0" max="100" step="1" value="12">
+                                        <div class="form-text">Maximum number of hotels available in the bank. Default is 12.</div>
+                                    </div>
+                                    
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="evenBuildingRuleInput" checked>
+                                        <label class="form-check-label" for="evenBuildingRuleInput">Enforce Even Building Rule</label>
+                                        <div class="form-text">Properties in a group must be developed evenly.</div>
+                                    </div>
+                                    
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="valueFollowEconomyInput" checked>
+                                        <label class="form-check-label" for="valueFollowEconomyInput">Property Values Follow Economy</label>
+                                        <div class="form-text">Property values fluctuate with economic conditions.</div>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">Save Global Settings</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <span>Bulk Operations</span>
+                            </div>
+                            <div class="card-body">
+                                <h5>Adjust Property Values</h5>
+                                <form id="adjustValuesForm" class="mb-4">
+                                    <div class="mb-3">
+                                        <label for="valueAdjustmentTypeInput" class="form-label">Adjustment Type</label>
+                                        <select class="form-select" id="valueAdjustmentTypeInput">
+                                            <option value="percentage">Percentage Change</option>
+                                            <option value="fixed">Fixed Amount</option>
+                                            <option value="reset">Reset to Base Values</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3" id="valueAdjustmentAmountDiv">
+                                        <label for="valueAdjustmentAmountInput" class="form-label">Adjustment Amount</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="valueAdjustmentAmountInput" value="0">
+                                            <span class="input-group-text" id="adjustmentSymbol">%</span>
+                                        </div>
+                                        <div class="form-text">Use positive values for increases, negative for decreases.</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="valueAdjustmentGroupInput" class="form-label">Apply To</label>
+                                        <select class="form-select" id="valueAdjustmentGroupInput">
+                                            <option value="all">All Properties</option>
+                                            <option value="brown">Brown Group</option>
+                                            <option value="lightblue">Light Blue Group</option>
+                                            <option value="pink">Pink Group</option>
+                                            <option value="orange">Orange Group</option>
+                                            <option value="red">Red Group</option>
+                                            <option value="yellow">Yellow Group</option>
+                                            <option value="green">Green Group</option>
+                                            <option value="darkblue">Dark Blue Group</option>
+                                            <option value="railroad">Railroads</option>
+                                            <option value="utility">Utilities</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-warning">Apply Value Adjustment</button>
+                                    </div>
+                                </form>
+                                
+                                <h5>Mass Property Transfer</h5>
+                                <form id="massTransferForm">
+                                    <div class="mb-3">
+                                        <label for="transferFromPlayerInput" class="form-label">Transfer From</label>
+                                        <select class="form-select" id="transferFromPlayerInput">
+                                            <option value="">-- Select Player --</option>
+                                            <!-- Player options will be populated here -->
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="transferToPlayerInput" class="form-label">Transfer To</label>
+                                        <select class="form-select" id="transferToPlayerInput">
+                                            <option value="">-- Select Player --</option>
+                                            <option value="bank">Bank</option>
+                                            <!-- Player options will be populated here -->
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="transferPropertyTypeInput" class="form-label">Property Type</label>
+                                        <select class="form-select" id="transferPropertyTypeInput">
+                                            <option value="all">All Properties</option>
+                                            <option value="color">Color Properties Only</option>
+                                            <option value="railroad">Railroads Only</option>
+                                            <option value="utility">Utilities Only</option>
+                                            <option value="mortgaged">Mortgaged Properties Only</option>
+                                            <option value="developed">Developed Properties Only</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="recordTransferInput" checked>
+                                        <label class="form-check-label" for="recordTransferInput">Record as Transaction</label>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-danger">Execute Mass Transfer</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <span>Bank Inventory</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <div class="card">
+                                            <div class="card-body text-center">
+                                                <h6 class="text-muted">Houses Available</h6>
+                                                <div id="availableHouses" class="stat-value">32</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card">
+                                            <div class="card-body text-center">
+                                                <h6 class="text-muted">Houses In Use</h6>
+                                                <div id="housesInUse" class="stat-value">0</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card">
+                                            <div class="card-body text-center">
+                                                <h6 class="text-muted">Hotels Available</h6>
+                                                <div id="availableHotels" class="stat-value">12</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card">
+                                            <div class="card-body text-center">
+                                                <h6 class="text-muted">Hotels In Use</h6>
+                                                <div id="hotelsInUse" class="stat-value">0</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col">
+                                        <h5>Adjust Bank Inventory</h5>
+                                        <form id="adjustInventoryForm" class="row g-3">
+                                            <div class="col-md-3">
+                                                <label for="houseCountInput" class="form-label">House Count</label>
+                                                <input type="number" class="form-control" id="houseCountInput" min="0" value="32">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="hotelCountInput" class="form-label">Hotel Count</label>
+                                                <input type="number" class="form-control" id="hotelCountInput" min="0" value="12">
+                                            </div>
+                                            <div class="col-md-6 d-flex align-items-end">
+                                                <button type="submit" class="btn btn-primary">Update Inventory</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modals -->
+        
+        <!-- Edit Property Modal -->
+        <div class="modal fade" id="editPropertyModal" tabindex="-1" aria-labelledby="editPropertyModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editPropertyModalLabel">Edit Property</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editPropertyForm">
+                            <input type="hidden" id="editPropertyId">
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="editPropertyNameInput" class="form-label">Property Name</label>
+                                    <input type="text" class="form-control" id="editPropertyNameInput" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="editPropertyGroupInput" class="form-label">Property Group</label>
+                                    <select class="form-select" id="editPropertyGroupInput" disabled>
+                                        <option value="brown">Brown</option>
+                                        <option value="lightblue">Light Blue</option>
+                                        <option value="pink">Pink</option>
+                                        <option value="orange">Orange</option>
+                                        <option value="red">Red</option>
+                                        <option value="yellow">Yellow</option>
+                                        <option value="green">Green</option>
+                                        <option value="darkblue">Dark Blue</option>
+                                        <option value="railroad">Railroad</option>
+                                        <option value="utility">Utility</option>
+                                    </select>
+                                    <div class="form-text">Group cannot be changed after creation.</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="editPropertyBaseValueInput" class="form-label">Base Value</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="editPropertyBaseValueInput" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="editPropertyCurrentValueInput" class="form-label">Current Value</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="editPropertyCurrentValueInput" min="0" required>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="editPropertyMortgageValueInput" class="form-label">Mortgage Value</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="editPropertyMortgageValueInput" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="editPropertyHouseCostInput" class="form-label">House Cost</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="editPropertyHouseCostInput" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h5 class="mt-4">Rent Values</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label for="editPropertyBaseRentInput" class="form-label">Base Rent</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="editPropertyBaseRentInput" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="editPropertyRent1Input" class="form-label">With 1 House</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="editPropertyRent1Input" min="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="editPropertyRent2Input" class="form-label">With 2 Houses</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="editPropertyRent2Input" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label for="editPropertyRent3Input" class="form-label">With 3 Houses</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="editPropertyRent3Input" min="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="editPropertyRent4Input" class="form-label">With 4 Houses</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="editPropertyRent4Input" min="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="editPropertyRentHotelInput" class="form-label">With Hotel</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="editPropertyRentHotelInput" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h5 class="mt-4">Special Rules</h5>
+                            <div class="mb-3">
+                                <label for="editPropertySpecialRulesInput" class="form-label">Special Rules</label>
+                                <textarea class="form-control" id="editPropertySpecialRulesInput" rows="3"></textarea>
+                                <div class="form-text">Define any special rules for this property.</div>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="editPropertyMortgagedInput">
+                                <label class="form-check-label" for="editPropertyMortgagedInput">Property is Mortgaged</label>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="savePropertyEdits">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Transfer Property Modal -->
+        <div class="modal fade" id="transferPropertyModal" tabindex="-1" aria-labelledby="transferPropertyModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="transferPropertyModalLabel">Transfer Property</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="transferPropertyForm">
+                            <input type="hidden" id="transferPropertyId">
+                            
+                            <div class="mb-3">
+                                <label for="transferPropertyNameDisplay" class="form-label">Property</label>
+                                <input type="text" class="form-control" id="transferPropertyNameDisplay" readonly>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="transferFromPlayerDisplay" class="form-label">Current Owner</label>
+                                <input type="text" class="form-control" id="transferFromPlayerDisplay" readonly>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="transferToPlayerInput" class="form-label">Transfer To</label>
+                                <select class="form-select" id="transferToPlayerInput" required>
+                                    <option value="">-- Select New Owner --</option>
+                                    <option value="bank">Bank</option>
+                                    <!-- Player options will be populated here -->
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="transferAmountInput" class="form-label">Transfer Amount (optional)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="transferAmountInput" min="0">
+                                </div>
+                                <div class="form-text">Leave empty for admin transfer with no payment.</div>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="recordTransactionInput" checked>
+                                <label class="form-check-label" for="recordTransactionInput">Record as Transaction</label>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="transferReasonInput" class="form-label">Reason</label>
+                                <input type="text" class="form-control" id="transferReasonInput" placeholder="Admin transfer">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="executeTransfer">Transfer Property</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Adjust Property Values Modal -->
+        <div class="modal fade" id="adjustValuesModal" tabindex="-1" aria-labelledby="adjustValuesModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="adjustValuesModalLabel">Adjust Property Values</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            This action will adjust the values of all properties in the selected group.
+                        </div>
+                        
+                        <form id="modalAdjustValuesForm">
+                            <div class="mb-3">
+                                <label for="modalValueAdjustmentTypeInput" class="form-label">Adjustment Type</label>
+                                <select class="form-select" id="modalValueAdjustmentTypeInput">
+                                    <option value="percentage">Percentage Change</option>
+                                    <option value="fixed">Fixed Amount</option>
+                                    <option value="reset">Reset to Base Values</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3" id="modalValueAdjustmentAmountDiv">
+                                <label for="modalValueAdjustmentAmountInput" class="form-label">Adjustment Amount</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="modalValueAdjustmentAmountInput" value="0">
+                                    <span class="input-group-text" id="modalAdjustmentSymbol">%</span>
+                                </div>
+                                <div class="form-text">Use positive values for increases, negative for decreases.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="modalValueAdjustmentGroupInput" class="form-label">Apply To</label>
+                                <input type="text" class="form-control" id="modalValueAdjustmentGroupDisplay" readonly>
+                                <input type="hidden" id="modalValueAdjustmentGroupInput">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="adjustmentReasonInput" class="form-label">Reason</label>
+                                <input type="text" class="form-control" id="adjustmentReasonInput" placeholder="Market conditions">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-warning" id="executeValueAdjustment">Apply Adjustment</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/jquery-3.6.0.min.js"></script>
+    <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/socket.io.min.js"></script>
+    
+    <script>
+        // Initialize the socket connection
+        const socket = io();
+        
+        // Global variables
+        let properties = [];
+        let propertyGroups = {};
+        let players = [];
+        let selectedPropertyId = null;
+        let selectedGroupName = null;
+        
+        // Chart objects for later reference
+        let valueDistributionChart, ownershipDistributionChart, 
+            developmentDistributionChart, groupValueChart, 
+            valueTrendChart, transactionVolumeChart;
+        
+        // Helper function to format currency
+        function formatCurrency(amount) {
+            return '$' + parseInt(amount).toLocaleString();
+        }
+        
+        // Tab switching function
+        function openTab(evt, tabName) {
+            // Hide all tab content
+            document.querySelectorAll('.tab-content').forEach(function(tab) {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab links
+            document.querySelectorAll('.tab-link').forEach(function(link) {
+                link.classList.remove('active');
+            });
+            
+            // Show the selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to the clicked tab link
+            if (evt && evt.currentTarget) {
+                evt.currentTarget.classList.add('active');
+            } else if (evt) {
+                evt.classList.add('active');
+            }
+            
+            // Load specific content based on the tab
+            if (tabName === 'propertyOverview') {
+                loadPropertiesOverview();
+            } else if (tabName === 'propertyDetails') {
+                loadPropertySelector();
+            } else if (tabName === 'propertyGroups') {
+                // Make sure there's a group selected
+                if (!selectedGroupName) {
+                    document.querySelector('#groupsList .list-group-item').click();
+                }
+            } else if (tabName === 'marketAnalysis') {
+                loadMarketAnalysis();
+            } else if (tabName === 'propertySettings') {
+                loadPropertySettings();
+            }
+        }
+        
+        // Function to show alerts
+        function showAlert(message, type = 'success') {
+            const alertContainer = document.getElementById('alertContainer');
+            
+            // Create alert element
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            // Add to container
+            alertContainer.appendChild(alert);
+            
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                alert.classList.remove('show');
+                setTimeout(() => {
+                    alertContainer.removeChild(alert);
+                }, 150);
+            }, 3000);
+        }
+        
+        // Fetch properties data from API
+        function fetchProperties(filters = {}) {
+            return new Promise((resolve, reject) => {
+                // Build query string from filters
+                const queryParams = new URLSearchParams();
+                
+                if (filters.group) queryParams.append('group', filters.group);
+                if (filters.owner_id) queryParams.append('owner_id', filters.owner_id);
+                if (filters.type) queryParams.append('type', filters.type);
+                if (filters.min_value) queryParams.append('min_value', filters.min_value);
+                if (filters.max_value) queryParams.append('max_value', filters.max_value);
+                
+                // Make API request
+                fetch(`/api/admin/properties/?${queryParams.toString()}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch properties');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            resolve(data.properties);
+                        } else {
+                            reject(data.error || 'Failed to fetch properties');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching properties:', error);
+                        reject(error);
+                    });
+            });
+        }
+        
+        // Fetch property details from API
+        function fetchPropertyDetails(propertyId) {
+            return new Promise((resolve, reject) => {
+                fetch(`/api/admin/properties/${propertyId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch property details');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            resolve(data.property);
+                        } else {
+                            reject(data.error || 'Failed to fetch property details');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching property details:', error);
+                        reject(error);
+                    });
+            });
+        }
+        
+        // Fetch players data from API
+        function fetchPlayers() {
+            return new Promise((resolve, reject) => {
+                fetch('/api/admin/players/')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch players');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            resolve(data.players);
+                        } else {
+                            reject(data.error || 'Failed to fetch players');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching players:', error);
+                        reject(error);
+                    });
+            });
+        }
+        
+        // Fetch market analysis data from API
+        function fetchMarketAnalysis() {
+            return new Promise((resolve, reject) => {
+                fetch('/api/admin/properties/market-analysis')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch market analysis');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            resolve(data.analysis);
+                        } else {
+                            reject(data.error || 'Failed to fetch market analysis');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching market analysis:', error);
+                        reject(error);
+                    });
+            });
+        }
+        
+        // Load properties overview
+        function loadPropertiesOverview() {
+            // Fetch properties
+            fetchProperties()
+                .then(data => {
+                    // Store properties globally
+                    properties = data;
+                    
+                    // Group properties by color/type
+                    propertyGroups = {};
+                    properties.forEach(property => {
+                        if (!propertyGroups[property.group]) {
+                            propertyGroups[property.group] = [];
+                        }
+                        propertyGroups[property.group].push(property);
+                    });
+                    
+                    // Update quick stats
+                    updateQuickStats(properties);
+                    
+                    // Populate properties table
+                    populatePropertiesTable(properties);
+                })
+                .catch(error => {
+                    showAlert(`Error loading properties: ${error}`, 'danger');
+                });
+        }
+        
+        // Update quick stats with property data
+        function updateQuickStats(properties) {
+            const totalProperties = properties.length;
+            const ownedProperties = properties.filter(p => p.owner_id !== null).length;
+            const mortgagedProperties = properties.filter(p => p.is_mortgaged).length;
+            const developedProperties = properties.filter(p => p.houses > 0 || p.hotel).length;
+            const totalValue = properties.reduce((sum, p) => sum + p.current_value, 0);
+            
+            document.getElementById('totalProperties').textContent = totalProperties;
+            document.getElementById('ownedProperties').textContent = ownedProperties;
+            document.getElementById('mortgagedProperties').textContent = mortgagedProperties;
+            document.getElementById('developedProperties').textContent = developedProperties;
+            document.getElementById('totalValue').textContent = formatCurrency(totalValue);
+        }
+        
+        // Populate properties table
+        function populatePropertiesTable(properties) {
+            const tableBody = document.getElementById('propertiesTableBody');
+            tableBody.innerHTML = '';
+            
+            properties.forEach(property => {
+                const row = document.createElement('tr');
+                
+                // Property ID
+                const idCell = document.createElement('td');
+                idCell.textContent = property.id;
+                row.appendChild(idCell);
+                
+                // Property Name
+                const nameCell = document.createElement('td');
+                nameCell.textContent = property.name;
+                row.appendChild(nameCell);
+                
+                // Property Group
+                const groupCell = document.createElement('td');
+                const groupBadge = document.createElement('span');
+                groupBadge.className = `badge property-group-${property.group}`;
+                groupBadge.textContent = property.group.charAt(0).toUpperCase() + property.group.slice(1);
+                groupCell.appendChild(groupBadge);
+                row.appendChild(groupCell);
+                
+                // Property Value
+                const valueCell = document.createElement('td');
+                valueCell.textContent = formatCurrency(property.current_value);
+                row.appendChild(valueCell);
+                
+                // Owner
+                const ownerCell = document.createElement('td');
+                ownerCell.textContent = property.owner_name || 'Bank';
+                row.appendChild(ownerCell);
+                
+                // Development
+                const developmentCell = document.createElement('td');
+                if (property.hotel) {
+                    developmentCell.textContent = 'Hotel';
+                } else if (property.houses > 0) {
+                    developmentCell.textContent = `${property.houses} House${property.houses > 1 ? 's' : ''}`;
+                } else {
+                    developmentCell.textContent = 'None';
+                }
+                row.appendChild(developmentCell);
+                
+                // Status
+                const statusCell = document.createElement('td');
+                const statusBadge = document.createElement('span');
+                
+                if (property.is_mortgaged) {
+                    statusBadge.className = 'status-badge status-inactive';
+                    statusBadge.textContent = 'Mortgaged';
+                } else if (property.owner_id) {
+                    statusBadge.className = 'status-badge status-active';
+                    statusBadge.textContent = 'Owned';
+                } else {
+                    statusBadge.className = 'status-badge status-info';
+                    statusBadge.textContent = 'Bank Owned';
+                }
+                
+                statusCell.appendChild(statusBadge);
+                row.appendChild(statusCell);
+                
+                // Actions
+                const actionsCell = document.createElement('td');
+                actionsCell.innerHTML = `
+                    <button class="btn btn-sm btn-info me-1" onclick="viewPropertyDetails(${property.id})">View</button>
+                    <button class="btn btn-sm btn-primary me-1" onclick="editProperty(${property.id})">Edit</button>
+                    <button class="btn btn-sm btn-warning" onclick="openTransferModal(${property.id})">Transfer</button>
+                `;
+                row.appendChild(actionsCell);
+                
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // View property details
+        function viewPropertyDetails(propertyId) {
+            selectedPropertyId = propertyId;
+            
+            // Switch to property details tab
+            document.querySelector('a[data-tab="propertyDetails"]').click();
+            
+            // Set the property selector to the selected property
+            document.getElementById('propertySelector').value = propertyId;
+            
+            // Load property details
+            loadPropertyDetails(propertyId);
+        }
+        
+        // Load property selector
+        function loadPropertySelector() {
+            const propertySelector = document.getElementById('propertySelector');
+            propertySelector.innerHTML = '<option value="">-- Select Property --</option>';
+            
+            // Sort properties by group, then by name
+            const sortedProperties = [...properties].sort((a, b) => {
+                if (a.group === b.group) {
+                    return a.name.localeCompare(b.name);
+                }
+                return a.group.localeCompare(b.group);
+            });
+            
+            // Group properties by color/type for the dropdown
+            const groups = {};
+            sortedProperties.forEach(property => {
+                if (!groups[property.group]) {
+                    groups[property.group] = [];
+                }
+                groups[property.group].push(property);
+            });
+            
+            // Add properties to selector grouped by color
+            Object.keys(groups).sort().forEach(group => {
+                const optGroup = document.createElement('optgroup');
+                optGroup.label = group.charAt(0).toUpperCase() + group.slice(1);
+                
+                groups[group].forEach(property => {
+                    const option = document.createElement('option');
+                    option.value = property.id;
+                    option.textContent = property.name;
+                    optGroup.appendChild(option);
+                });
+                
+                propertySelector.appendChild(optGroup);
+            });
+            
+            // If a property was selected, keep it selected
+            if (selectedPropertyId) {
+                propertySelector.value = selectedPropertyId;
+                loadPropertyDetails(selectedPropertyId);
+            }
+        }
+        
+        // Load property details
+        function loadPropertyDetails(propertyId) {
+            fetchPropertyDetails(propertyId)
+                .then(property => {
+                    // Update property selection details
+                    document.getElementById('propertySelectionDetails').classList.remove('d-none');
+                    document.getElementById('selectedPropertyName').textContent = property.name;
+                    document.getElementById('selectedPropertyId').textContent = property.id;
+                    
+                    const groupBadge = document.getElementById('selectedPropertyGroup');
+                    groupBadge.textContent = property.group.charAt(0).toUpperCase() + property.group.slice(1);
+                    groupBadge.className = `badge property-group-${property.group}`;
+                    
+                    document.getElementById('selectedPropertyOwner').textContent = property.owner_name || 'Bank';
+                    
+                    const statusBadge = document.getElementById('selectedPropertyStatus');
+                    if (property.is_mortgaged) {
+                        statusBadge.className = 'status-badge status-inactive';
+                        statusBadge.textContent = 'Mortgaged';
+                    } else if (property.owner_id) {
+                        statusBadge.className = 'status-badge status-active';
+                        statusBadge.textContent = 'Owned';
+                    } else {
+                        statusBadge.className = 'status-badge status-info';
+                        statusBadge.textContent = 'Bank Owned';
+                    }
+                    
+                    // Show property details content
+                    document.getElementById('noPropertySelected').classList.add('d-none');
+                    document.getElementById('propertyDetailsContent').classList.remove('d-none');
+                    
+                    // Populate basic info tab
+                    document.getElementById('detailPropertyId').textContent = property.id;
+                    document.getElementById('detailPropertyName').textContent = property.name;
+                    document.getElementById('detailPropertyGroup').textContent = property.group.charAt(0).toUpperCase() + property.group.slice(1);
+                    document.getElementById('detailPropertyPosition').textContent = property.position || 'N/A';
+                    document.getElementById('detailPropertyRules').textContent = property.special_rules || 'None';
+                    
+                    document.getElementById('detailPropertyOwner').textContent = property.owner_name || 'Bank';
+                    document.getElementById('detailPropertyAcquisitionDate').textContent = property.acquisition_date || 'N/A';
+                    document.getElementById('detailPropertyAcquisitionMethod').textContent = property.acquisition_method || 'N/A';
+                    
+                    const detailStatus = document.getElementById('detailPropertyStatus');
+                    if (property.is_mortgaged) {
+                        detailStatus.textContent = 'Mortgaged';
+                    } else {
+                        detailStatus.textContent = property.owner_id ? 'Owned' : 'Bank Owned';
+                    }
+                    
+                    // Populate financial tab
+                    document.getElementById('detailPropertyBaseValue').textContent = formatCurrency(property.base_value);
+                    document.getElementById('detailPropertyCurrentValue').textContent = formatCurrency(property.current_value);
+                    document.getElementById('detailPropertyPurchasePrice').textContent = formatCurrency(property.purchase_price || property.current_value);
+                    document.getElementById('detailPropertyMortgageValue').textContent = formatCurrency(property.mortgage_value);
+                    document.getElementById('detailPropertyUnmortgageCost').textContent = formatCurrency(Math.round(property.mortgage_value * 1.1));
+                    
+                    document.getElementById('detailPropertyBaseRent').textContent = formatCurrency(property.base_rent);
+                    document.getElementById('detailPropertyRent1').textContent = formatCurrency(property.rent_1_house || 'N/A');
+                    document.getElementById('detailPropertyRent2').textContent = formatCurrency(property.rent_2_houses || 'N/A');
+                    document.getElementById('detailPropertyRent3').textContent = formatCurrency(property.rent_3_houses || 'N/A');
+                    document.getElementById('detailPropertyRent4').textContent = formatCurrency(property.rent_4_houses || 'N/A');
+                    document.getElementById('detailPropertyRentHotel').textContent = formatCurrency(property.rent_hotel || 'N/A');
+                    
+                    // Populate development tab
+                    document.getElementById('detailPropertyHouses').textContent = property.houses || 0;
+                    document.getElementById('detailPropertyHotel').textContent = property.hotel ? 'Yes' : 'No';
+                    
+                    let devLevel = 'Undeveloped';
+                    if (property.hotel) {
+                        devLevel = 'Hotel';
+                    } else if (property.houses > 0) {
+                        devLevel = `${property.houses} House${property.houses > 1 ? 's' : ''}`;
+                    }
+                    document.getElementById('detailPropertyDevLevel').textContent = devLevel;
+                    
+                    document.getElementById('detailPropertyHouseCost').textContent = formatCurrency(property.house_price || 'N/A');
+                    document.getElementById('detailPropertyHotelCost').textContent = formatCurrency(property.hotel_price || (property.house_price ? property.house_price * 5 : 'N/A'));
+                    
+                    // Set up development action buttons
+                    const addHouseBtn = document.getElementById('addHouseBtn');
+                    const removeHouseBtn = document.getElementById('removeHouseBtn');
+                    const upgradeToHotelBtn = document.getElementById('upgradeToHotelBtn');
+                    const downgradeFromHotelBtn = document.getElementById('downgradeFromHotelBtn');
+                    const resetDevBtn = document.getElementById('resetDevBtn');
+                    
+                    // Enable/disable buttons based on current development state
+                    addHouseBtn.disabled = property.hotel || property.houses === 4 || !property.owner_id || property.is_mortgaged;
+                    removeHouseBtn.disabled = !property.houses || !property.owner_id;
+                    upgradeToHotelBtn.disabled = property.hotel || property.houses !== 4 || !property.owner_id || property.is_mortgaged;
+                    downgradeFromHotelBtn.disabled = !property.hotel || !property.owner_id;
+                    resetDevBtn.disabled = (!property.houses && !property.hotel) || !property.owner_id;
+                    
+                    // Populate group properties list
+                    const groupPropertiesList = document.getElementById('groupPropertiesList');
+                    groupPropertiesList.innerHTML = '';
+                    
+                    // Find properties in the same group
+                    const groupProperties = properties.filter(p => p.group === property.group && p.id !== property.id);
+                    
+                    if (groupProperties.length === 0) {
+                        const listItem = document.createElement('div');
+                        listItem.className = 'list-group-item';
+                        listItem.textContent = 'No other properties in this group';
+                        groupPropertiesList.appendChild(listItem);
+                    } else {
+                        groupProperties.forEach(p => {
+                            const listItem = document.createElement('div');
+                            listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                            
+                            let devInfo = 'No development';
+                            if (p.hotel) {
+                                devInfo = 'Hotel';
+                            } else if (p.houses > 0) {
+                                devInfo = `${p.houses} House${p.houses > 1 ? 's' : ''}`;
+                            }
+                            
+                            listItem.innerHTML = `
+                                <div>
+                                    <strong>${p.name}</strong><br>
+                                    <small>Owner: ${p.owner_name || 'Bank'}</small>
+                                </div>
+                                <div>
+                                    <span class="badge ${p.hotel ? 'bg-primary' : (p.houses > 0 ? 'bg-success' : 'bg-secondary')}">${devInfo}</span>
+                                    <span class="badge ${p.is_mortgaged ? 'bg-danger' : 'bg-light text-dark'}">${p.is_mortgaged ? 'Mortgaged' : 'Active'}</span>
+                                </div>
+                            `;
+                            groupPropertiesList.appendChild(listItem);
+                        });
+                    }
+                    
+                    // Load property history
+                    loadPropertyHistory(property.id);
+                })
+                .catch(error => {
+                    showAlert(`Error loading property details: ${error}`, 'danger');
+                });
+        }
+        
+        // Load property history
+        function loadPropertyHistory(propertyId) {
+            // In a real implementation, this would fetch history from the API
+            // For now, we'll use mock data
+            
+            // Mock ownership history
+            const ownershipHistory = [
+                { date: '2025-05-01', previous_owner: 'Bank', new_owner: 'Player 1', transaction_type: 'Purchase', amount: 200 },
+                { date: '2025-05-05', previous_owner: 'Player 1', new_owner: 'Player 2', transaction_type: 'Trade', amount: 250 }
+            ];
+            
+            // Mock development history
+            const developmentHistory = [
+                { date: '2025-05-06', action: 'Add House', from: 0, to: 1, cost: 50 },
+                { date: '2025-05-07', action: 'Add House', from: 1, to: 2, cost: 50 }
+            ];
+            
+            // Mock auction history
+            const auctionHistory = [
+                { date: '2025-05-01', auction_id: 123, starting_bid: 100, final_bid: 200, winner: 'Player 1', participants: 2 }
+            ];
+            
+            // Populate ownership history table
+            const ownershipHistoryBody = document.getElementById('ownershipHistoryBody');
+            ownershipHistoryBody.innerHTML = '';
+            
+            if (ownershipHistory.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="5" class="text-center">No ownership history available</td>';
+                ownershipHistoryBody.appendChild(row);
+            } else {
+                ownershipHistory.forEach(hist => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${hist.date}</td>
+                        <td>${hist.previous_owner}</td>
+                        <td>${hist.new_owner}</td>
+                        <td>${hist.transaction_type}</td>
+                        <td>${formatCurrency(hist.amount)}</td>
+                    `;
+                    ownershipHistoryBody.appendChild(row);
+                });
+            }
+            
+            // Populate development history table
+            const developmentHistoryBody = document.getElementById('developmentHistoryBody');
+            developmentHistoryBody.innerHTML = '';
+            
+            if (developmentHistory.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="5" class="text-center">No development history available</td>';
+                developmentHistoryBody.appendChild(row);
+            } else {
+                developmentHistory.forEach(hist => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${hist.date}</td>
+                        <td>${hist.action}</td>
+                        <td>${hist.from}</td>
+                        <td>${hist.to}</td>
+                        <td>${formatCurrency(hist.cost)}</td>
+                    `;
+                    developmentHistoryBody.appendChild(row);
+                });
+            }
+            
+            // Populate auction history table
+            const auctionHistoryBody = document.getElementById('auctionHistoryBody');
+            auctionHistoryBody.innerHTML = '';
+            
+            if (auctionHistory.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="6" class="text-center">No auction history available</td>';
+                auctionHistoryBody.appendChild(row);
+            } else {
+                auctionHistory.forEach(hist => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${hist.date}</td>
+                        <td>${hist.auction_id}</td>
+                        <td>${formatCurrency(hist.starting_bid)}</td>
+                        <td>${formatCurrency(hist.final_bid)}</td>
+                        <td>${hist.winner}</td>
+                        <td>${hist.participants}</td>
+                    `;
+                    auctionHistoryBody.appendChild(row);
+                });
+            }
+        }
+        
+        // Load property group details
+        function loadPropertyGroupDetails(groupName) {
+            selectedGroupName = groupName;
+            
+            // Get properties in this group
+            const groupProps = properties.filter(p => p.group === groupName);
+            
+            // Show group details content
+            document.getElementById('noGroupSelected').classList.add('d-none');
+            document.getElementById('groupDetailsContent').classList.remove('d-none');
+            document.getElementById('groupActions').classList.remove('d-none');
+            
+            // Update selected group name
+            const formattedGroupName = groupName.charAt(0).toUpperCase() + groupName.slice(1);
+            document.getElementById('selectedGroupName').textContent = `${formattedGroupName} Properties`;
+            
+            // Update group stats
+            document.getElementById('groupPropertyCount').textContent = groupProps.length;
+            
+            const totalValue = groupProps.reduce((sum, p) => sum + p.current_value, 0);
+            document.getElementById('groupTotalValue').textContent = formatCurrency(totalValue);
+            
+            // Check if any player has monopoly on this group
+            const owners = {};
+            groupProps.forEach(p => {
+                if (p.owner_id) {
+                    owners[p.owner_id] = (owners[p.owner_id] || 0) + 1;
+                }
+            });
+            
+            let monopolyStatus = 'No Monopoly';
+            Object.keys(owners).forEach(ownerId => {
+                if (owners[ownerId] === groupProps.length) {
+                    const owner = groupProps.find(p => p.owner_id === parseInt(ownerId)).owner_name;
+                    monopolyStatus = `${owner} has monopoly`;
+                }
+            });
+            document.getElementById('groupMonopolyStatus').textContent = monopolyStatus;
+            
+            // Populate group properties table
+            const tableBody = document.getElementById('groupPropertiesTableBody');
+            tableBody.innerHTML = '';
+            
+            groupProps.forEach(property => {
+                const row = document.createElement('tr');
+                
+                // Property Name
+                const nameCell = document.createElement('td');
+                nameCell.textContent = property.name;
+                row.appendChild(nameCell);
+                
+                // Property Value
+                const valueCell = document.createElement('td');
+                valueCell.textContent = formatCurrency(property.current_value);
+                row.appendChild(valueCell);
+                
+                // Owner
+                const ownerCell = document.createElement('td');
+                ownerCell.textContent = property.owner_name || 'Bank';
+                row.appendChild(ownerCell);
+                
+                // Development
+                const developmentCell = document.createElement('td');
+                if (property.hotel) {
+                    developmentCell.textContent = 'Hotel';
+                } else if (property.houses > 0) {
+                    developmentCell.textContent = `${property.houses} House${property.houses > 1 ? 's' : ''}`;
+                } else {
+                    developmentCell.textContent = 'None';
+                }
+                row.appendChild(developmentCell);
+                
+                // Status
+                const statusCell = document.createElement('td');
+                const statusBadge = document.createElement('span');
+                
+                if (property.is_mortgaged) {
+                    statusBadge.className = 'status-badge status-inactive';
+                    statusBadge.textContent = 'Mortgaged';
+                } else if (property.owner_id) {
+                    statusBadge.className = 'status-badge status-active';
+                    statusBadge.textContent = 'Owned';
+                } else {
+                    statusBadge.className = 'status-badge status-info';
+                    statusBadge.textContent = 'Bank Owned';
+                }
+                
+                statusCell.appendChild(statusBadge);
+                row.appendChild(statusCell);
+                
+                // Actions
+                const actionsCell = document.createElement('td');
+                actionsCell.innerHTML = `
+                    <button class="btn btn-sm btn-info" onclick="viewPropertyDetails(${property.id})">View</button>
+                `;
+                row.appendChild(actionsCell);
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Update development progress
+            updateGroupDevelopmentProgress(groupProps);
+            
+            // Update group financial data
+            updateGroupFinancialData(groupProps);
+        }
+        
+        // Update group development progress
+        function updateGroupDevelopmentProgress(groupProperties) {
+            const totalProperties = groupProperties.length;
+            const totalPossibleDevelopment = totalProperties * 5; // 4 houses + 1 hotel per property
+            
+            let currentDevelopment = 0;
+            let totalHouses = 0;
+            let totalHotels = 0;
+            
+            groupProperties.forEach(property => {
+                if (property.hotel) {
+                    currentDevelopment += 5;
+                    totalHotels += 1;
+                } else {
+                    currentDevelopment += property.houses || 0;
+                    totalHouses += property.houses || 0;
+                }
+            });
+            
+            const developmentPercent = totalPossibleDevelopment > 0 ? 
+                Math.round((currentDevelopment / totalPossibleDevelopment) * 100) : 0;
+            
+            document.getElementById('groupDevelopmentProgress').style.width = `${developmentPercent}%`;
+            
+            let developmentText = 'No properties developed';
+            if (currentDevelopment > 0) {
+                developmentText = `${developmentPercent}% developed (${totalHouses} houses, ${totalHotels} hotels)`;
+            }
+            document.getElementById('groupDevelopmentText').textContent = developmentText;
+            
+            // Average development
+            const avgDevelopment = totalProperties > 0 ? 
+                (currentDevelopment / totalProperties).toFixed(1) : 0;
+            document.getElementById('avgGroupDevelopment').textContent = avgDevelopment;
+            
+            document.getElementById('totalGroupHouses').textContent = totalHouses;
+            document.getElementById('totalGroupHotels').textContent = totalHotels;
+            document.getElementById('groupDevelopmentPotential').textContent = 
+                `${totalPossibleDevelopment - currentDevelopment} more (${100 - developmentPercent}%)`;
+        }
+        
+        // Update group financial data
+        function updateGroupFinancialData(groupProperties) {
+            const totalBaseCost = groupProperties.reduce((sum, p) => sum + p.base_value, 0);
+            document.getElementById('groupBaseCost').textContent = formatCurrency(totalBaseCost);
+            
+            // Get house cost (should be the same for all properties in group)
+            const houseCost = groupProperties.length > 0 ? 
+                groupProperties[0].house_price || 0 : 0;
+            document.getElementById('groupHouseCost').textContent = formatCurrency(houseCost);
+            
+            // Average base rent
+            const totalBaseRent = groupProperties.reduce((sum, p) => sum + p.base_rent, 0);
+            const avgBaseRent = groupProperties.length > 0 ? 
+                Math.round(totalBaseRent / groupProperties.length) : 0;
+            document.getElementById('groupBaseRent').textContent = formatCurrency(avgBaseRent);
+            
+            // Average max rent (with hotel)
+            const totalMaxRent = groupProperties.reduce((sum, p) => sum + (p.rent_hotel || 0), 0);
+            const avgMaxRent = groupProperties.length > 0 ? 
+                Math.round(totalMaxRent / groupProperties.length) : 0;
+            document.getElementById('groupMaxRent').textContent = formatCurrency(avgMaxRent);
+            
+            // ROI calculation
+            const totalInvestment = totalBaseCost + (houseCost * 4 * groupProperties.length);
+            const totalMaxPerTurn = totalMaxRent;
+            
+            const roi = totalInvestment > 0 ? 
+                Math.round((totalMaxPerTurn / totalInvestment) * 100) : 0;
+            document.getElementById('groupROI').textContent = `${roi}%`;
+        }
+        
+        // Load property settings
+        function loadPropertySettings() {
+            // In a real implementation, this would fetch settings from the API
+            // For now, we'll use default values
+            
+            document.getElementById('propertyValueCoefficientInput').value = 1.0;
+            document.getElementById('rentMultiplierInput').value = 1.0;
+            document.getElementById('mortgageInterestRateInput').value = 10;
+            document.getElementById('houseLimitInput').value = 32;
+            document.getElementById('hotelLimitInput').value = 12;
+            document.getElementById('evenBuildingRuleInput').checked = true;
+            document.getElementById('valueFollowEconomyInput').checked = true;
+            
+            // Update bank inventory stats
+            updateBankInventory();
+            
+            // Populate player dropdowns for mass transfer
+            fetchPlayers()
+                .then(data => {
+                    players = data;
+                    
+                    const fromPlayerSelect = document.getElementById('transferFromPlayerInput');
+                    const toPlayerSelect = document.getElementById('transferToPlayerInput');
+                    
+                    // Clear existing options (except the default and bank options)
+                    while (fromPlayerSelect.options.length > 1) {
+                        fromPlayerSelect.remove(1);
+                    }
+                    
+                    while (toPlayerSelect.options.length > 2) {
+                        toPlayerSelect.remove(2);
+                    }
+                    
+                    // Add players to dropdowns
+                    players.forEach(player => {
+                        const fromOption = document.createElement('option');
+                        fromOption.value = player.id;
+                        fromOption.textContent = player.username;
+                        fromPlayerSelect.appendChild(fromOption);
+                        
+                        const toOption = document.createElement('option');
+                        toOption.value = player.id;
+                        toOption.textContent = player.username;
+                        toPlayerSelect.appendChild(toOption);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading players:', error);
+                });
+        }
+        
+        // Update bank inventory
+        function updateBankInventory() {
+            // In a real implementation, this would fetch data from the API
+            // For now, we'll use mock data
+            
+            const propertiesWithHouses = properties.filter(p => p.houses > 0);
+            const propertiesWithHotels = properties.filter(p => p.hotel);
+            
+            const housesInUse = propertiesWithHouses.reduce((sum, p) => sum + p.houses, 0);
+            const hotelsInUse = propertiesWithHotels.length;
+            
+            const totalHouses = parseInt(document.getElementById('houseLimitInput').value) || 32;
+            const totalHotels = parseInt(document.getElementById('hotelLimitInput').value) || 12;
+            
+            const availableHouses = totalHouses - housesInUse;
+            const availableHotels = totalHotels - hotelsInUse;
+            
+            document.getElementById('availableHouses').textContent = availableHouses;
+            document.getElementById('housesInUse').textContent = housesInUse;
+            document.getElementById('availableHotels').textContent = availableHotels;
+            document.getElementById('hotelsInUse').textContent = hotelsInUse;
+        }
+        
+        // Edit property
+        function editProperty(propertyId) {
+            const property = properties.find(p => p.id === propertyId);
+            if (!property) {
+                showAlert('Property not found', 'danger');
+                return;
+            }
+            
+            // Populate edit form
+            document.getElementById('editPropertyId').value = property.id;
+            document.getElementById('editPropertyNameInput').value = property.name;
+            document.getElementById('editPropertyGroupInput').value = property.group;
+            document.getElementById('editPropertyBaseValueInput').value = property.base_value;
+            document.getElementById('editPropertyCurrentValueInput').value = property.current_value;
+            document.getElementById('editPropertyMortgageValueInput').value = property.mortgage_value;
+            document.getElementById('editPropertyHouseCostInput').value = property.house_price || '';
+            
+            document.getElementById('editPropertyBaseRentInput').value = property.base_rent;
+            document.getElementById('editPropertyRent1Input').value = property.rent_1_house || '';
+            document.getElementById('editPropertyRent2Input').value = property.rent_2_houses || '';
+            document.getElementById('editPropertyRent3Input').value = property.rent_3_houses || '';
+            document.getElementById('editPropertyRent4Input').value = property.rent_4_houses || '';
+            document.getElementById('editPropertyRentHotelInput').value = property.rent_hotel || '';
+            
+            document.getElementById('editPropertySpecialRulesInput').value = property.special_rules || '';
+            document.getElementById('editPropertyMortgagedInput').checked = property.is_mortgaged;
+            
+            // Show the modal
+            const editModal = new bootstrap.Modal(document.getElementById('editPropertyModal'));
+            editModal.show();
+        }
+        
+        // Open transfer modal
+        function openTransferModal(propertyId) {
+            const property = properties.find(p => p.id === propertyId);
+            if (!property) {
+                showAlert('Property not found', 'danger');
+                return;
+            }
+            
+            // Populate transfer form
+            document.getElementById('transferPropertyId').value = property.id;
+            document.getElementById('transferPropertyNameDisplay').value = property.name;
+            document.getElementById('transferFromPlayerDisplay').value = property.owner_name || 'Bank';
+            document.getElementById('transferToPlayerInput').value = '';
+            document.getElementById('transferAmountInput').value = '';
+            document.getElementById('recordTransactionInput').checked = true;
+            document.getElementById('transferReasonInput').value = 'Admin transfer';
+            
+            // Populate player dropdown
+            const transferToSelect = document.getElementById('transferToPlayerInput');
+            
+            // Clear existing options (except the default and bank options)
+            while (transferToSelect.options.length > 2) {
+                transferToSelect.remove(2);
+            }
+            
+            // Add players to dropdown
+            fetchPlayers()
+                .then(players => {
+                    players.forEach(player => {
+                        // Don't add current owner
+                        if (player.id !== property.owner_id) {
+                            const option = document.createElement('option');
+                            option.value = player.id;
+                            option.textContent = player.username;
+                            transferToSelect.appendChild(option);
+                        }
+                    });
+                    
+                    // Show the modal
+                    const transferModal = new bootstrap.Modal(document.getElementById('transferPropertyModal'));
+                    transferModal.show();
+                })
+                .catch(error => {
+                    console.error('Error loading players:', error);
+                    showAlert('Error loading players', 'danger');
+                });
+        }
+        
+        // Open adjust values modal
+        function openAdjustValuesModal(groupName) {
+            // Populate adjust values form
+            document.getElementById('modalValueAdjustmentTypeInput').value = 'percentage';
+            document.getElementById('modalValueAdjustmentAmountInput').value = 0;
+            document.getElementById('modalAdjustmentSymbol').textContent = '%';
+            
+            document.getElementById('modalValueAdjustmentGroupDisplay').value = 
+                groupName ? `${groupName.charAt(0).toUpperCase() + groupName.slice(1)} Properties` : 'All Properties';
+            document.getElementById('modalValueAdjustmentGroupInput').value = groupName || 'all';
+            
+            document.getElementById('adjustmentReasonInput').value = 'Market conditions';
+            
+            // Show the modal
+            const adjustValuesModal = new bootstrap.Modal(document.getElementById('adjustValuesModal'));
+            adjustValuesModal.show();
+        }
+        
+        // Load market analysis
+        function loadMarketAnalysis() {
+            fetchMarketAnalysis()
+                .then(analysis => {
+                    // Update market stats
+                    document.getElementById('avgPropertyValue').textContent = formatCurrency(analysis.average_property_value);
+                    document.getElementById('marketStatus').textContent = analysis.market_status || 'Stable';
+                    document.getElementById('mostValuableGroup').textContent = analysis.most_valuable_group || '-';
+                    document.getElementById('marketActivity').textContent = analysis.market_activity || 'Low';
+                    
+                    // Initialize charts
+                    initMarketCharts(analysis);
+                    
+                    // Populate recent transactions
+                    populateRecentTransactions(analysis.recent_transactions || []);
+                })
+                .catch(error => {
+                    console.error('Error loading market analysis:', error);
+                    showAlert('Error loading market analysis', 'danger');
+                    
+                    // Initialize charts with default data for UI testing
+                    initMarketCharts({
+                        value_distribution: {
+                            labels: ['Low', 'Medium', 'High'],
+                            data: [30, 50, 20]
+                        },
+                        ownership_distribution: {
+                            labels: ['Bank', 'Player 1', 'Player 2'],
+                            data: [40, 35, 25]
+                        },
+                        development_distribution: {
+                            labels: ['Undeveloped', 'Houses', 'Hotels'],
+                            data: [60, 30, 10]
+                        },
+                        group_values: {
+                            labels: ['Brown', 'Light Blue', 'Pink', 'Orange', 'Red', 'Yellow', 'Green', 'Dark Blue', 'Railroad', 'Utility'],
+                            data: [100, 150, 200, 250, 300, 350, 400, 450, 200, 150]
+                        },
+                        value_trends: {
+                            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                            data: [100, 120, 110, 130, 150]
+                        },
+                        transaction_volume: {
+                            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                            data: [5, 8, 3, 10, 7]
+                        }
+                    });
+                });
+        }
+        
+        // Initialize market analysis charts
+        function initMarketCharts(analysis) {
+            // Destroy existing charts to prevent duplicates
+            if (valueDistributionChart) valueDistributionChart.destroy();
+            if (ownershipDistributionChart) ownershipDistributionChart.destroy();
+            if (developmentDistributionChart) developmentDistributionChart.destroy();
+            if (groupValueChart) groupValueChart.destroy();
+            if (valueTrendChart) valueTrendChart.destroy();
+            if (transactionVolumeChart) transactionVolumeChart.destroy();
+            
+            // Value Distribution Chart
+            const valueDistributionCtx = document.getElementById('valueDistributionChart').getContext('2d');
+            valueDistributionChart = new Chart(valueDistributionCtx, {
+                type: 'pie',
+                data: {
+                    labels: analysis.value_distribution?.labels || ['Low', 'Medium', 'High'],
+                    datasets: [{
+                        data: analysis.value_distribution?.data || [30, 50, 20],
+                        backgroundColor: ['#36a2eb', '#ffcd56', '#4bc0c0']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            
+            // Ownership Distribution Chart
+            const ownershipDistributionCtx = document.getElementById('ownershipDistributionChart').getContext('2d');
+            ownershipDistributionChart = new Chart(ownershipDistributionCtx, {
+                type: 'pie',
+                data: {
+                    labels: analysis.ownership_distribution?.labels || ['Bank', 'Player 1', 'Player 2'],
+                    datasets: [{
+                        data: analysis.ownership_distribution?.data || [40, 35, 25],
+                        backgroundColor: ['#ff6384', '#36a2eb', '#ffcd56']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            
+            // Development Distribution Chart
+            const developmentDistributionCtx = document.getElementById('developmentDistributionChart').getContext('2d');
+            developmentDistributionChart = new Chart(developmentDistributionCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: analysis.development_distribution?.labels || ['Undeveloped', 'Houses', 'Hotels'],
+                    datasets: [{
+                        data: analysis.development_distribution?.data || [60, 30, 10],
+                        backgroundColor: ['#e0e0e0', '#4bc0c0', '#ff6384']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            
+            // Group Value Comparison Chart
+            const groupValueCtx = document.getElementById('groupValueChart').getContext('2d');
+            groupValueChart = new Chart(groupValueCtx, {
+                type: 'bar',
+                data: {
+                    labels: analysis.group_values?.labels || ['Brown', 'Light Blue', 'Pink', 'Orange', 'Red', 'Yellow', 'Green', 'Dark Blue', 'Railroad', 'Utility'],
+                    datasets: [{
+                        label: 'Average Value',
+                        data: analysis.group_values?.data || [100, 150, 200, 250, 300, 350, 400, 450, 200, 150],
+                        backgroundColor: ['#8B4513', '#87CEEB', '#FF69B4', '#FFA500', '#FF0000', '#FFFF00', '#008000', '#00008B', '#000000', '#708090']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // Value Trend Chart
+            const valueTrendCtx = document.getElementById('valueTrendChart').getContext('2d');
+            valueTrendChart = new Chart(valueTrendCtx, {
+                type: 'line',
+                data: {
+                    labels: analysis.value_trends?.labels || ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                    datasets: [{
+                        label: 'Average Property Value',
+                        data: analysis.value_trends?.data || [100, 120, 110, 130, 150],
+                        borderColor: '#4bc0c0',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+            
+            // Transaction Volume Chart
+            const transactionVolumeCtx = document.getElementById('transactionVolumeChart').getContext('2d');
+            transactionVolumeChart = new Chart(transactionVolumeCtx, {
+                type: 'bar',
+                data: {
+                    labels: analysis.transaction_volume?.labels || ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                    datasets: [{
+                        label: 'Number of Transactions',
+                        data: analysis.transaction_volume?.data || [5, 8, 3, 10, 7],
+                        backgroundColor: '#ff6384'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Populate recent transactions
+        function populateRecentTransactions(transactions) {
+            const tableBody = document.getElementById('recentTransactionsBody');
+            tableBody.innerHTML = '';
+            
+            if (transactions.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="6" class="text-center">No recent transactions</td>';
+                tableBody.appendChild(row);
+                return;
+            }
+            
+            transactions.forEach(transaction => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${transaction.date}</td>
+                    <td>${transaction.property_name}</td>
+                    <td>${transaction.type}</td>
+                    <td>${transaction.from}</td>
+                    <td>${transaction.to}</td>
+                    <td>${formatCurrency(transaction.amount)}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initial load
+            loadPropertiesOverview();
+            
+            // Set the first tab as active
+            document.querySelector('.tab-link').classList.add('active');
+            document.querySelector('.tab-content').classList.add('active');
+            
+            // Add event listeners for tab switching
+            document.querySelectorAll('.tab-link').forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    openTab(e, this.getAttribute('data-tab'));
+                });
+            });
+            
+            // Property selector change
+            document.getElementById('propertySelector').addEventListener('change', function() {
+                const propertyId = parseInt(this.value);
+                if (propertyId) {
+                    selectedPropertyId = propertyId;
+                    loadPropertyDetails(propertyId);
+                } else {
+                    // Hide property details
+                    document.getElementById('propertySelectionDetails').classList.add('d-none');
+                    document.getElementById('noPropertySelected').classList.remove('d-none');
+                    document.getElementById('propertyDetailsContent').classList.add('d-none');
+                }
+            });
+            
+            // Group selection
+            document.querySelectorAll('#groupsList .list-group-item').forEach(function(item) {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove active class from all group items
+                    document.querySelectorAll('#groupsList .list-group-item').forEach(function(i) {
+                        i.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked item
+                    this.classList.add('active');
+                    
+                    // Load group details
+                    loadPropertyGroupDetails(this.getAttribute('data-group'));
+                });
+            });
+            
+            // Property filters
+            document.getElementById('applyFilters').addEventListener('click', function() {
+                const filters = {
+                    group: document.getElementById('propertyGroupFilter').value,
+                    type: document.getElementById('developmentFilter').value
+                };
+                
+                // Ownership filter
+                const ownershipFilter = document.getElementById('ownershipFilter').value;
+                if (ownershipFilter === 'owned') {
+                    filters.owner_id = 'notnull';
+                } else if (ownershipFilter === 'unowned') {
+                    filters.owner_id = 'null';
+                } else if (ownershipFilter === 'mortgaged') {
+                    filters.mortgaged = true;
+                }
+                
+                // Value filter
+                const valueFilter = document.getElementById('valueFilter').value;
+                if (valueFilter === 'low') {
+                    filters.max_value = 100;
+                } else if (valueFilter === 'medium') {
+                    filters.min_value = 101;
+                    filters.max_value = 300;
+                } else if (valueFilter === 'high') {
+                    filters.min_value = 301;
+                }
+                
+                // Fetch filtered properties
+                fetchProperties(filters)
+                    .then(filteredProperties => {
+                        populatePropertiesTable(filteredProperties);
+                    })
+                    .catch(error => {
+                        showAlert(`Error applying filters: ${error}`, 'danger');
+                    });
+            });
+            
+            // Reset filters
+            document.getElementById('resetFilters').addEventListener('click', function() {
+                document.getElementById('propertyGroupFilter').value = '';
+                document.getElementById('ownershipFilter').value = '';
+                document.getElementById('developmentFilter').value = '';
+                document.getElementById('valueFilter').value = '';
+                
+                loadPropertiesOverview();
+            });
+            
+            // Refresh properties
+            document.getElementById('refreshProperties').addEventListener('click', loadPropertiesOverview);
+            
+            // Adjust all property values
+            document.getElementById('adjustAllValues').addEventListener('click', function() {
+                openAdjustValuesModal();
+            });
+            
+            // Adjust group values
+            document.getElementById('adjustGroupValues').addEventListener('click', function() {
+                openAdjustValuesModal(selectedGroupName);
+            });
+            
+            // Save property edits
+            document.getElementById('savePropertyEdits').addEventListener('click', function() {
+                const propertyId = parseInt(document.getElementById('editPropertyId').value);
+                
+                // Get form values
+                const updateData = {
+                    name: document.getElementById('editPropertyNameInput').value,
+                    base_value: parseInt(document.getElementById('editPropertyBaseValueInput').value),
+                    current_value: parseInt(document.getElementById('editPropertyCurrentValueInput').value),
+                    mortgage_value: parseInt(document.getElementById('editPropertyMortgageValueInput').value),
+                    house_price: parseInt(document.getElementById('editPropertyHouseCostInput').value) || null,
+                    base_rent: parseInt(document.getElementById('editPropertyBaseRentInput').value),
+                    rent_1_house: parseInt(document.getElementById('editPropertyRent1Input').value) || null,
+                    rent_2_houses: parseInt(document.getElementById('editPropertyRent2Input').value) || null,
+                    rent_3_houses: parseInt(document.getElementById('editPropertyRent3Input').value) || null,
+                    rent_4_houses: parseInt(document.getElementById('editPropertyRent4Input').value) || null,
+                    rent_hotel: parseInt(document.getElementById('editPropertyRentHotelInput').value) || null,
+                    special_rules: document.getElementById('editPropertySpecialRulesInput').value,
+                    is_mortgaged: document.getElementById('editPropertyMortgagedInput').checked
+                };
+                
+                // Update property
+                fetch(`/api/admin/properties/${propertyId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Close modal
+                        bootstrap.Modal.getInstance(document.getElementById('editPropertyModal')).hide();
+                        
+                        // Show success message
+                        showAlert('Property updated successfully', 'success');
+                        
+                        // Refresh properties
+                        loadPropertiesOverview();
+                        
+                        // If property details are open, refresh them
+                        if (selectedPropertyId === propertyId) {
+                            loadPropertyDetails(propertyId);
+                        }
+                        
+                        // If property group is open, refresh it
+                        if (selectedGroupName) {
+                            const property = properties.find(p => p.id === propertyId);
+                            if (property && property.group === selectedGroupName) {
+                                loadPropertyGroupDetails(selectedGroupName);
+                            }
+                        }
+                    } else {
+                        showAlert(`Error updating property: ${data.error}`, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating property:', error);
+                    showAlert('Error updating property', 'danger');
+                });
+            });
+            
+            // Execute property transfer
+            document.getElementById('executeTransfer').addEventListener('click', function() {
+                const propertyId = parseInt(document.getElementById('transferPropertyId').value);
+                const toPlayerId = document.getElementById('transferToPlayerInput').value;
+                const transferAmount = parseInt(document.getElementById('transferAmountInput').value) || null;
+                const recordTransaction = document.getElementById('recordTransactionInput').checked;
+                const reason = document.getElementById('transferReasonInput').value || 'Admin transfer';
+                
+                if (!toPlayerId) {
+                    showAlert('Please select a new owner', 'warning');
+                    return;
+                }
+                
+                // Transfer property
+                fetch('/api/admin/properties/transfer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        property_id: propertyId,
+                        to_player_id: toPlayerId === 'bank' ? null : parseInt(toPlayerId),
+                        transfer_amount: transferAmount,
+                        record_transaction: recordTransaction,
+                        reason: reason
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Close modal
+                        bootstrap.Modal.getInstance(document.getElementById('transferPropertyModal')).hide();
+                        
+                        // Show success message
+                        showAlert('Property transferred successfully', 'success');
+                        
+                        // Refresh properties
+                        loadPropertiesOverview();
+                        
+                        // If property details are open, refresh them
+                        if (selectedPropertyId === propertyId) {
+                            loadPropertyDetails(propertyId);
+                        }
+                        
+                        // If property group is open, refresh it
+                        if (selectedGroupName) {
+                            const property = properties.find(p => p.id === propertyId);
+                            if (property && property.group === selectedGroupName) {
+                                loadPropertyGroupDetails(selectedGroupName);
+                            }
+                        }
+                    } else {
+                        showAlert(`Error transferring property: ${data.error}`, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error transferring property:', error);
+                    showAlert('Error transferring property', 'danger');
+                });
+            });
+            
+            // Adjustment type change handler
+            document.getElementById('valueAdjustmentTypeInput').addEventListener('change', function() {
+                const symbol = document.getElementById('adjustmentSymbol');
+                if (this.value === 'percentage') {
+                    symbol.textContent = '%';
+                } else {
+                    symbol.textContent = '$';
+                }
+            });
+            
+            // Modal adjustment type change handler
+            document.getElementById('modalValueAdjustmentTypeInput').addEventListener('change', function() {
+                const symbol = document.getElementById('modalAdjustmentSymbol');
+                if (this.value === 'percentage') {
+                    symbol.textContent = '%';
+                } else {
+                    symbol.textContent = '$';
+                }
+            });
+            
+            // Save global settings
+            document.getElementById('saveGlobalSettings').addEventListener('click', function() {
+                const settings = {
+                    property_value_coefficient: parseFloat(document.getElementById('propertyValueCoefficient').value),
+                    rent_multiplier: parseFloat(document.getElementById('rentMultiplier').value),
+                    mortgage_interest_rate: parseFloat(document.getElementById('mortgageInterestRate').value),
+                    house_limit: parseInt(document.getElementById('houseLimit').value),
+                    hotel_limit: parseInt(document.getElementById('hotelLimit').value),
+                    enforce_even_building: document.getElementById('enforceEvenBuilding').checked,
+                    property_values_follow_economy: document.getElementById('propertyValueFollowEconomy').checked
+                };
+                
+                // Save settings
+                fetch('/api/admin/properties/settings', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settings)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('Settings saved successfully', 'success');
+                    } else {
+                        showAlert(`Error saving settings: ${data.error}`, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error saving settings:', error);
+                    showAlert('Error saving settings', 'danger');
+                });
+            });
+            
+            // Apply bulk value adjustment
+            document.getElementById('applyValueAdjustment').addEventListener('click', function() {
+                const type = document.getElementById('valueAdjustmentTypeInput').value;
+                const amount = parseFloat(document.getElementById('valueAdjustmentAmountInput').value);
+                const applyTo = document.getElementById('valueAdjustmentGroupInput').value;
+                const reason = document.getElementById('bulkAdjustmentReasonInput').value || 'Admin adjustment';
+                
+                if (isNaN(amount)) {
+                    showAlert('Please enter a valid adjustment amount', 'warning');
+                    return;
+                }
+                
+                // Confirm before proceeding
+                if (!confirm(`Are you sure you want to adjust property values by ${type === 'percentage' ? amount + '%' : '$' + amount} for ${applyTo === 'all' ? 'all properties' : applyTo + ' properties'}?`)) {
+                    return;
+                }
+                
+                // Apply adjustment
+                fetch('/api/admin/properties/adjust-values', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: type,
+                        amount: amount,
+                        group: applyTo === 'all' ? null : applyTo,
+                        reason: reason
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert(`Values adjusted for ${data.affected_count} properties`, 'success');
+                        loadPropertiesOverview();
+                        
+                        // If property group is open, refresh it
+                        if (selectedGroupName && (applyTo === 'all' || applyTo === selectedGroupName)) {
+                            loadPropertyGroupDetails(selectedGroupName);
+                        }
+                    } else {
+                        showAlert(`Error adjusting values: ${data.error}`, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adjusting values:', error);
+                    showAlert('Error adjusting property values', 'danger');
+                });
+            });
+            
+            // Apply modal value adjustment
+            document.getElementById('applyModalValueAdjustment').addEventListener('click', function() {
+                const type = document.getElementById('modalValueAdjustmentTypeInput').value;
+                const amount = parseFloat(document.getElementById('modalValueAdjustmentAmountInput').value);
+                const applyTo = document.getElementById('modalValueAdjustmentGroupInput').value;
+                const reason = document.getElementById('adjustmentReasonInput').value || 'Admin adjustment';
+                
+                if (isNaN(amount)) {
+                    showAlert('Please enter a valid adjustment amount', 'warning');
+                    return;
+                }
+                
+                // Apply adjustment
+                fetch('/api/admin/properties/adjust-values', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: type,
+                        amount: amount,
+                        group: applyTo === 'all' ? null : applyTo,
+                        reason: reason
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Close modal
+                        bootstrap.Modal.getInstance(document.getElementById('adjustValuesModal')).hide();
+                        
+                        showAlert(`Values adjusted for ${data.affected_count} properties`, 'success');
+                        loadPropertiesOverview();
+                        
+                        // If property group is open, refresh it
+                        if (selectedGroupName && (applyTo === 'all' || applyTo === selectedGroupName)) {
+                            loadPropertyGroupDetails(selectedGroupName);
+                        }
+                    } else {
+                        showAlert(`Error adjusting values: ${data.error}`, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adjusting values:', error);
+                    showAlert('Error adjusting property values', 'danger');
+                });
+            });
+            
+            // Apply mass transfer
+            document.getElementById('applyMassTransfer').addEventListener('click', function() {
+                const toPlayerId = document.getElementById('massTransferPlayerInput').value;
+                const propertyType = document.getElementById('massTransferPropertyTypeInput').value;
+                
+                if (!toPlayerId) {
+                    showAlert('Please select a player to transfer properties to', 'warning');
+                    return;
+                }
+                
+                // Confirm before proceeding
+                if (!confirm(`Are you sure you want to transfer all ${propertyType === 'all' ? '' : propertyType + ' '}properties to ${toPlayerId === 'bank' ? 'the bank' : 'this player'}?`)) {
+                    return;
+                }
+                
+                // Apply mass transfer
+                fetch('/api/admin/properties/mass-transfer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        to_player_id: toPlayerId === 'bank' ? null : parseInt(toPlayerId),
+                        property_type: propertyType === 'all' ? null : propertyType
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert(`${data.affected_count} properties transferred successfully`, 'success');
+                        loadPropertiesOverview();
+                        
+                        // If property group is open, refresh it
+                        if (selectedGroupName) {
+                            loadPropertyGroupDetails(selectedGroupName);
+                        }
+                    } else {
+                        showAlert(`Error transferring properties: ${data.error}`, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error transferring properties:', error);
+                    showAlert('Error transferring properties', 'danger');
+                });
+            });
+            
+            // Update bank inventory
+            document.getElementById('updateBankInventory').addEventListener('click', function() {
+                const houses = parseInt(document.getElementById('bankHousesInput').value);
+                const hotels = parseInt(document.getElementById('bankHotelsInput').value);
+                
+                if (isNaN(houses) || isNaN(hotels)) {
+                    showAlert('Please enter valid numbers for houses and hotels', 'warning');
+                    return;
+                }
+                
+                // Update inventory
+                fetch('/api/admin/properties/bank-inventory', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        houses: houses,
+                        hotels: hotels
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('Bank inventory updated successfully', 'success');
+                        updateBankInventory();
+                    } else {
+                        showAlert(`Error updating inventory: ${data.error}`, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating inventory:', error);
+                    showAlert('Error updating bank inventory', 'danger');
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

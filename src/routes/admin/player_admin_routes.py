@@ -22,10 +22,8 @@ def modify_cash():
     if not player_id or amount is None:
         return jsonify({'success': False, 'error': 'Player ID and amount are required'}), 400
     
-    # TODO: Call the (currently placeholder) admin_controller method
-    # result = admin_controller.modify_player_cash(player_id, amount, reason)
-    # Placeholder response until controller method is implemented:
-    result = {"success": True, "message": f"Placeholder: Modified cash for player {player_id} by {amount}"}
+    # Call the implemented admin_controller method
+    result = admin_controller.modify_player_cash(player_id, amount, reason)
         
     if result.get('success'):
         return jsonify(result), 200
@@ -45,10 +43,8 @@ def transfer_property():
     if not property_id:
         return jsonify({'success': False, 'error': 'Property ID is required'}), 400
     
-    # TODO: Call the (currently placeholder) admin_controller method
-    # result = admin_controller.transfer_property(property_id, from_player_id, to_player_id, reason)
-    # Placeholder response:
-    result = {"success": True, "message": f"Placeholder: Transferred property {property_id} from {from_player_id} to {to_player_id}"}
+    # Call the implemented admin_controller method
+    result = admin_controller.transfer_property(property_id, from_player_id, to_player_id, reason)
         
     if result.get('success'):
         return jsonify(result), 200
@@ -69,6 +65,20 @@ def admin_get_player(player_id):
         return jsonify({"error": "Player not found"}), 404
     else:
         return jsonify({"error": result.get('error', 'Failed to get player details')}), 500
+
+@player_admin_bp.route('/audit/<int:player_id>', methods=['POST'])
+@admin_required
+def audit_player(player_id):
+    """Trigger an audit of player's activities and finances"""
+    # Call the implemented admin_controller method
+    result = admin_controller.trigger_player_audit(player_id)
+    
+    if result.get('success'):
+        return jsonify(result), 200
+    elif result.get('error') == 'Player not found':
+        return jsonify({"error": "Player not found"}), 404
+    else:
+        return jsonify({"error": result.get('error', 'Failed to audit player')}), 500
 
 @player_admin_bp.route('/remove', methods=['POST'])
 @admin_required

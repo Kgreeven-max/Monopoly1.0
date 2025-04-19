@@ -186,73 +186,125 @@ def register_player_action_handlers(socketio):
                 logger.error(f"Error handling decline_buy: {e}", exc_info=True)
                 emit('game_error', {'error': 'Internal error while declining property.'}, room=player_sid)
 
-    # ... existing handlers like handle_repair_property, handle_draw_chance_card etc remain ...
-    # But ensure they don't conflict with GameController logic
-
-    # Example: Keep card draw handlers as they are likely player-initiated after a prompt
-    @socketio.on('draw_chance_card')
-    def handle_draw_chance_card(data):
-        player_id = data.get('playerId') # Renamed for consistency
+    @socketio.on('improve_property')
+    def handle_improve_property(data):
+        """Socket event handler for property improvement (adding houses/hotels)"""
+        player_id = data.get('playerId')
+        property_id = data.get('propertyId')
         game_id = data.get('gameId', 1)
+        improvement_type = data.get('improvementType', 'house')  # Default to 'house'
         player_sid = request.sid
-        logger.info(f"Received draw_chance_card request: Player {player_id}, Game {game_id}")
         
-        special_space_controller = current_app.config.get('special_space_controller')
-        if not special_space_controller: logger.error("SSC not found"); emit('game_error', {'error':'Server config error'}, room=player_sid); return
-
-        with current_app.app_context():
-            game_state = GameState.query.get(game_id)
-            if not game_state: emit('game_error', {'error': 'Game not found'}, room=player_sid); return
-            if game_state.current_player_id != player_id: emit('game_error', {'error': 'Not your turn'}, room=player_sid); return
+        logger.info(f"Received improve_property request: Player {player_id}, Property {property_id}, Type {improvement_type}, Game {game_id}")
+        
+        property_controller = current_app.config.get('property_controller')
+        if not property_controller:
+            logger.error("Property controller not found in app config")
+            emit('property_error', {'error': 'Server configuration error'}, room=player_sid)
+            return
             
-            # --- Action Validation --- 
-            expected_type = 'draw_chance_card'
-            if game_state.expected_action_type != expected_type:
-                 logger.warning(f"Player {player_id} sent 'draw_chance_card' but expected '{game_state.expected_action_type}'")
-                 emit('game_error', {'error': f'Cannot draw Chance card now, expected: {game_state.expected_action_type or "None"}'}, room=player_sid)
-                 return
-            # --- End Action Validation --- 
-
-            try: 
-                # SpecialSpaceController method should handle drawing, executing, 
-                # committing DB changes, emitting results, clearing expected state, and ending turn if needed.
-                result = special_space_controller.process_chance_card(player_id, game_id)
-                # This handler might not need to emit anything if SSC handles it.
-            except Exception as e: 
+        with current_app.app_context():
+            # Basic validation before passing to controller
+            game_state = GameState.query.get(game_id)
+            if not game_state:
+                emit('property_error', {'error': 'Game not found'}, room=player_sid)
+                return
+                
+            if game_state.current_player_id != player_id:
+                emit('property_error', {'error': 'Not your turn'}, room=player_sid)
+                return
+                
+            # Validate improvement type
+            if improvement_type not in ['house', 'hotel']:
+                emit('property_error', {'error': 'Invalid improvement type'}, room=player_sid)
+                return
+                
+            try:
+                # Call property controller to handle improvement
+                result = property_controller.handle_property_improvement(
+                    game_id=game_id,
+                    player_id=player_id,
+                    property_id=property_id,
+                    improvement_type=improvement_type
+                )
+                
+                if result.get('success'):
+                    # The controller will emit events to all players
+                    # but we can send a direct success confirmation to the requester
+                    emit('property_improvement_result', {
+                        'success': True,
+                        'message': result.get('message', f'Successfully added {improvement_type} to property'),
+                        'cost': result.get('cost', 0),
+                        'improvement_type': improvement_type
+                    }, room=player_sid)
+                else:
+                    emit('property_error', {
+                        'error': result.get('error', f'Failed to add {improvement_type} to property')
+                    }, room=player_sid)
+            except Exception as e:
                 db.session.rollback()
-                logger.error(f"Error handling draw_chance_card: {e}", exc_info=True)
-                emit('card_error', {'error': f"Error processing Chance card: {str(e)}"}, room=player_sid) 
+                logger.error(f"Error handling property improvement: {str(e)}", exc_info=True)
+                emit('property_error', {'error': f"Error improving property: {str(e)}"}, room=player_sid)
 
-    @socketio.on('draw_community_chest_card')
-    def handle_draw_community_chest_card(data):
-        player_id = data.get('playerId') # Renamed for consistency
+    @socketio.on('sell_improvement')
+    def handle_sell_improvement(data):
+        """Socket event handler for selling property improvements (houses/hotels)"""
+        player_id = data.get('playerId')
+        property_id = data.get('propertyId')
         game_id = data.get('gameId', 1)
+        improvement_type = data.get('improvementType', 'house')  # Default to 'house'
         player_sid = request.sid
-        logger.info(f"Received draw_community_chest_card request: Player {player_id}, Game {game_id}")
-
-        special_space_controller = current_app.config.get('special_space_controller')
-        if not special_space_controller: logger.error("SSC not found"); emit('game_error', {'error':'Server config error'}, room=player_sid); return
-
-        with current_app.app_context():
-            game_state = GameState.query.get(game_id)
-            if not game_state: emit('game_error', {'error': 'Game not found'}, room=player_sid); return
-            if game_state.current_player_id != player_id: emit('game_error', {'error': 'Not your turn'}, room=player_sid); return
+        
+        logger.info(f"Received sell_improvement request: Player {player_id}, Property {property_id}, Type {improvement_type}, Game {game_id}")
+        
+        property_controller = current_app.config.get('property_controller')
+        if not property_controller:
+            logger.error("Property controller not found in app config")
+            emit('property_error', {'error': 'Server configuration error'}, room=player_sid)
+            return
             
-            # --- Action Validation --- 
-            expected_type = 'draw_community_chest_card'
-            if game_state.expected_action_type != expected_type:
-                 logger.warning(f"Player {player_id} sent 'draw_cc_card' but expected '{game_state.expected_action_type}'")
-                 emit('game_error', {'error': f'Cannot draw CC card now, expected: {game_state.expected_action_type or "None"}'}, room=player_sid)
-                 return
-            # --- End Action Validation --- 
-
-            try: 
-                # SSC method should handle all logic, state changes, commits, emits, turn end.
-                result = special_space_controller.process_community_chest_card(player_id, game_id)
-            except Exception as e: 
+        with current_app.app_context():
+            # Basic validation before passing to controller
+            game_state = GameState.query.get(game_id)
+            if not game_state:
+                emit('property_error', {'error': 'Game not found'}, room=player_sid)
+                return
+                
+            if game_state.current_player_id != player_id:
+                emit('property_error', {'error': 'Not your turn'}, room=player_sid)
+                return
+                
+            # Validate improvement type
+            if improvement_type not in ['house', 'hotel']:
+                emit('property_error', {'error': 'Invalid improvement type'}, room=player_sid)
+                return
+                
+            try:
+                # Call property controller to handle selling improvement
+                result = property_controller.handle_sell_improvement(
+                    game_id=game_id,
+                    player_id=player_id,
+                    property_id=property_id,
+                    improvement_type=improvement_type
+                )
+                
+                if result.get('success'):
+                    # The controller will emit events to all players
+                    # but we can send a direct success confirmation to the requester
+                    emit('property_improvement_sell_result', {
+                        'success': True,
+                        'message': result.get('message', f'Successfully sold {improvement_type} from property'),
+                        'amount': result.get('amount', 0),
+                        'improvement_type': improvement_type
+                    }, room=player_sid)
+                else:
+                    emit('property_error', {
+                        'error': result.get('error', f'Failed to sell {improvement_type} from property')
+                    }, room=player_sid)
+            except Exception as e:
                 db.session.rollback()
-                logger.error(f"Error handling draw_cc_card: {e}", exc_info=True)
-                emit('card_error', {'error': f"Error processing Community Chest card: {str(e)}"}, room=player_sid) 
+                logger.error(f"Error handling property improvement sale: {str(e)}", exc_info=True)
+                emit('property_error', {'error': f"Error selling property improvement: {str(e)}"}, room=player_sid)
 
     @socketio.on('pay_jail_fine')
     def handle_pay_jail_fine(data):
@@ -414,6 +466,291 @@ def register_player_action_handlers(socketio):
             emit('repair_completed', result) # Emit specific success event
         else: 
             emit('repair_error', result)
+
+    # Example: Keep card draw handlers as they are likely player-initiated after a prompt
+    @socketio.on('draw_chance_card')
+    def handle_draw_chance_card(data):
+        player_id = data.get('playerId') # Renamed for consistency
+        game_id = data.get('gameId', 1)
+        player_sid = request.sid
+        logger.info(f"Received draw_chance_card request: Player {player_id}, Game {game_id}")
+        
+        special_space_controller = current_app.config.get('special_space_controller')
+        if not special_space_controller: logger.error("SSC not found"); emit('game_error', {'error':'Server config error'}, room=player_sid); return
+
+        with current_app.app_context():
+            game_state = GameState.query.get(game_id)
+            if not game_state: emit('game_error', {'error': 'Game not found'}, room=player_sid); return
+            if game_state.current_player_id != player_id: emit('game_error', {'error': 'Not your turn'}, room=player_sid); return
+            
+            # --- Action Validation --- 
+            expected_type = 'draw_chance_card'
+            if game_state.expected_action_type != expected_type:
+                 logger.warning(f"Player {player_id} sent 'draw_chance_card' but expected '{game_state.expected_action_type}'")
+                 emit('game_error', {'error': f'Cannot draw Chance card now, expected: {game_state.expected_action_type or "None"}'}, room=player_sid)
+                 return
+            # --- End Action Validation --- 
+
+            try: 
+                # SpecialSpaceController method should handle drawing, executing, 
+                # committing DB changes, emitting results, clearing expected state, and ending turn if needed.
+                result = special_space_controller.process_chance_card(player_id, game_id)
+                # This handler might not need to emit anything if SSC handles it.
+            except Exception as e: 
+                db.session.rollback()
+                logger.error(f"Error handling draw_chance_card: {e}", exc_info=True)
+                emit('card_error', {'error': f"Error processing Chance card: {str(e)}"}, room=player_sid) 
+
+    @socketio.on('draw_community_chest_card')
+    def handle_draw_community_chest_card(data):
+        player_id = data.get('playerId') # Renamed for consistency
+        game_id = data.get('gameId', 1)
+        player_sid = request.sid
+        logger.info(f"Received draw_community_chest_card request: Player {player_id}, Game {game_id}")
+
+        special_space_controller = current_app.config.get('special_space_controller')
+        if not special_space_controller: logger.error("SSC not found"); emit('game_error', {'error':'Server config error'}, room=player_sid); return
+
+        with current_app.app_context():
+            game_state = GameState.query.get(game_id)
+            if not game_state: emit('game_error', {'error': 'Game not found'}, room=player_sid); return
+            if game_state.current_player_id != player_id: emit('game_error', {'error': 'Not your turn'}, room=player_sid); return
+            
+            # --- Action Validation --- 
+            expected_type = 'draw_community_chest_card'
+            if game_state.expected_action_type != expected_type:
+                 logger.warning(f"Player {player_id} sent 'draw_cc_card' but expected '{game_state.expected_action_type}'")
+                 emit('game_error', {'error': f'Cannot draw CC card now, expected: {game_state.expected_action_type or "None"}'}, room=player_sid)
+                 return
+            # --- End Action Validation --- 
+
+            try: 
+                # SSC method should handle all logic, state changes, commits, emits, turn end.
+                result = special_space_controller.process_community_chest_card(player_id, game_id)
+            except Exception as e: 
+                db.session.rollback()
+                logger.error(f"Error handling draw_cc_card: {e}", exc_info=True)
+                emit('card_error', {'error': f"Error processing Community Chest card: {str(e)}"}, room=player_sid)
+                
+    @socketio.on('declare_bankruptcy')
+    def handle_declare_bankruptcy(data):
+        """Socket event handler for bankruptcy declaration"""
+        player_id = data.get('playerId')
+        pin = data.get('pin')
+        player_sid = request.sid
+        logger.info(f"Received bankruptcy declaration request from player {player_id}")
+        
+        if not player_id or not pin:
+            emit('bankruptcy_error', {'error': 'Player ID and PIN are required'}, room=player_sid)
+            return
+            
+        player_controller = current_app.config.get('player_controller')
+        if not player_controller:
+            logger.error("Player controller not found in app config")
+            emit('bankruptcy_error', {'error': 'Server configuration error'}, room=player_sid)
+            return
+            
+        try:
+            result = player_controller.handle_bankruptcy(player_id, pin)
+            
+            if result.get('success'):
+                # Notify the player about bankruptcy result
+                emit('bankruptcy_result', {
+                    'success': True,
+                    'message': 'Bankruptcy processed successfully',
+                    'debt_forgiven': result.get('debt_forgiven', 0),
+                    'properties_lost': result.get('properties_lost', 0),
+                    'new_balance': result.get('new_balance', 0)
+                }, room=player_sid)
+                
+                # No need to broadcast to game room as the player_controller emits player_updated event
+            else:
+                emit('bankruptcy_error', {
+                    'error': result.get('error', 'Failed to process bankruptcy')
+                }, room=player_sid)
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error processing bankruptcy for player {player_id}: {str(e)}", exc_info=True)
+            emit('bankruptcy_error', {'error': f"Error declaring bankruptcy: {str(e)}"}, room=player_sid)
+            
+    @socketio.on('handle_market_fluctuation')
+    def handle_market_fluctuation(data):
+        """Socket event handler for when a player lands on a market fluctuation space"""
+        player_id = data.get('playerId')
+        game_id = data.get('gameId', 1)
+        player_sid = request.sid
+        
+        logger.info(f"Received handle_market_fluctuation request: Player {player_id}, Game {game_id}")
+        
+        # Get the special space controller
+        special_space_controller = current_app.config.get('special_space_controller')
+        if not special_space_controller:
+            logger.error("Special space controller not found in app config")
+            emit('game_error', {'error': 'Server configuration error'}, room=player_sid)
+            return
+            
+        with current_app.app_context():
+            # Basic validation
+            game_state = GameState.query.get(game_id)
+            if not game_state:
+                emit('game_error', {'error': 'Game not found'}, room=player_sid)
+                return
+                
+            if game_state.current_player_id != player_id:
+                emit('game_error', {'error': 'Not your turn'}, room=player_sid)
+                return
+                
+            # Verify expected action
+            expected_type = 'market_fluctuation'
+            if game_state.expected_action_type != expected_type:
+                logger.warning(f"Player {player_id} sent 'handle_market_fluctuation' but expected '{game_state.expected_action_type}'")
+                emit('game_error', {'error': f'Cannot process market fluctuation now, expected: {game_state.expected_action_type or "None"}'}, room=player_sid)
+                return
+                
+            try:
+                # Call the special space controller to handle market fluctuation
+                result = special_space_controller.handle_market_fluctuation_space(game_id, player_id)
+                
+                if result.get('success'):
+                    # The special space controller will emit events to all players
+                    # and clear the expected action state
+                    
+                    # Send a direct confirmation to the requesting client
+                    emit('market_fluctuation_result', {
+                        'success': True,
+                        'message': result.get('message', 'Market fluctuation processed'),
+                    }, room=player_sid)
+                    
+                    # End turn after handling market fluctuation
+                    game_controller = current_app.config.get('game_controller')
+                    if game_controller:
+                        game_controller._internal_end_turn(player_id, game_id)
+                else:
+                    emit('game_error', {
+                        'error': result.get('error', 'Failed to process market fluctuation')
+                    }, room=player_sid)
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Error handling market fluctuation: {str(e)}", exc_info=True)
+                emit('game_error', {'error': f"Error processing market fluctuation: {str(e)}"}, room=player_sid)
+
+    @socketio.on('mortgage_property')
+    def handle_mortgage_property(data):
+        """Socket event handler for mortgaging a property"""
+        player_id = data.get('playerId')
+        property_id = data.get('propertyId')
+        game_id = data.get('gameId', 1)
+        player_sid = request.sid
+        
+        logger.info(f"Received mortgage_property request: Player {player_id}, Property {property_id}, Game {game_id}")
+        
+        property_controller = current_app.config.get('property_controller')
+        if not property_controller:
+            logger.error("Property controller not found in app config")
+            emit('property_error', {'error': 'Server configuration error'}, room=player_sid)
+            return
+            
+        with current_app.app_context():
+            # Basic validation
+            game_state = GameState.query.get(game_id)
+            if not game_state:
+                emit('property_error', {'error': 'Game not found'}, room=player_sid)
+                return
+                
+            # Verify it's the player's turn (though mortgaging is often allowed outside of turn)
+            current_player_turn = game_state.current_player_id == player_id
+            
+            try:
+                # Call property controller to handle mortgaging
+                result = property_controller.mortgage_property(
+                    player_id=player_id,
+                    pin=data.get('pin'),  # Optional, depends on your authentication
+                    property_id=property_id
+                )
+                
+                if result.get('success'):
+                    # Send a direct confirmation to the requesting client
+                    emit('mortgage_result', {
+                        'success': True,
+                        'message': result.get('message', 'Property mortgaged successfully'),
+                        'amount': result.get('amount', 0),
+                        'property_id': property_id
+                    }, room=player_sid)
+                    
+                    # The property controller emits the property_mortgaged event to all players
+                    # If an update to the game state is needed after this action
+                    game_controller = current_app.config.get('game_controller')
+                    if game_controller and current_player_turn:
+                        updated_state = game_controller.get_game_state(game_id)
+                        if updated_state.get('success'):
+                            socketio.emit('game_state_update', updated_state, room=game_id)
+                else:
+                    emit('property_error', {
+                        'error': result.get('error', 'Failed to mortgage property')
+                    }, room=player_sid)
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Error handling property mortgage: {str(e)}", exc_info=True)
+                emit('property_error', {'error': f"Error mortgaging property: {str(e)}"}, room=player_sid)
+
+    @socketio.on('unmortgage_property')
+    def handle_unmortgage_property(data):
+        """Socket event handler for unmortgaging a property"""
+        player_id = data.get('playerId')
+        property_id = data.get('propertyId')
+        game_id = data.get('gameId', 1)
+        player_sid = request.sid
+        
+        logger.info(f"Received unmortgage_property request: Player {player_id}, Property {property_id}, Game {game_id}")
+        
+        property_controller = current_app.config.get('property_controller')
+        if not property_controller:
+            logger.error("Property controller not found in app config")
+            emit('property_error', {'error': 'Server configuration error'}, room=player_sid)
+            return
+            
+        with current_app.app_context():
+            # Basic validation
+            game_state = GameState.query.get(game_id)
+            if not game_state:
+                emit('property_error', {'error': 'Game not found'}, room=player_sid)
+                return
+                
+            # Verify it's the player's turn (though unmortgaging is often allowed outside of turn)
+            current_player_turn = game_state.current_player_id == player_id
+            
+            try:
+                # Call property controller to handle unmortgaging
+                result = property_controller.unmortgage_property(
+                    player_id=player_id,
+                    pin=data.get('pin'),  # Optional, depends on your authentication
+                    property_id=property_id
+                )
+                
+                if result.get('success'):
+                    # Send a direct confirmation to the requesting client
+                    emit('unmortgage_result', {
+                        'success': True,
+                        'message': result.get('message', 'Property unmortgaged successfully'),
+                        'amount': result.get('amount', 0),
+                        'property_id': property_id
+                    }, room=player_sid)
+                    
+                    # The property controller emits the property_unmortgaged event to all players
+                    # If an update to the game state is needed after this action
+                    game_controller = current_app.config.get('game_controller')
+                    if game_controller and current_player_turn:
+                        updated_state = game_controller.get_game_state(game_id)
+                        if updated_state.get('success'):
+                            socketio.emit('game_state_update', updated_state, room=game_id)
+                else:
+                    emit('property_error', {
+                        'error': result.get('error', 'Failed to unmortgage property')
+                    }, room=player_sid)
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"Error handling property unmortgage: {str(e)}", exc_info=True)
+                emit('property_error', {'error': f"Error unmortgaging property: {str(e)}"}, room=player_sid)
 
 # Note: Registration happens externally, e.g.:
 # from src.controllers.player_action_controller import register_player_action_handlers

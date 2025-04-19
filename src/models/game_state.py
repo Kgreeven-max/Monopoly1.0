@@ -167,8 +167,87 @@ class GameState(db.Model):
     def process_economic_cycle(self):
         """Process economic changes based on current lap"""
         # This might still be useful if called from GameController._internal_end_turn during lap change
-        # ... (rest of existing logic) ...
-        pass
+        logger = logging.getLogger(__name__)
+        
+        try:
+            from flask import current_app
+            
+            # Get or create EconomicCycleManager from app config
+            economic_manager = current_app.config.get('economic_manager')
+            
+            if not economic_manager:
+                logger.warning("EconomicCycleManager not found in app config, creating new instance")
+                from src.models.economic_cycle_manager import EconomicCycleManager
+                
+                # Create with minimal dependencies - these may be unavailable at this point
+                economic_manager = EconomicCycleManager()
+                current_app.config['economic_manager'] = economic_manager
+            
+            # Update the economic cycle
+            result = economic_manager.update_economic_cycle()
+            
+            if not result.get('success', False):
+                logger.error(f"Error updating economic cycle: {result.get('error', 'Unknown error')}")
+                return False
+            
+            logger.info(f"Economic cycle updated: {result['economic_state']} (inflation: {result['inflation_rate']:.2f}, interest: {result['base_interest_rate']:.2f})")
+            
+            # Potentially update property values based on new economic state
+            if current_app.config.get('PROPERTY_VALUES_FOLLOW_ECONOMY', True):
+                self._update_property_values(result['economic_state'])
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error in process_economic_cycle: {str(e)}", exc_info=True)
+            return False
+            
+    def _update_property_values(self, economic_state):
+        """Update property values based on economic state
+        
+        Args:
+            economic_state: Current economic state
+        """
+        logger = logging.getLogger(__name__)
+        
+        try:
+            from src.models.property import Property
+            
+            # Define economic multipliers for property values
+            economic_multipliers = {
+                "recession": 0.9,  # Properties lose value in recession
+                "normal": 1.0,     # Normal state is baseline
+                "growth": 1.1,     # Properties gain value in growth
+                "boom": 1.25       # Properties gain significant value in boom
+            }
+            
+            multiplier = economic_multipliers.get(economic_state, 1.0)
+            
+            # Don't apply full multiplier at once - gradual change
+            adjustment_factor = 0.1  # Apply 10% of the difference
+            effective_multiplier = 1.0 + (multiplier - 1.0) * adjustment_factor
+            
+            # Get all properties
+            properties = Property.query.all()
+            
+            # Update property values
+            for prop in properties:
+                # Calculate new current price (with limits to prevent extreme changes)
+                new_price = int(prop.current_price * effective_multiplier)
+                
+                # Ensure price doesn't go below base price or above 3x base price
+                min_price = prop.price
+                max_price = prop.price * 3
+                
+                prop.current_price = max(min_price, min(new_price, max_price))
+            
+            # Commit all changes
+            db.session.commit()
+            
+            logger.info(f"Updated property values based on economic state: {economic_state} (multiplier: {effective_multiplier:.2f})")
+            
+        except Exception as e:
+            logger.error(f"Error updating property values: {str(e)}", exc_info=True)
             
     def _update_police_activity(self):
         """Update police activity level randomly"""

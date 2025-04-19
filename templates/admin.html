@@ -19,51 +19,30 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <ul class="nav nav-tabs card-header-tabs" id="adminTabs" role="tablist">
+                        <ul class="nav nav-tabs" id="adminTabs" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" 
-                                        data-bs-target="#dashboard" type="button" role="tab" 
-                                        aria-controls="dashboard" aria-selected="true">Dashboard</button>
+                                <button class="nav-link active" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard" type="button" role="tab" aria-controls="dashboard" aria-selected="true">Dashboard</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="game-settings-tab" data-bs-toggle="tab" 
-                                        data-bs-target="#game-settings" type="button" role="tab" 
-                                        aria-controls="game-settings" aria-selected="false">Game Settings</button>
+                                <button class="nav-link" id="players-tab" data-bs-toggle="tab" data-bs-target="#players" type="button" role="tab" aria-controls="players" aria-selected="false">Players</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="players-tab" data-bs-toggle="tab" 
-                                        data-bs-target="#players" type="button" role="tab" 
-                                        aria-controls="players" aria-selected="false">Players</button>
+                                <button class="nav-link" id="properties-tab" data-bs-toggle="tab" data-bs-target="#properties" type="button" role="tab" aria-controls="properties" aria-selected="false">Properties</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="properties-tab" data-bs-toggle="tab" 
-                                        data-bs-target="#properties" type="button" role="tab" 
-                                        aria-controls="properties" aria-selected="false">Properties</button>
+                                <button class="nav-link" id="bots-tab" data-bs-toggle="tab" data-bs-target="#bots" type="button" role="tab" aria-controls="bots" aria-selected="false">Bots</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="bots-tab" data-bs-toggle="tab" 
-                                        data-bs-target="#bots" type="button" role="tab" 
-                                        aria-controls="bots" aria-selected="false">Bots</button>
+                                <button class="nav-link" id="finance-tab" data-bs-toggle="tab" data-bs-target="#finance" type="button" role="tab" aria-controls="finance" aria-selected="false">Finance</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="finance-tab" data-bs-toggle="tab" 
-                                        data-bs-target="#finance" type="button" role="tab" 
-                                        aria-controls="finance" aria-selected="false">Finance</button>
+                                <button class="nav-link" id="economy-tab" data-bs-toggle="tab" data-bs-target="#economy" type="button" role="tab" aria-controls="economy" aria-selected="false">Economy</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="crime-tab" data-bs-toggle="tab" 
-                                        data-bs-target="#crime" type="button" role="tab" 
-                                        aria-controls="crime" aria-selected="false">Crime</button>
+                                <button class="nav-link" id="game-modes-tab" data-bs-toggle="tab" data-bs-target="#game-modes" type="button" role="tab" aria-controls="game-modes" aria-selected="false">Game Modes</button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="remote-play-tab" data-bs-toggle="tab" 
-                                        data-bs-target="#remote-play" type="button" role="tab" 
-                                        aria-controls="remote-play" aria-selected="false">Remote Play</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="game-modes-tab" data-bs-toggle="tab" 
-                                        data-bs-target="#game-modes" type="button" role="tab" 
-                                        aria-controls="game-modes" aria-selected="false">Game Modes</button>
+                                <button class="nav-link" id="remote-play-tab" data-bs-toggle="tab" data-bs-target="#remote-play" type="button" role="tab" aria-controls="remote-play" aria-selected="false">Remote Play</button>
                             </li>
                         </ul>
                     </div>
@@ -247,37 +226,108 @@
                                 </div>
                             </div>
 
-                            <!-- Finance Tab (Placeholder) -->
+                            <!-- Finance Tab -->
                             <div class="tab-pane fade" id="finance" role="tabpanel" aria-labelledby="finance-tab">
-                                <div class="container-fluid mt-4">
-                                    <h3>Finance Overview</h3>
-                                    <div id="finance-overview" class="row">
-                                        <div class="col-md-6">
-                                            <div class="card mb-4">
-                                                <div class="card-header">
-                                                    <h5>Financial Statistics</h5>
+                                <!-- Finance tab content here -->
+                            </div>
+                            
+                            <!-- Economy Tab -->
+                            <div class="tab-pane fade" id="economy" role="tabpanel" aria-labelledby="economy-tab">
+                                <h2>Economic Cycle Management</h2>
+                                <div class="row">
+                                    <!-- Economic State Column -->
+                                    <div class="col-md-6 mb-3">
+                                        <div class="card">
+                                            <div class="card-header bg-primary text-white">
+                                                <h5 class="mb-0">Current Economic State</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <strong>State:</strong> <span id="economic-state">Loading...</span>
                                                 </div>
-                                                <div class="card-body" id="finance-stats">
-                                                    <p>Loading financial statistics...</p>
+                                                <div class="mb-3">
+                                                    <strong>Inflation Rate:</strong> <span id="inflation-rate">Loading...</span>
                                                 </div>
+                                                <div class="mb-3">
+                                                    <strong>Base Interest Rate:</strong> <span id="interest-rate">Loading...</span>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <strong>Cycle Position:</strong> 
+                                                    <div class="progress">
+                                                        <div id="cycle-position-bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                                                    </div>
+                                                </div>
+                                                <button id="refresh-economy-btn" class="btn btn-outline-secondary">Refresh</button>
+                                                <button id="update-now-btn" class="btn btn-primary">Update Now</button>
                                             </div>
                                         </div>
-                                        <div class="col-md-6">
-                                            <div class="card mb-4">
-                                                <div class="card-header">
-                                                    <h5>Current Interest Rates</h5>
+                                    </div>
+                                    
+                                    <!-- Economic Controls Column -->
+                                    <div class="col-md-6 mb-3">
+                                        <div class="card">
+                                            <div class="card-header bg-primary text-white">
+                                                <h5 class="mb-0">Economic Controls</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label for="economic-state-select" class="form-label">Force Economic State</label>
+                                                    <select class="form-select" id="economic-state-select">
+                                                        <option value="recession">Recession</option>
+                                                        <option value="normal">Normal</option>
+                                                        <option value="growth">Growth</option>
+                                                        <option value="boom">Boom</option>
+                                                    </select>
                                                 </div>
-                                                <div class="card-body" id="interest-rates">
-                                                    <p>Loading interest rates...</p>
+                                                <div class="mb-3">
+                                                    <button id="force-state-btn" class="btn btn-warning">Force State</button>
+                                                </div>
+                                                <hr>
+                                                <div class="mb-3 form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" id="economic-cycle-toggle" checked>
+                                                    <label class="form-check-label" for="economic-cycle-toggle">Economic Cycle Updates</label>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="admin-pin-economy" class="form-label">Admin PIN</label>
+                                                    <input type="password" class="form-control" id="admin-pin-economy" placeholder="Enter Admin PIN">
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <!-- Additional finance content -->
+                                </div>
+                                
+                                <!-- Economic History Column -->
+                                <div class="col-12 mb-3">
+                                    <div class="card">
+                                        <div class="card-header bg-primary text-white">
+                                            <h5 class="mb-0">Economic History</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="table-responsive">
+                                                <table class="table table-striped table-bordered table-hover table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Lap</th>
+                                                            <th>Change</th>
+                                                            <th>Inflation Factor</th>
+                                                            <th>Total Cash</th>
+                                                            <th>Property Value</th>
+                                                            <th>Time</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="economic-history-body">
+                                                        <tr>
+                                                            <td colspan="6" class="text-center">No economic phase changes recorded.</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-
-                            <!-- Crime Tab (Placeholder) -->
+                            
+                            <!-- Crime Tab -->
                             <div class="tab-pane fade" id="crime" role="tabpanel" aria-labelledby="crime-tab">
                                 <h2>Crime System</h2>
                                 <p>Crime details and controls coming soon...</p>
@@ -1921,6 +1971,227 @@
         }
         
         // --- End Finance Tab Functions ---
+
+        // --- Economy Tab Functions ---
+        
+        // Load the economic state when tab is shown
+        document.getElementById('economy-tab').addEventListener('shown.bs.tab', function (e) {
+            loadEconomicState();
+        });
+        
+        // Refresh economic state button
+        document.getElementById('refresh-economy-btn').addEventListener('click', function() {
+            loadEconomicState();
+        });
+        
+        // Update now button
+        document.getElementById('update-now-btn').addEventListener('click', function() {
+            updateEconomicCycleNow();
+        });
+        
+        // Force state button
+        document.getElementById('force-state-btn').addEventListener('click', function() {
+            forceEconomicState();
+        });
+        
+        // Toggle economic cycle updates
+        document.getElementById('economic-cycle-toggle').addEventListener('change', function() {
+            toggleEconomicCycle(this.checked);
+        });
+        
+        function loadEconomicState() {
+            fetch('/api/admin/economic/state', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': window.adminKey
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Update UI with economic state
+                    document.getElementById('economic-state').textContent = data.economic_state || 'Unknown';
+                    document.getElementById('inflation-rate').textContent = formatPercent(data.inflation_rate);
+                    document.getElementById('interest-rate').textContent = formatPercent(data.base_interest_rate);
+                    
+                    // Update progress bar
+                    const position = data.cycle_position * 100;
+                    const positionBar = document.getElementById('cycle-position-bar');
+                    positionBar.style.width = `${position}%`;
+                    positionBar.setAttribute('aria-valuenow', position);
+                    positionBar.textContent = `${Math.round(position)}%`;
+                    
+                    // Update toggle switch
+                    document.getElementById('economic-cycle-toggle').checked = data.config.economic_cycle_enabled;
+                    
+                    // Color code the economic state
+                    const stateElement = document.getElementById('economic-state');
+                    stateElement.className = ''; // Reset classes
+                    
+                    switch (data.economic_state) {
+                        case 'recession':
+                            stateElement.classList.add('text-danger', 'fw-bold');
+                            break;
+                        case 'normal':
+                            stateElement.classList.add('text-secondary', 'fw-bold');
+                            break;
+                        case 'growth':
+                            stateElement.classList.add('text-success', 'fw-bold');
+                            break;
+                        case 'boom':
+                            stateElement.classList.add('text-primary', 'fw-bold');
+                            break;
+                    }
+                    
+                    // TODO: Load economic history
+                    // loadEconomicHistory();
+                } else {
+                    console.error('Failed to load economic state:', data.error);
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading economic state:', error);
+                document.getElementById('economic-state').textContent = 'Error loading';
+                document.getElementById('inflation-rate').textContent = 'Error loading';
+                document.getElementById('interest-rate').textContent = 'Error loading';
+            });
+        }
+        
+        function formatPercent(value) {
+            if (value === undefined || value === null) return 'N/A';
+            return `${(value * 100).toFixed(2)}%`;
+        }
+        
+        function forceEconomicState() {
+            const state = document.getElementById('economic-state-select').value;
+            const adminPin = document.getElementById('admin-pin-economy').value;
+            
+            if (!adminPin) {
+                alert('Please enter the admin PIN');
+                return;
+            }
+            
+            fetch('/api/admin/economic/force-state', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': window.adminKey
+                },
+                body: JSON.stringify({
+                    state: state,
+                    admin_key: adminPin
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert(`Economic state forced to ${state}`);
+                    loadEconomicState();
+                } else {
+                    console.error('Failed to force economic state:', data.error);
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error forcing economic state:', error);
+                alert('Failed to force economic state: ' + error.message);
+            });
+        }
+        
+        function toggleEconomicCycle(enabled) {
+            const adminPin = document.getElementById('admin-pin-economy').value;
+            
+            if (!adminPin) {
+                alert('Please enter the admin PIN');
+                document.getElementById('economic-cycle-toggle').checked = !enabled; // Revert toggle
+                return;
+            }
+            
+            fetch('/api/admin/economic/toggle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': window.adminKey
+                },
+                body: JSON.stringify({
+                    enabled: enabled,
+                    admin_key: adminPin
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert(`Economic cycle ${enabled ? 'enabled' : 'disabled'}`);
+                } else {
+                    console.error('Failed to toggle economic cycle:', data.error);
+                    alert('Error: ' + data.error);
+                    document.getElementById('economic-cycle-toggle').checked = !enabled; // Revert toggle
+                }
+            })
+            .catch(error => {
+                console.error('Error toggling economic cycle:', error);
+                alert('Failed to toggle economic cycle: ' + error.message);
+                document.getElementById('economic-cycle-toggle').checked = !enabled; // Revert toggle
+            });
+        }
+        
+        function updateEconomicCycleNow() {
+            const adminPin = document.getElementById('admin-pin-economy').value;
+            
+            if (!adminPin) {
+                alert('Please enter the admin PIN');
+                return;
+            }
+            
+            fetch('/api/admin/economic/update-now', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': window.adminKey
+                },
+                body: JSON.stringify({
+                    admin_key: adminPin
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('Economic cycle updated manually');
+                    loadEconomicState();
+                } else {
+                    console.error('Failed to update economic cycle:', data.error);
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating economic cycle:', error);
+                alert('Failed to update economic cycle: ' + error.message);
+            });
+        }
+        
+        // --- End Economy Tab Functions ---
     </script>
 </body>
 </html> 

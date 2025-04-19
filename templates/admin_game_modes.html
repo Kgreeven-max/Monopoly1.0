@@ -5,6 +5,125 @@
         <div id="mode-alert-container" class="mt-3"></div>
         <div id="mode-loading-message" class="alert alert-info" style="display: none;">Loading...</div>
         
+        <!-- Tab Navigation -->
+        <ul class="nav nav-tabs mt-3" id="gameModeTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="active-games-tab" data-bs-toggle="tab" data-bs-target="#active-games" type="button" role="tab">Active Games</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="mode-selection-tab" data-bs-toggle="tab" data-bs-target="#mode-selection" type="button" role="tab">Game Mode Selection</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="mode-settings-tab" data-bs-toggle="tab" data-bs-target="#mode-settings" type="button" role="tab">Mode Settings</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="mode-analytics-tab" data-bs-toggle="tab" data-bs-target="#mode-analytics" type="button" role="tab">Analytics</button>
+            </li>
+        </ul>
+        
+        <!-- Tab Content -->
+        <div class="tab-content" id="gameModeTabContent">
+            <!-- Active Games Tab -->
+            <div class="tab-pane fade show active" id="active-games" role="tabpanel">
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Active Games</h5>
+                                <div>
+                                    <button class="btn btn-light btn-sm" id="refresh-games-btn">
+                                        <i class="fas fa-sync-alt"></i> Refresh
+                                    </button>
+                                    <button class="btn btn-success btn-sm" id="create-game-btn">
+                                        <i class="fas fa-plus"></i> Create Game
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <div class="input-group">
+                                            <span class="input-group-text">Filter</span>
+                                            <input type="text" class="form-control" id="game-search" placeholder="Search games...">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select class="form-select" id="game-mode-filter">
+                                            <option value="">All Game Modes</option>
+                                            <option value="classic">Classic</option>
+                                            <option value="speed">Speed</option>
+                                            <option value="cooperative">Cooperative</option>
+                                            <option value="tycoon">Tycoon</option>
+                                            <option value="market_crash">Market Crash</option>
+                                            <option value="team_battle">Team Battle</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select class="form-select" id="game-status-filter">
+                                            <option value="">All Statuses</option>
+                                            <option value="active">Active</option>
+                                            <option value="paused">Paused</option>
+                                            <option value="completed">Completed</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="active-games-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Game ID</th>
+                                                <th>Game Mode</th>
+                                                <th>Players</th>
+                                                <th>Current Turn</th>
+                                                <th>Status</th>
+                                                <th>Duration</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="active-games-list">
+                                            <!-- Games will be loaded here -->
+                                            <tr>
+                                                <td colspan="7" class="text-center">Loading active games...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Total Games:</strong> <span id="total-games-count">0</span></span>
+                                    <div>
+                                        <button class="btn btn-danger" id="cleanup-games-btn">
+                                            <i class="fas fa-broom"></i> Cleanup Inactive
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Game Details</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="game-details-container">
+                                    <div class="alert alert-info">
+                                        Select a game from the table above to view details.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mode Selection Tab (existing content) -->
+            <div class="tab-pane fade" id="mode-selection" role="tabpanel">
         <div class="row mt-4">
             <div class="col-12">
                 <div class="card">
@@ -46,11 +165,14 @@
                     <div class="card-footer">
                         <button class="btn btn-primary" id="select-mode-btn" disabled>Select Mode</button>
                         <button class="btn btn-secondary" id="refresh-modes-btn">Refresh Modes</button>
+                            </div>
                     </div>
                 </div>
             </div>
         </div>
         
+            <!-- Mode Settings Tab -->
+            <div class="tab-pane fade" id="mode-settings" role="tabpanel">
         <div class="row mt-4">
             <div class="col-12">
                 <div class="card">
@@ -65,6 +187,245 @@
                     <div class="card-footer">
                         <button class="btn btn-primary" id="update-settings-btn" disabled>Update Settings</button>
                         <button class="btn btn-secondary" id="reset-settings-btn" disabled>Reset to Defaults</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Advanced Settings</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="card mb-3">
+                                            <div class="card-header">Property Settings</div>
+                                            <div class="card-body">
+                                                <div class="form-group mb-3">
+                                                    <label for="property-value-factor">Property Value Factor</label>
+                                                    <input type="range" class="form-range" id="property-value-factor" min="0.5" max="2.0" step="0.1" value="1.0">
+                                                    <div class="d-flex justify-content-between">
+                                                        <small>Lower (50%)</small>
+                                                        <small>Default (100%)</small>
+                                                        <small>Higher (200%)</small>
+                                                    </div>
+                                                </div>
+                                                <div class="form-group mb-3">
+                                                    <label for="property-rent-factor">Rent Factor</label>
+                                                    <input type="range" class="form-range" id="property-rent-factor" min="0.5" max="2.0" step="0.1" value="1.0">
+                                                    <div class="d-flex justify-content-between">
+                                                        <small>Lower</small>
+                                                        <small>Default</small>
+                                                        <small>Higher</small>
+                                                    </div>
+                                                </div>
+                                                <div class="form-check mb-3">
+                                                    <input class="form-check-input" type="checkbox" id="enable-property-injuries">
+                                                    <label class="form-check-label" for="enable-property-injuries">
+                                                        Enable Property Injuries
+                                                    </label>
+                                                    <small class="form-text text-muted d-block">Properties can be damaged and require repair</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card mb-3">
+                                            <div class="card-header">Economic Settings</div>
+                                            <div class="card-body">
+                                                <div class="form-group mb-3">
+                                                    <label for="inflation-rate">Inflation Rate</label>
+                                                    <input type="range" class="form-range" id="inflation-rate" min="0" max="0.2" step="0.01" value="0.05">
+                                                    <div class="d-flex justify-content-between">
+                                                        <small>None (0%)</small>
+                                                        <small>Moderate (10%)</small>
+                                                        <small>High (20%)</small>
+                                                    </div>
+                                                </div>
+                                                <div class="form-group mb-3">
+                                                    <label for="economic-cycle-interval">Economic Cycle Interval (turns)</label>
+                                                    <input type="number" class="form-control" id="economic-cycle-interval" min="1" max="20" value="5">
+                                                </div>
+                                                <div class="form-check mb-3">
+                                                    <input class="form-check-input" type="checkbox" id="enable-market-crashes">
+                                                    <label class="form-check-label" for="enable-market-crashes">
+                                                        Enable Market Crashes
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-header">Turn & Time Settings</div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <div class="form-group mb-3">
+                                                            <label for="turn-timer-seconds">Turn Timer (seconds)</label>
+                                                            <input type="number" class="form-control" id="turn-timer-seconds" min="0" max="300" value="60">
+                                                            <small class="form-text text-muted">0 = no timer</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="form-group mb-3">
+                                                            <label for="max-turns">Maximum Turns</label>
+                                                            <input type="number" class="form-control" id="max-turns" min="0" max="100" value="0">
+                                                            <small class="form-text text-muted">0 = unlimited</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="form-group mb-3">
+                                                            <label for="max-time-minutes">Maximum Time (minutes)</label>
+                                                            <input type="number" class="form-control" id="max-time-minutes" min="0" max="240" value="0">
+                                                            <small class="form-text text-muted">0 = unlimited</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <button class="btn btn-primary" id="save-advanced-settings-btn">Save Advanced Settings</button>
+                                <button class="btn btn-secondary" id="reset-advanced-settings-btn">Reset</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Analytics Tab -->
+            <div class="tab-pane fade" id="mode-analytics" role="tabpanel">
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Game Mode Analytics</h5>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="timeRangeDropdown" data-bs-toggle="dropdown">
+                                        Time Range: Last 30 Days
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="timeRangeDropdown">
+                                        <li><a class="dropdown-item time-range-option" href="#" data-days="7">Last 7 Days</a></li>
+                                        <li><a class="dropdown-item time-range-option" href="#" data-days="30">Last 30 Days</a></li>
+                                        <li><a class="dropdown-item time-range-option" href="#" data-days="90">Last 90 Days</a></li>
+                                        <li><a class="dropdown-item time-range-option" href="#" data-days="365">Last Year</a></li>
+                                        <li><a class="dropdown-item time-range-option" href="#" data-days="0">All Time</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="card mb-3">
+                                            <div class="card-body text-center">
+                                                <h6 class="text-muted">Total Games</h6>
+                                                <h2 id="analytics-total-games">0</h2>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card mb-3">
+                                            <div class="card-body text-center">
+                                                <h6 class="text-muted">Avg. Game Duration</h6>
+                                                <h2 id="analytics-avg-duration">0 min</h2>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card mb-3">
+                                            <div class="card-body text-center">
+                                                <h6 class="text-muted">Avg. Players</h6>
+                                                <h2 id="analytics-avg-players">0</h2>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card mb-3">
+                                            <div class="card-body text-center">
+                                                <h6 class="text-muted">Avg. Turns</h6>
+                                                <h2 id="analytics-avg-turns">0</h2>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="card mb-3">
+                                            <div class="card-header">Game Mode Popularity</div>
+                                            <div class="card-body">
+                                                <canvas id="mode-popularity-chart" height="250"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card mb-3">
+                                            <div class="card-header">Game Duration by Mode</div>
+                                            <div class="card-body">
+                                                <canvas id="duration-by-mode-chart" height="250"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="card mb-3">
+                                            <div class="card-header">Completion Rate by Mode</div>
+                                            <div class="card-body">
+                                                <canvas id="completion-rate-chart" height="250"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card mb-3">
+                                            <div class="card-header">Player Count Trends</div>
+                                            <div class="card-body">
+                                                <canvas id="player-count-trend-chart" height="250"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Game Mode Performance Comparison</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped" id="mode-performance-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Game Mode</th>
+                                                <th>Games Played</th>
+                                                <th>Avg. Duration</th>
+                                                <th>Completion Rate</th>
+                                                <th>Avg. Players</th>
+                                                <th>Avg. Turns</th>
+                                                <th>Popularity</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="mode-performance-data">
+                                            <!-- Mode performance data will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -78,17 +439,89 @@
                     </div>
                     <div class="card-body">
                         <ol>
-                            <li><strong>Select a Mode:</strong> Choose from the available game modes.</li>
-                            <li><strong>Review Settings:</strong> Check the default settings for the selected mode.</li>
-                            <li><strong>Customize (Optional):</strong> Adjust settings as needed for your game.</li>
-                            <li><strong>Apply:</strong> Click "Select Mode" to apply to the current game.</li>
-                            <li><strong>Start Game:</strong> Once configured, start the game from the main controls.</li>
+                            <li><strong>Manage Active Games:</strong> View, monitor, and control ongoing games.</li>
+                            <li><strong>Select a Mode:</strong> Choose from the available game modes for new games.</li>
+                            <li><strong>Configure Settings:</strong> Customize game parameters to create unique experiences.</li>
+                            <li><strong>Review Analytics:</strong> Track game mode popularity and performance metrics.</li>
                         </ol>
                         <div class="alert alert-warning">
-                            <strong>Note:</strong> Changing game mode will reset all players' cash and may affect current 
+                            <strong>Note:</strong> Changing game mode for an active game will reset all players' cash and may affect current 
                             game state. It's best to select a mode before starting a new game.
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Game Modal -->
+<div class="modal fade" id="create-game-modal" tabindex="-1" aria-labelledby="create-game-modal-label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="create-game-modal-label">Create New Game</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="create-game-form">
+                    <div class="mb-3">
+                        <label for="game-name" class="form-label">Game Name</label>
+                        <input type="text" class="form-control" id="game-name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="game-mode-select" class="form-label">Game Mode</label>
+                        <select class="form-select" id="game-mode-select" required>
+                            <option value="">-- Select Mode --</option>
+                            <option value="classic">Classic Mode</option>
+                            <option value="speed">Speed Mode</option>
+                            <option value="cooperative">Co-op Mode</option>
+                            <option value="tycoon">Tycoon Mode</option>
+                            <option value="market_crash">Market Crash Mode</option>
+                            <option value="team_battle">Team Battle Mode</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="player-count" class="form-label">Max Players</label>
+                        <input type="number" class="form-control" id="player-count" min="2" max="8" value="4" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bot-count" class="form-label">AI Players</label>
+                        <input type="number" class="form-control" id="bot-count" min="0" max="7" value="0">
+                        <small class="form-text text-muted">Number of AI players to add automatically</small>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="public-game">
+                        <label class="form-check-label" for="public-game">Public Game</label>
+                        <small class="form-text text-muted d-block">If checked, game will be visible in the public lobby</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirm-create-game-btn">Create Game</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Game Details Modal -->
+<div class="modal fade" id="game-details-modal" tabindex="-1" aria-labelledby="game-details-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="game-details-modal-label">Game Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="game-details-modal-content">
+                <!-- Game details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary" id="edit-game-btn">Edit Game</button>
+                    <button type="button" class="btn btn-warning" id="pause-game-btn">Pause Game</button>
+                    <button type="button" class="btn btn-danger" id="end-game-btn">End Game</button>
                 </div>
             </div>
         </div>
@@ -119,6 +552,36 @@
     .settings-form .form-text {
         font-size: 0.8rem;
     }
+    
+    /* Games table */
+    #active-games-table .action-btn {
+        padding: .25rem .5rem;
+        font-size: .75rem;
+        line-height: 1.5;
+    }
+    
+    .badge-active {
+        background-color: #28a745;
+    }
+    
+    .badge-paused {
+        background-color: #ffc107;
+    }
+    
+    .badge-completed {
+        background-color: #6c757d;
+    }
+    
+    /* Animation for loading */
+    @keyframes pulse {
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
+    }
+    
+    .loading-pulse {
+        animation: pulse 1.5s infinite ease-in-out;
+    }
 </style>
 
 <!-- JavaScript for Game Modes Tab -->
@@ -133,6 +596,24 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Initialize sub-tabs
+    const gameModeTabs = document.querySelectorAll('#gameModeTabs .nav-link');
+    gameModeTabs.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(e) {
+            // Handle tab switch
+            const targetId = e.target.getAttribute('data-bs-target').substring(1);
+            if (targetId === 'active-games') {
+                GameModesAdmin.loadActiveGames();
+            } else if (targetId === 'mode-selection') {
+                GameModesAdmin.loadAvailableModes();
+            } else if (targetId === 'mode-settings') {
+                GameModesAdmin.loadCurrentModeSettings();
+            } else if (targetId === 'mode-analytics') {
+                GameModesAdmin.loadAnalytics();
+            }
+        });
+    });
 });
 
 // Game Modes Admin Module
@@ -143,6 +624,8 @@ const GameModesAdmin = (function() {
     let availableModes = null;
     let selectedMode = null;
     let currentSettings = null;
+    let selectedGameId = null;
+    let activeGames = [];
     
     // Initialize module
     function init(key) {
@@ -152,11 +635,8 @@ const GameModesAdmin = (function() {
         // Set up event listeners
         setupEventListeners();
         
-        // Load available modes
-        loadAvailableModes();
-        
-        // Load current mode settings
-        loadCurrentModeSettings();
+        // Load active games by default
+        loadActiveGames();
     }
     
     // Setup event listeners
@@ -172,6 +652,874 @@ const GameModesAdmin = (function() {
         
         // Reset settings button
         document.getElementById('reset-settings-btn').addEventListener('click', resetSettings);
+        
+        // Advanced settings buttons
+        document.getElementById('save-advanced-settings-btn').addEventListener('click', saveAdvancedSettings);
+        document.getElementById('reset-advanced-settings-btn').addEventListener('click', resetAdvancedSettings);
+        
+        // Active games buttons
+        document.getElementById('refresh-games-btn').addEventListener('click', loadActiveGames);
+        document.getElementById('create-game-btn').addEventListener('click', showCreateGameModal);
+        document.getElementById('cleanup-games-btn').addEventListener('click', cleanupInactiveGames);
+        
+        // Create game modal button
+        document.getElementById('confirm-create-game-btn').addEventListener('click', createNewGame);
+        
+        // Game details modal buttons
+        document.getElementById('edit-game-btn').addEventListener('click', editSelectedGame);
+        document.getElementById('pause-game-btn').addEventListener('click', toggleGamePause);
+        document.getElementById('end-game-btn').addEventListener('click', endSelectedGame);
+        
+        // Search and filter inputs
+        document.getElementById('game-search').addEventListener('input', filterGames);
+        document.getElementById('game-mode-filter').addEventListener('change', filterGames);
+        document.getElementById('game-status-filter').addEventListener('change', filterGames);
+        
+        // Time range options for analytics
+        document.querySelectorAll('.time-range-option').forEach(option => {
+            option.addEventListener('click', function(e) {
+                e.preventDefault();
+                const days = parseInt(this.dataset.days);
+                updateAnalyticsTimeRange(days);
+            });
+        });
+    }
+    
+    // Load active games
+    function loadActiveGames() {
+        showLoading(true);
+        
+        // Make API request to get active games
+        fetch('/api/admin/games/active', {
+            headers: {
+                'X-Admin-Key': adminKey
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    activeGames = data.games || [];
+                    renderActiveGames();
+                    
+                    // Update total count
+                    document.getElementById('total-games-count').textContent = activeGames.length;
+                } else {
+                    showAlert('error', 'Error loading active games: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                showAlert('error', 'Error loading active games: ' + error.message);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+    }
+    
+    // Render active games table
+    function renderActiveGames() {
+        const tableBody = document.getElementById('active-games-list');
+        
+        if (!activeGames.length) {
+            tableBody.innerHTML = `<tr><td colspan="7" class="text-center">No active games found</td></tr>`;
+            return;
+        }
+        
+        tableBody.innerHTML = '';
+        
+        activeGames.forEach(game => {
+            const row = document.createElement('tr');
+            row.dataset.gameId = game.id;
+            
+            // Format duration
+            const durationMinutes = game.duration_minutes || 0;
+            const durationFormatted = durationMinutes < 60 
+                ? `${durationMinutes}m` 
+                : `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m`;
+            
+            // Create status badge
+            const statusClass = `badge-${game.status.toLowerCase()}`;
+            
+            row.innerHTML = `
+                <td>${game.id}</td>
+                <td>${formatModeName(game.mode)}</td>
+                <td>${game.player_count} / ${game.max_players}</td>
+                <td>${game.current_turn_player ? game.current_turn_player : 'N/A'}</td>
+                <td><span class="badge ${statusClass}">${capitalizeFirstLetter(game.status)}</span></td>
+                <td>${durationFormatted}</td>
+                <td>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-primary action-btn view-game-btn">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-warning action-btn ${game.status === 'active' ? 'pause-game-btn' : 'resume-game-btn'}">
+                            <i class="fas fa-${game.status === 'active' ? 'pause' : 'play'}"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger action-btn end-game-btn">
+                            <i class="fas fa-stop"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            
+            // Add event listeners for action buttons
+            row.querySelector('.view-game-btn').addEventListener('click', () => viewGameDetails(game.id));
+            row.querySelector(`.${game.status === 'active' ? 'pause-game-btn' : 'resume-game-btn'}`).addEventListener('click', () => toggleGamePause(game.id));
+            row.querySelector('.end-game-btn').addEventListener('click', () => endGame(game.id));
+            
+            // Add click event for the whole row
+            row.addEventListener('click', function(e) {
+                // Only trigger if not clicking a button
+                if (!e.target.closest('button')) {
+                    viewGameDetails(game.id);
+                }
+            });
+            
+            tableBody.appendChild(row);
+        });
+    }
+    
+    // View game details
+    function viewGameDetails(gameId) {
+        selectedGameId = gameId;
+        showLoading(true);
+        
+        fetch(`/api/admin/games/${gameId}`, {
+            headers: {
+                'X-Admin-Key': adminKey
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    renderGameDetails(data.game);
+                } else {
+                    showAlert('error', 'Error loading game details: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                showAlert('error', 'Error loading game details: ' + error.message);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+    }
+    
+    // Render game details
+    function renderGameDetails(game) {
+        const container = document.getElementById('game-details-container');
+        
+        let html = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h3>Game #${game.id}: ${game.name || 'Unnamed Game'}</h3>
+                    <p><strong>Status:</strong> <span class="badge badge-${game.status.toLowerCase()}">${capitalizeFirstLetter(game.status)}</span></p>
+                    <p><strong>Game Mode:</strong> ${formatModeName(game.mode)}</p>
+                    <p><strong>Created:</strong> ${new Date(game.created_at).toLocaleString()}</p>
+                    <p><strong>Duration:</strong> ${formatDuration(game.duration_minutes)}</p>
+                    <p><strong>Current Turn:</strong> ${game.current_turn}</p>
+                    <p><strong>Current Player:</strong> ${game.current_turn_player || 'N/A'}</p>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">Game Settings</div>
+                        <div class="card-body">
+                            <p><strong>Starting Cash:</strong> $${game.settings.starting_cash}</p>
+                            <p><strong>GO Salary:</strong> $${game.settings.go_salary}</p>
+                            <p><strong>Free Parking Collects Fees:</strong> ${game.settings.free_parking_collects_fees ? 'Yes' : 'No'}</p>
+                            <p><strong>Auction Enabled:</strong> ${game.settings.auction_enabled ? 'Yes' : 'No'}</p>
+                            <p><strong>Max Turns:</strong> ${game.settings.max_turns || 'Unlimited'}</p>
+                            <p><strong>Max Time:</strong> ${game.settings.max_time_minutes ? `${game.settings.max_time_minutes} minutes` : 'Unlimited'}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h4>Players</h4>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Cash</th>
+                                    <th>Properties</th>
+                                    <th>Position</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+        `;
+        
+        if (game.players && game.players.length > 0) {
+            game.players.forEach(player => {
+                html += `
+                    <tr>
+                        <td>${player.id}</td>
+                        <td>${player.name}</td>
+                        <td>${player.is_bot ? 'AI' : 'Human'}</td>
+                        <td>$${player.cash}</td>
+                        <td>${player.property_count}</td>
+                        <td>${player.position}</td>
+                        <td><span class="badge badge-${player.status.toLowerCase()}">${capitalizeFirstLetter(player.status)}</span></td>
+                    </tr>
+                `;
+            });
+        } else {
+            html += `<tr><td colspan="7" class="text-center">No players in this game</td></tr>`;
+        }
+        
+        html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <button class="btn btn-primary" onclick="viewGameBoard(${game.id})">
+                                <i class="fas fa-chess-board"></i> View Game Board
+                            </button>
+                        </div>
+                        <div>
+                            <button class="btn btn-secondary" onclick="exportGameData(${game.id})">
+                                <i class="fas fa-download"></i> Export Game Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        
+        // Adjust buttons based on game status
+        const pauseBtn = document.getElementById('pause-game-btn');
+        if (game.status === 'active') {
+            pauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause Game';
+            pauseBtn.classList.remove('btn-success');
+            pauseBtn.classList.add('btn-warning');
+        } else if (game.status === 'paused') {
+            pauseBtn.innerHTML = '<i class="fas fa-play"></i> Resume Game';
+            pauseBtn.classList.remove('btn-warning');
+            pauseBtn.classList.add('btn-success');
+        } else {
+            pauseBtn.disabled = true;
+        }
+        
+        // Disable edit button for completed games
+        if (game.status === 'completed') {
+            document.getElementById('edit-game-btn').disabled = true;
+            document.getElementById('end-game-btn').disabled = true;
+        } else {
+            document.getElementById('edit-game-btn').disabled = false;
+            document.getElementById('end-game-btn').disabled = false;
+        }
+    }
+    
+    // Filter games
+    function filterGames() {
+        const searchTerm = document.getElementById('game-search').value.toLowerCase();
+        const modeFilter = document.getElementById('game-mode-filter').value;
+        const statusFilter = document.getElementById('game-status-filter').value;
+        
+        const rows = document.querySelectorAll('#active-games-list tr');
+        let visibleCount = 0;
+        
+        rows.forEach(row => {
+            const gameId = row.cells[0]?.textContent;
+            const gameMode = row.cells[1]?.textContent.toLowerCase();
+            const gameStatus = row.querySelector('.badge')?.textContent.toLowerCase();
+            
+            const matchesSearch = !searchTerm || 
+                                gameId?.includes(searchTerm) || 
+                                gameMode?.includes(searchTerm);
+                                
+            const matchesMode = !modeFilter || 
+                              (gameMode && gameMode.includes(modeFilter.replace('_', ' ')));
+                              
+            const matchesStatus = !statusFilter || 
+                                (gameStatus && gameStatus === statusFilter);
+            
+            if (matchesSearch && matchesMode && matchesStatus) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        // Show no results message if needed
+        if (visibleCount === 0 && rows.length > 0) {
+            const tableBody = document.getElementById('active-games-list');
+            // Check if we already added a no results row
+            if (!tableBody.querySelector('.no-results-row')) {
+                const noResultsRow = document.createElement('tr');
+                noResultsRow.className = 'no-results-row';
+                noResultsRow.innerHTML = '<td colspan="7" class="text-center">No games match the current filters</td>';
+                tableBody.appendChild(noResultsRow);
+            }
+        } else {
+            // Remove any existing no results message
+            const noResultsRow = document.querySelector('.no-results-row');
+            if (noResultsRow) {
+                noResultsRow.remove();
+            }
+        }
+    }
+    
+    // Show create game modal
+    function showCreateGameModal() {
+        // Reset form
+        document.getElementById('create-game-form').reset();
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('create-game-modal'));
+        modal.show();
+    }
+    
+    // Create new game
+    function createNewGame() {
+        const name = document.getElementById('game-name').value;
+        const mode = document.getElementById('game-mode-select').value;
+        const maxPlayers = parseInt(document.getElementById('player-count').value);
+        const botCount = parseInt(document.getElementById('bot-count').value);
+        const isPublic = document.getElementById('public-game').checked;
+        
+        if (!name || !mode || isNaN(maxPlayers) || isNaN(botCount)) {
+            showAlert('error', 'Please fill in all required fields');
+            return;
+        }
+        
+        showLoading(true);
+        
+        fetch('/api/admin/games/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Key': adminKey
+            },
+            body: JSON.stringify({
+                name: name,
+                mode: mode,
+                max_players: maxPlayers,
+                bot_count: botCount,
+                public: isPublic
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', `Game "${name}" created successfully`);
+                    
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('create-game-modal')).hide();
+                    
+                    // Reload active games
+                    loadActiveGames();
+                    
+                    // View the newly created game
+                    if (data.game_id) {
+                        setTimeout(() => {
+                            viewGameDetails(data.game_id);
+                        }, 500);
+                    }
+                } else {
+                    showAlert('error', 'Error creating game: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                showAlert('error', 'Error creating game: ' + error.message);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+    }
+    
+    // Toggle game pause/resume
+    function toggleGamePause(specificGameId = null) {
+        const gameId = specificGameId || selectedGameId;
+        
+        if (!gameId) {
+            showAlert('error', 'No game selected');
+            return;
+        }
+        
+        showLoading(true);
+        
+        // Find current game status
+        const game = activeGames.find(g => g.id == gameId);
+        const action = game && game.status === 'active' ? 'pause' : 'resume';
+        
+        fetch(`/api/admin/games/${gameId}/${action}`, {
+            method: 'POST',
+            headers: {
+                'X-Admin-Key': adminKey
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', `Game ${action === 'pause' ? 'paused' : 'resumed'} successfully`);
+                    
+                    // Reload active games
+                    loadActiveGames();
+                    
+                    // Refresh game details if viewing the same game
+                    if (selectedGameId === gameId) {
+                        viewGameDetails(gameId);
+                    }
+                } else {
+                    showAlert('error', `Error ${action}ing game: ` + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                showAlert('error', `Error ${action}ing game: ` + error.message);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+    }
+    
+    // End selected game
+    function endGame(specificGameId = null) {
+        const gameId = specificGameId || selectedGameId;
+        
+        if (!gameId) {
+            showAlert('error', 'No game selected');
+            return;
+        }
+        
+        if (!confirm('Are you sure you want to end this game? This action cannot be undone.')) {
+            return;
+        }
+        
+        showLoading(true);
+        
+        fetch(`/api/admin/games/${gameId}/end`, {
+            method: 'POST',
+            headers: {
+                'X-Admin-Key': adminKey
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Game ended successfully');
+                    
+                    // Reload active games
+                    loadActiveGames();
+                    
+                    // Refresh game details if viewing the same game
+                    if (selectedGameId === gameId) {
+                        viewGameDetails(gameId);
+                    }
+                } else {
+                    showAlert('error', 'Error ending game: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                showAlert('error', 'Error ending game: ' + error.message);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+    }
+    
+    // Edit selected game
+    function editSelectedGame() {
+        // This would open a modal to edit game settings
+        if (!selectedGameId) {
+            showAlert('error', 'No game selected');
+            return;
+        }
+        
+        showAlert('info', 'Game editing functionality will be implemented in a future update');
+    }
+    
+    // Cleanup inactive games
+    function cleanupInactiveGames() {
+        if (!confirm('This will remove all inactive and abandoned games. Continue?')) {
+            return;
+        }
+        
+        showLoading(true);
+        
+        fetch('/api/admin/games/cleanup', {
+            method: 'POST',
+            headers: {
+                'X-Admin-Key': adminKey
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', `Cleaned up ${data.removed_count} inactive games`);
+                    
+                    // Reload active games
+                    loadActiveGames();
+                } else {
+                    showAlert('error', 'Error cleaning up games: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                showAlert('error', 'Error cleaning up games: ' + error.message);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+    }
+    
+    // Format duration
+    function formatDuration(minutes) {
+        if (!minutes) return 'N/A';
+        
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        
+        if (hours === 0) {
+            return `${mins} minutes`;
+        } else {
+            return `${hours} hour${hours !== 1 ? 's' : ''} ${mins} minute${mins !== 1 ? 's' : ''}`;
+        }
+    }
+    
+    // Load analytics data
+    function loadAnalytics() {
+        showLoading(true);
+        
+        // Get selected time range
+        const timeRange = document.getElementById('timeRangeDropdown').textContent.trim();
+        const days = timeRange.includes('7 Days') ? 7 : 
+                    timeRange.includes('30 Days') ? 30 : 
+                    timeRange.includes('90 Days') ? 90 : 
+                    timeRange.includes('Year') ? 365 : 0;
+        
+        fetch(`/api/admin/games/analytics?days=${days}`, {
+            headers: {
+                'X-Admin-Key': adminKey
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    renderAnalytics(data.analytics);
+                } else {
+                    showAlert('error', 'Error loading analytics: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                showAlert('error', 'Error loading analytics: ' + error.message);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
+    }
+    
+    // Render analytics data
+    function renderAnalytics(data) {
+        // Update metrics
+        document.getElementById('analytics-total-games').textContent = data.total_games;
+        document.getElementById('analytics-avg-duration').textContent = formatDuration(data.avg_duration_minutes);
+        document.getElementById('analytics-avg-players').textContent = data.avg_players.toFixed(1);
+        document.getElementById('analytics-avg-turns').textContent = data.avg_turns.toFixed(0);
+        
+        // Render charts
+        renderModePopularityChart(data.mode_distribution);
+        renderDurationByModeChart(data.duration_by_mode);
+        renderCompletionRateChart(data.completion_rate_by_mode);
+        renderPlayerCountTrendChart(data.player_count_trend);
+        
+        // Render performance table
+        renderModePerformanceTable(data.mode_performance);
+    }
+    
+    // Render mode popularity chart
+    function renderModePopularityChart(data) {
+        const ctx = document.getElementById('mode-popularity-chart').getContext('2d');
+        
+        // Destroy existing chart if it exists
+        if (window.modePopularityChart) {
+            window.modePopularityChart.destroy();
+        }
+        
+        // Prepare data
+        const labels = Object.keys(data).map(formatModeName);
+        const values = Object.values(data);
+        
+        // Create chart
+        window.modePopularityChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: [
+                        '#4e73df',
+                        '#1cc88a',
+                        '#36b9cc',
+                        '#f6c23e',
+                        '#e74a3b',
+                        '#6f42c1'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Render duration by mode chart
+    function renderDurationByModeChart(data) {
+        const ctx = document.getElementById('duration-by-mode-chart').getContext('2d');
+        
+        // Destroy existing chart if it exists
+        if (window.durationByModeChart) {
+            window.durationByModeChart.destroy();
+        }
+        
+        // Prepare data
+        const labels = Object.keys(data).map(formatModeName);
+        const values = Object.values(data);
+        
+        // Create chart
+        window.durationByModeChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Average Duration (minutes)',
+                    data: values,
+                    backgroundColor: '#4e73df'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Minutes'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Render completion rate chart
+    function renderCompletionRateChart(data) {
+        const ctx = document.getElementById('completion-rate-chart').getContext('2d');
+        
+        // Destroy existing chart if it exists
+        if (window.completionRateChart) {
+            window.completionRateChart.destroy();
+        }
+        
+        // Prepare data
+        const labels = Object.keys(data).map(formatModeName);
+        const values = Object.values(data).map(rate => rate * 100); // Convert to percentage
+        
+        // Create chart
+        window.completionRateChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Completion Rate (%)',
+                    data: values,
+                    backgroundColor: '#1cc88a'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Percentage'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Render player count trend chart
+    function renderPlayerCountTrendChart(data) {
+        const ctx = document.getElementById('player-count-trend-chart').getContext('2d');
+        
+        // Destroy existing chart if it exists
+        if (window.playerCountTrendChart) {
+            window.playerCountTrendChart.destroy();
+        }
+        
+        // Prepare data
+        const labels = data.map(item => item.date);
+        const values = data.map(item => item.avg_players);
+        
+        // Create chart
+        window.playerCountTrendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Average Players per Game',
+                    data: values,
+                    borderColor: '#36b9cc',
+                    backgroundColor: 'rgba(54, 185, 204, 0.1)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Average Players'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Render mode performance table
+    function renderModePerformanceTable(data) {
+        const tableBody = document.getElementById('mode-performance-data');
+        tableBody.innerHTML = '';
+        
+        Object.entries(data).forEach(([mode, stats]) => {
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td>${formatModeName(mode)}</td>
+                <td>${stats.games_played}</td>
+                <td>${formatDuration(stats.avg_duration_minutes)}</td>
+                <td>${(stats.completion_rate * 100).toFixed(0)}%</td>
+                <td>${stats.avg_players.toFixed(1)}</td>
+                <td>${stats.avg_turns.toFixed(0)}</td>
+                <td>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: ${stats.popularity * 100}%;" 
+                            aria-valuenow="${stats.popularity * 100}" aria-valuemin="0" aria-valuemax="100">
+                            ${(stats.popularity * 100).toFixed(0)}%
+                        </div>
+                    </div>
+                </td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
+    }
+    
+    // Update analytics time range
+    function updateAnalyticsTimeRange(days) {
+        let rangeText;
+        if (days === 0) {
+            rangeText = 'All Time';
+        } else if (days === 365) {
+            rangeText = 'Last Year';
+        } else {
+            rangeText = `Last ${days} Days`;
+        }
+        
+        document.getElementById('timeRangeDropdown').textContent = `Time Range: ${rangeText}`;
+        
+        // Reload analytics
+        loadAnalytics();
+    }
+    
+    // Utility: Show/hide loading message
+    function showLoading(show) {
+        const loadingMessage = document.getElementById('mode-loading-message');
+        if (loadingMessage) {
+            loadingMessage.style.display = show ? 'block' : 'none';
+        }
+    }
+    
+    // Utility: Show alert
+    function showAlert(type, message) {
+        const alertContainer = document.getElementById('mode-alert-container');
+        if (!alertContainer) return;
+        
+        const alertElement = document.createElement('div');
+        alertElement.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+        alertElement.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        alertContainer.appendChild(alertElement);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            alertElement.classList.remove('show');
+            setTimeout(() => alertElement.remove(), 150);
+        }, 5000);
+    }
+    
+    // Utility: Get game ID
+    function getGameId() {
+        return document.querySelector('meta[name="game-id"]')?.content || null;
+    }
+    
+    // Utility: Format mode name
+    function formatModeName(mode) {
+        if (!mode) return 'Unknown';
+        
+        // Convert snake_case or kebab-case to Title Case
+        return mode
+            .replace(/[-_]/g, ' ')
+            .replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase())));
+    }
+    
+    // Utility: Capitalize first letter
+    function capitalizeFirstLetter(string) {
+        if (!string) return '';
+        return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+    
+    // View game board
+    function viewGameBoard(gameId) {
+        window.open(`/board?game_id=${gameId}&admin=true`, '_blank');
+    }
+    
+    // Export game data
+    function exportGameData(gameId) {
+        window.open(`/api/admin/games/${gameId}/export?key=${adminKey}`, '_blank');
     }
     
     // Load available game modes
@@ -242,91 +1590,6 @@ const GameModesAdmin = (function() {
             })
             .finally(() => {
                 showLoading(false);
-            });
-    }
-    
-    // Render available modes
-    function renderModes() {
-        if (!availableModes) return;
-        
-        // Standard modes
-        const standardContainer = document.getElementById('standard-modes-container');
-        standardContainer.innerHTML = '';
-        
-        availableModes.standard.forEach(mode => {
-            const modeElement = document.createElement('div');
-            modeElement.className = 'list-group-item mode-item';
-            modeElement.dataset.modeId = mode.id;
-            modeElement.innerHTML = `
-                <div class="d-flex w-100 justify-content-between">
-                    <h6 class="mb-1">${mode.name}</h6>
-                    <small>${mode.difficulty}</small>
-                </div>
-                <p class="mb-1">${mode.objective}</p>
-                <small>Estimated Time: ${mode.estimated_time}</small>
-            `;
-            
-            modeElement.addEventListener('click', () => {
-                // Deselect all other modes
-                document.querySelectorAll('.mode-item').forEach(el => {
-                    el.classList.remove('active');
-                });
-                
-                // Select this mode
-                modeElement.classList.add('active');
-                selectedMode = mode.id;
-                
-                // Enable the select button
-                document.getElementById('select-mode-btn').disabled = false;
-                
-                // Show mode description
-                renderModeDescription(mode.id);
-                
-                // Show default settings
-                renderModeSettings(mode.id);
-            });
-            
-            standardContainer.appendChild(modeElement);
-        });
-        
-        // Specialty modes
-        const specialtyContainer = document.getElementById('specialty-modes-container');
-        specialtyContainer.innerHTML = '';
-        
-        availableModes.specialty.forEach(mode => {
-            const modeElement = document.createElement('div');
-            modeElement.className = 'list-group-item mode-item';
-            modeElement.dataset.modeId = mode.id;
-            modeElement.innerHTML = `
-                <div class="d-flex w-100 justify-content-between">
-                    <h6 class="mb-1">${mode.name}</h6>
-                    <small>${mode.difficulty}</small>
-                </div>
-                <p class="mb-1">${mode.objective}</p>
-                <small>Estimated Time: ${mode.estimated_time}</small>
-            `;
-            
-            modeElement.addEventListener('click', () => {
-                // Deselect all other modes
-                document.querySelectorAll('.mode-item').forEach(el => {
-                    el.classList.remove('active');
-                });
-                
-                // Select this mode
-                modeElement.classList.add('active');
-                selectedMode = mode.id;
-                
-                // Enable the select button
-                document.getElementById('select-mode-btn').disabled = false;
-                
-                // Show mode description
-                renderModeDescription(mode.id);
-                
-                // Show default settings
-                renderModeSettings(mode.id);
-            });
-            
-            specialtyContainer.appendChild(modeElement);
         });
     }
     
@@ -465,6 +1728,83 @@ const GameModesAdmin = (function() {
                     </div>
                     <small class="form-text text-muted">How much property values fluctuate (0-1)</small>
                 </div>
+                
+                <div class="form-group">
+                    <label for="setting-crash-frequency">Crash Frequency</label>
+                    <input type="range" class="form-range" id="setting-crash-frequency" name="crash_frequency" min="0.05" max="0.3" step="0.05">
+                    <div class="d-flex justify-content-between">
+                        <small>Rare</small>
+                        <small>Normal</small>
+                        <small>Frequent</small>
+                    </div>
+                    <small class="form-text text-muted">How often market crashes occur (0.05-0.3)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="setting-crash-impact">Crash Impact</label>
+                    <input type="range" class="form-range" id="setting-crash-impact" name="crash_impact" min="0.1" max="0.6" step="0.05">
+                    <div class="d-flex justify-content-between">
+                        <small>Minor (10%)</small>
+                        <small>Moderate (30%)</small>
+                        <small>Severe (60%)</small>
+                    </div>
+                    <small class="form-text text-muted">How much property values drop during a crash (0.1-0.6)</small>
+                </div>
+            `;
+        } else if (modeId === 'tycoon') {
+            settingsHTML += `
+                <div class="form-group">
+                    <label for="setting-dev-levels">Development Levels</label>
+                    <input type="number" class="form-control" id="setting-dev-levels" name="development_levels" min="3" max="10" step="1">
+                    <small class="form-text text-muted">Maximum property development level</small>
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="setting-advanced-improvements" name="advanced_improvement_types">
+                        <label class="form-check-label" for="setting-advanced-improvements">Advanced Improvement Types</label>
+                    </div>
+                    <small class="form-text text-muted">Enable special improvement types beyond houses/hotels</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="setting-gold-milestone">Gold Milestone (Level 5 Properties)</label>
+                    <input type="number" class="form-control" id="setting-gold-milestone" name="gold_milestone" min="1" max="10" step="1">
+                    <small class="form-text text-muted">Number of level 5 properties needed to win</small>
+                </div>
+            `;
+        } else if (modeId === 'team_battle') {
+            settingsHTML += `
+                <div class="form-group">
+                    <label for="setting-min-teams">Minimum Teams</label>
+                    <input type="number" class="form-control" id="setting-min-teams" name="min_teams" min="2" max="4" step="1">
+                    <small class="form-text text-muted">Minimum number of teams</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="setting-max-teams">Maximum Teams</label>
+                    <input type="number" class="form-control" id="setting-max-teams" name="max_teams" min="2" max="4" step="1">
+                    <small class="form-text text-muted">Maximum number of teams</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="setting-income-sharing">Team Income Sharing (%)</label>
+                    <input type="range" class="form-range" id="setting-income-sharing" name="team_income_sharing" min="0" max="0.5" step="0.05">
+                    <div class="d-flex justify-content-between">
+                        <small>0%</small>
+                        <small>25%</small>
+                        <small>50%</small>
+                    </div>
+                    <small class="form-text text-muted">Percentage of income shared with teammates</small>
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="setting-rent-immunity" name="team_rent_immunity">
+                        <label class="form-check-label" for="setting-rent-immunity">Team Rent Immunity</label>
+                    </div>
+                    <small class="form-text text-muted">Whether teammates don't pay rent to each other</small>
+                </div>
             `;
         }
         
@@ -570,6 +1910,14 @@ const GameModesAdmin = (function() {
             settings.free_parking_collects_fees = false;
         }
         
+        if (selectedMode === 'tycoon' && !settings.hasOwnProperty('advanced_improvement_types')) {
+            settings.advanced_improvement_types = false;
+        }
+        
+        if (selectedMode === 'team_battle' && !settings.hasOwnProperty('team_rent_immunity')) {
+            settings.team_rent_immunity = false;
+        }
+        
         // Make API request to update settings
         fetch(`/api/game-modes/update-settings/${gameId}`, {
             method: 'POST',
@@ -613,53 +1961,698 @@ const GameModesAdmin = (function() {
         showAlert('info', 'Settings reset to defaults. Click "Update Settings" to apply.');
     }
     
-    // Utility: Show/hide loading message
-    function showLoading(show) {
-        const loadingMessage = document.getElementById('mode-loading-message');
-        if (loadingMessage) {
-            loadingMessage.style.display = show ? 'block' : 'none';
+    // Save advanced settings
+    function saveAdvancedSettings() {
+        if (!gameId) {
+            showAlert('error', 'No active game');
+            return;
         }
+        
+        // Get advanced settings
+        const advancedSettings = {
+            property_value_factor: parseFloat(document.getElementById('property-value-factor').value),
+            property_rent_factor: parseFloat(document.getElementById('property-rent-factor').value),
+            enable_property_injuries: document.getElementById('enable-property-injuries').checked,
+            inflation_rate: parseFloat(document.getElementById('inflation-rate').value),
+            economic_cycle_interval: parseInt(document.getElementById('economic-cycle-interval').value),
+            enable_market_crashes: document.getElementById('enable-market-crashes').checked,
+            turn_timer_seconds: parseInt(document.getElementById('turn-timer-seconds').value),
+            max_turns: parseInt(document.getElementById('max-turns').value),
+            max_time_minutes: parseInt(document.getElementById('max-time-minutes').value)
+        };
+        
+        showLoading(true);
+        
+        // Make API request to update advanced settings
+        fetch(`/api/game-modes/update-advanced-settings/${gameId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Key': adminKey
+            },
+            body: JSON.stringify({
+                settings: advancedSettings
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Advanced settings updated successfully');
+                } else {
+                    showAlert('error', 'Error updating advanced settings: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                showAlert('error', 'Error updating advanced settings: ' + error.message);
+            })
+            .finally(() => {
+                showLoading(false);
+            });
     }
     
-    // Utility: Show alert
-    function showAlert(type, message) {
-        const alertContainer = document.getElementById('mode-alert-container');
-        if (!alertContainer) return;
+    // Reset advanced settings
+    function resetAdvancedSettings() {
+        // Reset form to default values
+        document.getElementById('property-value-factor').value = 1.0;
+        document.getElementById('property-rent-factor').value = 1.0;
+        document.getElementById('enable-property-injuries').checked = false;
+        document.getElementById('inflation-rate').value = 0.05;
+        document.getElementById('economic-cycle-interval').value = 5;
+        document.getElementById('enable-market-crashes').checked = true;
+        document.getElementById('turn-timer-seconds').value = 60;
+        document.getElementById('max-turns').value = 0;
+        document.getElementById('max-time-minutes').value = 0;
         
-        const alertElement = document.createElement('div');
-        alertElement.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
-        alertElement.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        `;
-        
-        alertContainer.appendChild(alertElement);
-        
-        // Auto-dismiss after 5 seconds
-        setTimeout(() => {
-            alertElement.classList.remove('show');
-            setTimeout(() => alertElement.remove(), 150);
-        }, 5000);
-    }
-    
-    // Utility: Get game ID
-    function getGameId() {
-        return document.querySelector('meta[name="game-id"]')?.content || null;
-    }
-    
-    // Utility: Format mode name
-    function formatModeName(mode) {
-        if (!mode) return 'Unknown';
-        
-        // Convert snake_case or kebab-case to Title Case
-        return mode
-            .replace(/[-_]/g, ' ')
-            .replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase())));
+        showAlert('info', 'Advanced settings reset to defaults. Click "Save Advanced Settings" to apply.');
     }
     
     // Public API
     return {
-        init: init
+        init: init,
+        loadActiveGames: loadActiveGames,
+        loadAvailableModes: loadAvailableModes,
+        loadCurrentModeSettings: loadCurrentModeSettings,
+        loadAnalytics: loadAnalytics
     };
 })();
+
+// Initialization when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Initial load
+    loadGameModesOverview();
+    
+    // Set the first tab as active
+    document.querySelector('.tab-link').classList.add('active');
+    document.querySelector('.tab-content').classList.add('active');
+    
+    // Add event listeners for tab switching
+    document.querySelectorAll('.tab-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            openTab(e, this.getAttribute('data-tab'));
+        });
+    });
+    
+    // Event handlers for game mode settings forms
+    document.getElementById('createGameModeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        createGameMode();
+    });
+    
+    document.getElementById('editGameModeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        updateGameMode();
+    });
+    
+    // Mode selection change event
+    document.getElementById('gameSettingsMode').addEventListener('change', function() {
+        loadModeSettings(this.value);
+    });
+    
+    // Active games refresh button
+    document.getElementById('refreshActiveGames').addEventListener('click', function() {
+        loadActiveGames();
+    });
+    
+    // Global settings form submission
+    document.getElementById('globalSettingsForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveGlobalSettings();
+    });
+});
+
+// Initialize game mode data
+loadAvailableModes();
+loadActiveGames();
+initCharts();
+
+// Tab handling function
+function openTab(evt, tabName) {
+    // Hide all tab content
+    document.querySelectorAll('.tab-content').forEach(function(tab) {
+        tab.classList.remove('active');
+    });
+    
+    // Remove active class from all tab links
+    document.querySelectorAll('.tab-link').forEach(function(link) {
+        link.classList.remove('active');
+    });
+    
+    // Show the selected tab content
+    document.getElementById(tabName).classList.add('active');
+    
+    // Add active class to the clicked tab link
+    if (evt && evt.currentTarget) {
+        evt.currentTarget.classList.add('active');
+    } else if (evt) {
+        evt.classList.add('active');
+    }
+    
+    // Load specific content based on the tab
+    if (tabName === 'gameModes') {
+        loadGameModesOverview();
+    } else if (tabName === 'activeGames') {
+        loadActiveGames();
+    } else if (tabName === 'gameSettings') {
+        loadAvailableModes();
+    }
+}
+
+// Modal functions
+function openCreateModeModal() {
+    document.getElementById('createGameModeModal').style.display = 'block';
+}
+
+function openEditModeModal(modeId) {
+    // Fetch the game mode details
+    const mode = gameModes.find(m => m.id === modeId);
+    if (!mode) return;
+    
+    // Populate the form
+    document.getElementById('editModeId').value = mode.id;
+    document.getElementById('editModeName').value = mode.name;
+    document.getElementById('editModeDescription').value = mode.description;
+    document.getElementById('editStartingCash').value = mode.startingCash;
+    document.getElementById('editSalaryAmount').value = mode.salaryAmount;
+    document.getElementById('editIncomeTaxRate').value = mode.incomeTaxRate;
+    document.getElementById('editLuxuryTaxAmount').value = mode.luxuryTaxAmount;
+    document.getElementById('editMaxJailTurns').value = mode.maxJailTurns;
+    document.getElementById('editIsDefault').checked = mode.isDefault;
+    
+    // Show the modal
+    document.getElementById('editGameModeModal').style.display = 'block';
+}
+
+function closeModals() {
+    document.querySelectorAll('.modal').forEach(function(modal) {
+        modal.style.display = 'none';
+    });
+}
+
+// Data loading functions
+let gameModes = [];
+let activeGames = [];
+
+function fetchGameModes() {
+    // Mock data - would be replaced with actual API call
+    return [
+        {
+            id: 1,
+            name: "Classic",
+            description: "Traditional gameplay with standard rules",
+            startingCash: 1500,
+            salaryAmount: 200,
+            incomeTaxRate: 10,
+            luxuryTaxAmount: 75,
+            maxJailTurns: 3,
+            isDefault: true,
+            games: 24,
+            activePlayers: 87
+        },
+        {
+            id: 2,
+            name: "Speed Play",
+            description: "Faster gameplay with higher starting cash and income",
+            startingCash: 2500,
+            salaryAmount: 300,
+            incomeTaxRate: 8,
+            luxuryTaxAmount: 100,
+            maxJailTurns: 2,
+            isDefault: false,
+            games: 18,
+            activePlayers: 54
+        },
+        {
+            id: 3,
+            name: "Economic Hardship",
+            description: "Limited cash, higher taxes, tough economic conditions",
+            startingCash: 1000,
+            salaryAmount: 150,
+            incomeTaxRate: 15,
+            luxuryTaxAmount: 100,
+            maxJailTurns: 4,
+            isDefault: false,
+            games: 7,
+            activePlayers: 22
+        }
+    ];
+}
+
+function fetchActiveGames() {
+    // Mock data - would be replaced with actual API call
+    return [
+        {
+            id: 1001,
+            name: "Game #1001",
+            mode: "Classic",
+            players: 4,
+            botPlayers: 2,
+            humanPlayers: 2,
+            status: "In Progress",
+            currentTurn: 18,
+            startTime: "2025-05-16T14:30:00",
+            timeElapsed: "1h 45m"
+        },
+        {
+            id: 1002,
+            name: "Game #1002",
+            mode: "Speed Play",
+            players: 3,
+            botPlayers: 1,
+            humanPlayers: 2,
+            status: "In Progress",
+            currentTurn: 12,
+            startTime: "2025-05-16T15:15:00",
+            timeElapsed: "1h 00m"
+        },
+        {
+            id: 1003,
+            name: "Game #1003",
+            mode: "Economic Hardship",
+            players: 5,
+            botPlayers: 3,
+            humanPlayers: 2,
+            status: "Paused",
+            currentTurn: 7,
+            startTime: "2025-05-16T16:00:00",
+            timeElapsed: "0h 25m"
+        }
+    ];
+}
+
+function loadGameModesOverview() {
+    gameModes = fetchGameModes();
+    
+    // Update the game modes count
+    document.getElementById('gameModeCount').textContent = gameModes.length;
+    
+    // Update the default game mode
+    const defaultMode = gameModes.find(mode => mode.isDefault);
+    document.getElementById('defaultGameMode').textContent = defaultMode ? defaultMode.name : 'None';
+    
+    // Calculate active games
+    const totalGames = gameModes.reduce((sum, mode) => sum + mode.games, 0);
+    document.getElementById('activeGamesCount').textContent = totalGames;
+    
+    // Calculate active players
+    const totalPlayers = gameModes.reduce((sum, mode) => sum + mode.activePlayers, 0);
+    document.getElementById('activePlayers').textContent = totalPlayers;
+    
+    // Populate the game modes table
+    const tableBody = document.getElementById('gameModesTable').getElementsByTagName('tbody')[0];
+    tableBody.innerHTML = '';
+    
+    gameModes.forEach(mode => {
+        const row = tableBody.insertRow();
+        
+        row.insertCell(0).textContent = mode.name;
+        row.insertCell(1).textContent = mode.description;
+        row.insertCell(2).textContent = `$${mode.startingCash}`;
+        row.insertCell(3).textContent = mode.games;
+        row.insertCell(4).textContent = mode.activePlayers;
+        
+        const statusCell = row.insertCell(5);
+        statusCell.innerHTML = mode.isDefault ? 
+            '<span class="status-badge status-active">Default</span>' : 
+            '<span class="status-badge status-inactive">Alternative</span>';
+        
+        const actionsCell = row.insertCell(6);
+        actionsCell.innerHTML = `
+            <button class="btn btn-sm btn-primary" onclick="openEditModeModal(${mode.id})">Edit</button>
+            <button class="btn btn-sm ${mode.isDefault ? 'btn-secondary disabled' : 'btn-danger'}" 
+                ${mode.isDefault ? 'disabled' : `onclick="deleteGameMode(${mode.id})"`}>
+                Delete
+            </button>
+        `;
+    });
+    
+    // Update the mode distribution chart
+    updateModeDistributionChart();
+}
+
+function loadActiveGames() {
+    activeGames = fetchActiveGames();
+    
+    // Populate the active games table
+    const tableBody = document.getElementById('activeGamesTable').getElementsByTagName('tbody')[0];
+    tableBody.innerHTML = '';
+    
+    activeGames.forEach(game => {
+        const row = tableBody.insertRow();
+        
+        row.insertCell(0).textContent = game.id;
+        row.insertCell(1).textContent = game.name;
+        row.insertCell(2).textContent = game.mode;
+        
+        const playersCell = row.insertCell(3);
+        playersCell.innerHTML = `
+            ${game.players} <small>(${game.humanPlayers} human, ${game.botPlayers} bot)</small>
+        `;
+        
+        const statusCell = row.insertCell(4);
+        statusCell.innerHTML = `
+            <span class="status-badge status-${game.status === 'In Progress' ? 'active' : 'inactive'}">
+                ${game.status}
+            </span>
+        `;
+        
+        row.insertCell(5).textContent = game.currentTurn;
+        row.insertCell(6).textContent = game.timeElapsed;
+        
+        const actionsCell = row.insertCell(7);
+        actionsCell.innerHTML = `
+            <button class="btn btn-sm btn-info" onclick="viewGameDetails(${game.id})">View</button>
+            <button class="btn btn-sm btn-warning" onclick="toggleGamePause(${game.id})">
+                ${game.status === 'Paused' ? 'Resume' : 'Pause'}
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="endGame(${game.id})">End</button>
+        `;
+    });
+}
+
+function loadAvailableModes() {
+    gameModes = fetchGameModes();
+    
+    // Populate the game mode selector
+    const modeSelector = document.getElementById('gameSettingsMode');
+    modeSelector.innerHTML = '<option value="">-- Select Game Mode --</option>';
+    
+    gameModes.forEach(mode => {
+        const option = document.createElement('option');
+        option.value = mode.id;
+        option.textContent = mode.name;
+        modeSelector.appendChild(option);
+    });
+}
+
+function loadModeSettings(modeId) {
+    if (!modeId) {
+        // Clear form if no mode selected
+        document.getElementById('viewGameSettingsForm').reset();
+        return;
+    }
+    
+    const mode = gameModes.find(m => m.id == modeId);
+    if (!mode) return;
+    
+    // Populate the form
+    document.getElementById('viewModeName').value = mode.name;
+    document.getElementById('viewModeDescription').value = mode.description;
+    document.getElementById('viewStartingCash').value = mode.startingCash;
+    document.getElementById('viewSalaryAmount').value = mode.salaryAmount;
+    document.getElementById('viewIncomeTaxRate').value = mode.incomeTaxRate;
+    document.getElementById('viewLuxuryTaxAmount').value = mode.luxuryTaxAmount;
+    document.getElementById('viewMaxJailTurns').value = mode.maxJailTurns;
+    document.getElementById('viewIsDefault').checked = mode.isDefault;
+}
+
+// Chart functions
+function initCharts() {
+    updateModeDistributionChart();
+    updatePlayerDistributionChart();
+}
+
+function updateModeDistributionChart() {
+    const ctx = document.getElementById('modeDistributionChart').getContext('2d');
+    
+    // Extract data for the chart
+    const labels = gameModes.map(mode => mode.name);
+    const data = gameModes.map(mode => mode.games);
+    
+    // Create the chart
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: [
+                    '#4e73df',
+                    '#1cc88a',
+                    '#36b9cc',
+                    '#f6c23e',
+                    '#e74a3b'
+                ],
+                hoverBackgroundColor: [
+                    '#2e59d9',
+                    '#17a673',
+                    '#2c9faf',
+                    '#dda20a',
+                    '#be2617'
+                ],
+                hoverBorderColor: "rgba(234, 236, 244, 1)",
+            }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            tooltips: {
+                backgroundColor: "rgb(255,255,255)",
+                bodyFontColor: "#858796",
+                borderColor: '#dddfeb',
+                borderWidth: 1,
+                xPadding: 15,
+                yPadding: 15,
+                displayColors: false,
+                caretPadding: 10,
+            },
+            legend: {
+                display: true,
+                position: 'bottom'
+            },
+            title: {
+                display: true,
+                text: 'Active Games by Mode'
+            },
+            cutoutPercentage: 0,
+        },
+    });
+}
+
+function updatePlayerDistributionChart() {
+    const ctx = document.getElementById('playerDistributionChart').getContext('2d');
+    
+    // Create the chart
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: gameModes.map(mode => mode.name),
+            datasets: [{
+                label: 'Active Players',
+                data: gameModes.map(mode => mode.activePlayers),
+                backgroundColor: '#4e73df',
+                borderColor: '#4e73df',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true
+                    },
+                    gridLines: {
+                        color: "rgba(0, 0, 0, 0.1)",
+                    }
+                }],
+                xAxes: [{
+                    gridLines: {
+                        display: false
+                    }
+                }]
+            },
+            legend: {
+                display: true,
+                position: 'bottom'
+            },
+            title: {
+                display: true,
+                text: 'Players by Game Mode'
+            }
+        }
+    });
+}
+
+// CRUD operations for game modes
+function createGameMode() {
+    // Get form data
+    const name = document.getElementById('createModeName').value;
+    const description = document.getElementById('createModeDescription').value;
+    const startingCash = parseInt(document.getElementById('createStartingCash').value);
+    const salaryAmount = parseInt(document.getElementById('createSalaryAmount').value);
+    const incomeTaxRate = parseFloat(document.getElementById('createIncomeTaxRate').value);
+    const luxuryTaxAmount = parseInt(document.getElementById('createLuxuryTaxAmount').value);
+    const maxJailTurns = parseInt(document.getElementById('createMaxJailTurns').value);
+    const isDefault = document.getElementById('createIsDefault').checked;
+    
+    // Create new mode (would be an API call in real implementation)
+    const newMode = {
+        id: gameModes.length + 1,
+        name,
+        description,
+        startingCash,
+        salaryAmount,
+        incomeTaxRate,
+        luxuryTaxAmount,
+        maxJailTurns,
+        isDefault,
+        games: 0,
+        activePlayers: 0
+    };
+    
+    // If this is set as default, update other modes
+    if (isDefault) {
+        gameModes.forEach(mode => {
+            mode.isDefault = false;
+        });
+    }
+    
+    // Add to the modes array
+    gameModes.push(newMode);
+    
+    // Refresh the UI
+    loadGameModesOverview();
+    loadAvailableModes();
+    
+    // Close the modal
+    closeModals();
+    
+    // Show success message
+    showAlert('Game mode created successfully', 'success');
+}
+
+function updateGameMode() {
+    // Get form data
+    const id = parseInt(document.getElementById('editModeId').value);
+    const name = document.getElementById('editModeName').value;
+    const description = document.getElementById('editModeDescription').value;
+    const startingCash = parseInt(document.getElementById('editStartingCash').value);
+    const salaryAmount = parseInt(document.getElementById('editSalaryAmount').value);
+    const incomeTaxRate = parseFloat(document.getElementById('editIncomeTaxRate').value);
+    const luxuryTaxAmount = parseInt(document.getElementById('editLuxuryTaxAmount').value);
+    const maxJailTurns = parseInt(document.getElementById('editMaxJailTurns').value);
+    const isDefault = document.getElementById('editIsDefault').checked;
+    
+    // Find the mode to update
+    const modeIndex = gameModes.findIndex(m => m.id === id);
+    if (modeIndex === -1) return;
+    
+    // If this is set as default, update other modes
+    if (isDefault) {
+        gameModes.forEach(mode => {
+            mode.isDefault = false;
+        });
+    }
+    
+    // Update the mode
+    gameModes[modeIndex] = {
+        ...gameModes[modeIndex],
+        name,
+        description,
+        startingCash,
+        salaryAmount,
+        incomeTaxRate,
+        luxuryTaxAmount,
+        maxJailTurns,
+        isDefault
+    };
+    
+    // Refresh the UI
+    loadGameModesOverview();
+    loadAvailableModes();
+    
+    // Close the modal
+    closeModals();
+    
+    // Show success message
+    showAlert('Game mode updated successfully', 'success');
+}
+
+function deleteGameMode(modeId) {
+    if (confirm('Are you sure you want to delete this game mode? This action cannot be undone.')) {
+        // Check if the mode is in use
+        const mode = gameModes.find(m => m.id === modeId);
+        if (mode && mode.games > 0) {
+            showAlert('Cannot delete a game mode that has active games', 'error');
+            return;
+        }
+        
+        // Remove the mode
+        gameModes = gameModes.filter(mode => mode.id !== modeId);
+        
+        // Refresh the UI
+        loadGameModesOverview();
+        loadAvailableModes();
+        
+        // Show success message
+        showAlert('Game mode deleted successfully', 'success');
+    }
+}
+
+// Game management functions
+function viewGameDetails(gameId) {
+    // Would navigate to a detailed view of the game in a real implementation
+    alert(`Viewing details for Game #${gameId}`);
+}
+
+function toggleGamePause(gameId) {
+    // Find the game
+    const gameIndex = activeGames.findIndex(g => g.id === gameId);
+    if (gameIndex === -1) return;
+    
+    // Toggle the status
+    activeGames[gameIndex].status = 
+        activeGames[gameIndex].status === 'Paused' ? 'In Progress' : 'Paused';
+    
+    // Refresh the UI
+    loadActiveGames();
+    
+    // Show success message
+    showAlert(`Game ${activeGames[gameIndex].status === 'Paused' ? 'paused' : 'resumed'} successfully`, 'success');
+}
+
+function endGame(gameId) {
+    if (confirm('Are you sure you want to end this game? This action cannot be undone.')) {
+        // Remove the game
+        activeGames = activeGames.filter(game => game.id !== gameId);
+        
+        // Refresh the UI
+        loadActiveGames();
+        
+        // Show success message
+        showAlert('Game ended successfully', 'success');
+    }
+}
+
+// Global settings functions
+function saveGlobalSettings() {
+    // In a real implementation, this would save the settings to the server
+    showAlert('Global game settings saved successfully', 'success');
+}
+
+// Utility functions
+function showAlert(message, type) {
+    const alertContainer = document.getElementById('alertContainer');
+    
+    // Create alert element
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    `;
+    
+    // Add to container
+    alertContainer.appendChild(alert);
+    
+    // Auto-dismiss after 3 seconds
+    setTimeout(() => {
+        alert.classList.remove('show');
+        setTimeout(() => {
+            alertContainer.removeChild(alert);
+        }, 150);
+    }, 3000);
+}
 </script> 

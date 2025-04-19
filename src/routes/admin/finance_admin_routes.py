@@ -9,6 +9,7 @@ from src.models.game_state import GameState
 from src.controllers.finance_controller import FinanceController
 from src.routes.decorators import admin_required
 from src.utils.errors import GameError
+from src.controllers.admin_controller import AdminController
 
 logger = logging.getLogger(__name__)
 finance_admin_bp = Blueprint('finance_admin', __name__, url_prefix='/finance')
@@ -16,6 +17,9 @@ finance_admin_bp = Blueprint('finance_admin', __name__, url_prefix='/finance')
 # Initialize the finance controller - this will be replaced with a function
 # that gets dependencies from app context
 finance_controller = None
+
+# Initialize the admin controller
+admin_controller = AdminController()
 
 def get_finance_controller():
     """Get finance controller with dependencies from app context"""
@@ -39,445 +43,462 @@ def get_financial_stats():
         logger.error(f"Error getting financial stats: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-@finance_admin_bp.route('/settings', methods=['GET', 'POST'])
+@finance_admin_bp.route('/settings', methods=['GET'])
 @admin_required
-def manage_bank_settings():
-    """Get or update bank settings"""
+def get_finance_settings():
+    """
+    Get current financial system settings.
+    
+    Returns settings for interest rates, loans, taxes, and other economic parameters.
+    """
     try:
-        if request.method == 'GET':
-            # Return current settings
-            return jsonify({
-                "success": True,
-                "interest_rate": get_finance_controller().game_state.loan_interest_rate,
-                "max_loan_amount": get_finance_controller().game_state.max_loan_amount,
-                "enable_automatic_fees": get_finance_controller().game_state.automatic_fees_enabled
-            })
+        result = admin_controller.get_finance_settings()
+        
+        if result.get('success'):
+            return jsonify(result), 200
         else:
-            # Update settings
-            data = request.json
-            
-            # Update interest rate if provided
-            if 'interest_rate' in data:
-                get_finance_controller().game_state.loan_interest_rate = float(data['interest_rate'])
-            
-            # Update max loan amount if provided
-            if 'max_loan_amount' in data:
-                get_finance_controller().game_state.max_loan_amount = int(data['max_loan_amount'])
-            
-            # Update automatic fees setting if provided
-            if 'enable_automatic_fees' in data:
-                get_finance_controller().game_state.automatic_fees_enabled = bool(data['enable_automatic_fees'])
-            
-            # Save changes
-            db.session.commit()
-            
-            logger.info(f"Bank settings updated: interest_rate={get_finance_controller().game_state.loan_interest_rate}, "
-                       f"max_loan_amount={get_finance_controller().game_state.max_loan_amount}, "
-                       f"automatic_fees={get_finance_controller().game_state.automatic_fees_enabled}")
-            
-            return jsonify({
-                "success": True,
-                "message": "Bank settings updated successfully"
-            })
+            return jsonify(result), 500
+    
     except Exception as e:
-        logger.error(f"Error managing bank settings: {str(e)}")
+        logger.error(f"Error getting finance settings: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
-@finance_admin_bp.route('/modify-player-cash', methods=['POST'])
+@finance_admin_bp.route('/settings', methods=['PUT'])
 @admin_required
-def adjust_player_money():
-    """Adjust a player's cash balance"""
+def update_finance_settings():
+    """
+    Update financial system settings.
+    
+    Request body may include:
+    - interest_rate: Bank interest rate
+    - loan_interest_rate: Loan interest rate
+    - income_tax_rate: Income tax rate
+    - property_tax_rate: Property tax rate
+    - loan_term_limits: Limits for loan terms
+    - bankruptcy_threshold: Threshold for declaring bankruptcy
+    - starting_cash: Starting cash for new players
+    - inflation_rate: Game inflation rate
+    """
+    try:
+        # Get update data from request
+        update_data = request.json
+        
+        if not update_data:
+            return jsonify({"success": False, "error": "Update data is required"}), 400
+        
+        # Call the controller method
+        result = admin_controller.update_finance_settings(update_data)
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    
+    except Exception as e:
+        logger.error(f"Error updating finance settings: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@finance_admin_bp.route('/modify-cash/<int:player_id>', methods=['POST'])
+@admin_required
+def modify_player_cash(player_id):
+    """
+    Modify a player's cash balance.
+    
+    Request body:
+    - amount: Amount to add or subtract (positive to add, negative to subtract)
+    - reason: Reason for the modification
+    - record_transaction: Whether to record this as a transaction (default: true)
+    """
     try:
         data = request.json
-        player_id = data.get('player_id')
+        
+        if not data:
+            return jsonify({"success": False, "error": "Cash modification data is required"}), 400
+        
         amount = data.get('amount')
         reason = data.get('reason', 'Admin adjustment')
+        record_transaction = data.get('record_transaction', True)
         
-        if not player_id or amount is None:
-            return jsonify({
-                "success": False,
-                "error": "Player ID and amount are required"
-            }), 400
+        if amount is None:
+            return jsonify({"success": False, "error": "Amount is required"}), 400
         
-        # Convert amount to int
-        try:
-            amount = int(amount)
-        except ValueError:
-            return jsonify({
-                "success": False,
-                "error": "Amount must be a valid number"
-            }), 400
+        # Call the controller method
+        result = admin_controller.modify_player_cash(player_id, amount, reason, record_transaction)
         
-        # Get the player
-        player = Player.query.get(player_id)
-        if not player:
-            return jsonify({
-                "success": False,
-                "error": "Player not found"
-            }), 404
-        
-        # Adjust player's cash
-        player.money += amount
-        
-        # Create transaction record
-        transaction = Transaction(
-            from_player_id=None if amount > 0 else player_id,  # From bank if adding, from player if subtracting
-            to_player_id=player_id if amount > 0 else None,  # To player if adding, to bank if subtracting
-            amount=abs(amount),
-            transaction_type="admin_adjustment",
-            description=reason,
-            timestamp=datetime.now()
-        )
-        
-        # Save changes
-        db.session.add(transaction)
-        db.session.commit()
-        
-        logger.info(f"Player {player.username} (ID: {player_id}) money adjusted by ${amount}. Reason: {reason}")
-        
-        return jsonify({
-            "success": True,
-            "player_id": player_id,
-            "player_name": player.username,
-            "adjustment": amount,
-            "new_balance": player.money,
-            "reason": reason,
-            "transaction_id": transaction.id
-        })
-    except Exception as e:
-        logger.error(f"Error adjusting player money: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@finance_admin_bp.route('/community-fund', methods=['GET', 'POST'])
-@admin_required
-def manage_community_fund():
-    """Get or update community fund balance"""
-    try:
-        if request.method == 'GET':
-            # Return current balance
-            return jsonify({
-                "success": True,
-                "balance": get_finance_controller().game_state.community_fund
-            })
+        if result.get('success'):
+            return jsonify(result), 200
         else:
-            # Update community fund
-            data = request.json
-            action = data.get('action')
-            amount = data.get('amount')
-            reason = data.get('reason', 'Admin action')
-            
-            if not action:
-                return jsonify({
-                    "success": False,
-                    "error": "Action is required (add, withdraw, or reset)"
-                }), 400
-                
-            if action not in ['add', 'withdraw', 'reset']:
-                return jsonify({
-                    "success": False,
-                    "error": "Invalid action. Must be add, withdraw, or reset"
-                }), 400
-                
-            # For add or withdraw, amount is required
-            if action in ['add', 'withdraw'] and not amount:
-                return jsonify({
-                    "success": False,
-                    "error": "Amount is required for add or withdraw actions"
-                }), 400
-                
-            # Convert amount to int if provided
-            if amount:
-                try:
-                    amount = int(amount)
-                except ValueError:
-                    return jsonify({
-                        "success": False,
-                        "error": "Amount must be a valid number"
-                    }), 400
-            
-            # Update community fund based on action
-            old_balance = get_finance_controller().game_state.community_fund
-            if action == 'add':
-                get_finance_controller().game_state.community_fund += amount
-                db.session.commit()
-                logger.info(f"Added ${amount} to community fund. Reason: {reason}")
-            elif action == 'withdraw':
-                if get_finance_controller().game_state.community_fund < amount:
-                    return jsonify({
-                        "success": False,
-                        "error": "Not enough funds in community fund",
-                        "requested": amount,
-                        "available": get_finance_controller().game_state.community_fund
-                    }), 400
-                get_finance_controller().game_state.community_fund -= amount
-                db.session.commit()
-                logger.info(f"Withdrew ${amount} from community fund. Reason: {reason}")
-            elif action == 'reset':
-                get_finance_controller().game_state.community_fund = 0
-                db.session.commit()
-                logger.info(f"Reset community fund to zero. Reason: {reason}")
-            
-            return jsonify({
-                "success": True,
-                "action": action,
-                "old_balance": old_balance,
-                "new_balance": get_finance_controller().game_state.community_fund,
-                "amount": amount if action != 'reset' else old_balance
-            })
+            return jsonify(result), 400
+    
     except Exception as e:
-        logger.error(f"Error managing community fund: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@finance_admin_bp.route('/loans', methods=['GET'])
-@admin_required
-def get_active_loans():
-    """Get all active loans"""
-    try:
-        loans = get_finance_controller().get_active_loans()
-        return jsonify({"success": True, "loans": loans})
-    except Exception as e:
-        logger.error(f"Error getting active loans: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@finance_admin_bp.route('/loans/create', methods=['POST'])
-@admin_required
-def create_loan():
-    """Create a new loan for a player"""
-    try:
-        data = request.json
-        player_id = data.get('player_id')
-        amount = data.get('amount')
-        interest_rate = data.get('interest_rate')
-        term = data.get('term')
-        reason = data.get('reason', 'Admin issued loan')
-        
-        if not player_id or not amount or interest_rate is None or not term:
-            return jsonify({
-                "success": False,
-                "error": "Player ID, amount, interest rate, and term are required"
-            }), 400
-        
-        # Convert to proper types
-        try:
-            amount = int(amount)
-            interest_rate = float(interest_rate) / 100  # Convert from percentage to decimal
-            term = int(term)
-        except ValueError:
-            return jsonify({
-                "success": False,
-                "error": "Invalid number format"
-            }), 400
-        
-        # Get the player
-        player = Player.query.get(player_id)
-        if not player:
-            return jsonify({
-                "success": False,
-                "error": "Player not found"
-            }), 404
-        
-        # Get current game state
-        game_state = GameState.get_instance()
-        current_lap = game_state.current_lap if game_state else 0
-        
-        # Create the loan
-        loan = Loan(
-            player_id=player_id,
-            amount=amount,
-            interest_rate=interest_rate,
-            length_laps=term,
-            issued_lap=current_lap,
-            status='active',
-            loan_type='loan',
-            description=reason
-        )
-        
-        # Give money to player
-        player.money += amount
-        
-        # Create transaction record
-        transaction = Transaction(
-            from_player_id=None,  # From bank
-            to_player_id=player_id,
-            amount=amount,
-            transaction_type="loan_issued",
-            description=reason,
-            timestamp=datetime.now()
-        )
-        
-        # Save changes
-        db.session.add(loan)
-        db.session.add(transaction)
-        db.session.commit()
-        
-        logger.info(f"Loan created for player {player.username} (ID: {player_id}): "
-                   f"${amount} at {interest_rate*100:.1f}% for {term} rounds")
-        
-        return jsonify({
-            "success": True,
-            "loan_id": loan.id,
-            "player_id": player_id,
-            "player_name": player.username,
-            "amount": amount,
-            "interest_rate": interest_rate,
-            "term": term,
-            "reason": reason
-        })
-    except Exception as e:
-        logger.error(f"Error creating loan: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@finance_admin_bp.route('/loans/<int:loan_id>/pay', methods=['POST'])
-@admin_required
-def mark_loan_paid(loan_id):
-    """Mark a loan as paid"""
-    try:
-        result = get_finance_controller().mark_loan_paid(loan_id)
-        return jsonify(result)
-    except GameError as e:
-        logger.error(f"Game error marking loan {loan_id} as paid: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 400
-    except Exception as e:
-        logger.error(f"Error marking loan {loan_id} as paid: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@finance_admin_bp.route('/loans/<int:loan_id>/extend', methods=['POST'])
-@admin_required
-def extend_loan(loan_id):
-    """Extend a loan by additional rounds"""
-    try:
-        data = request.json
-        additional_rounds = data.get('additional_rounds')
-        
-        if not additional_rounds:
-            return jsonify({
-                "success": False,
-                "error": "Additional rounds are required"
-            }), 400
-        
-        try:
-            additional_rounds = int(additional_rounds)
-        except ValueError:
-            return jsonify({
-                "success": False,
-                "error": "Additional rounds must be a valid number"
-            }), 400
-        
-        # Get the loan
-        loan = Loan.query.get(loan_id)
-        if not loan:
-            return jsonify({
-                "success": False,
-                "error": "Loan not found"
-            }), 404
-        
-        # Get the player
-        player = Player.query.get(loan.player_id)
-        if not player:
-            return jsonify({
-                "success": False,
-                "error": "Player not found"
-            }), 404
-        
-        # Extend the loan
-        old_length = loan.length_laps
-        loan.length_laps += additional_rounds
-        db.session.commit()
-        
-        logger.info(f"Loan {loan_id} for player {player.username} (ID: {loan.player_id}) "
-                   f"extended from {old_length} to {loan.length_laps} rounds")
-        
-        # Get updated due date
-        game_state = GameState.get_instance()
-        current_lap = game_state.current_lap if game_state else 0
-        due_lap = loan.issued_lap + loan.length_laps
-        
-        return jsonify({
-            "success": True,
-            "loan_id": loan_id,
-            "player_id": loan.player_id,
-            "player_name": player.username,
-            "old_length": old_length,
-            "new_length": loan.length_laps,
-            "additional_rounds": additional_rounds,
-            "new_due_date": f"Round {due_lap}",
-            "rounds_left": max(0, due_lap - current_lap)
-        })
-    except Exception as e:
-        logger.error(f"Error extending loan: {str(e)}")
+        logger.error(f"Error modifying cash for player {player_id}: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 @finance_admin_bp.route('/transactions', methods=['GET'])
 @admin_required
 def get_transactions():
-    """Get recent transactions"""
+    """
+    Get transaction history with filtering options.
+    
+    Query parameters:
+    - player_id: Filter by player ID
+    - type: Filter by transaction type
+    - min_amount: Minimum transaction amount
+    - max_amount: Maximum transaction amount
+    - start_date: Transactions after this date
+    - end_date: Transactions before this date
+    - limit: Maximum number of transactions to return (default: 100)
+    - offset: Offset for pagination (default: 0)
+    """
     try:
-        # Get limit parameter (default 20)
-        limit = request.args.get('limit', 20, type=int)
+        # Get filter parameters
+        filters = {}
         
-        # Get recent transactions
-        transactions = Transaction.query.order_by(Transaction.timestamp.desc()).limit(limit).all()
+        if 'player_id' in request.args:
+            filters['player_id'] = int(request.args.get('player_id'))
         
-        transaction_data = []
-        for t in transactions:
-            # Get player names
-            from_player = Player.query.get(t.from_player_id) if t.from_player_id else None
-            to_player = Player.query.get(t.to_player_id) if t.to_player_id else None
-            
-            from_name = from_player.username if from_player else "Bank"
-            to_name = to_player.username if to_player else "Bank"
-            
-            # Format time
-            time_str = t.timestamp.strftime("%I:%M %p") if t.timestamp else "Unknown"
-            
-            transaction_data.append({
-                "id": t.id,
-                "time": time_str,
-                "type": t.transaction_type,
-                "from": from_name,
-                "to": to_name,
-                "amount": t.amount,
-                "reason": t.description
-            })
+        if 'type' in request.args:
+            filters['type'] = request.args.get('type')
         
-        return jsonify({
-            "success": True,
-            "transactions": transaction_data
-        })
+        if 'min_amount' in request.args:
+            filters['min_amount'] = float(request.args.get('min_amount'))
+        
+        if 'max_amount' in request.args:
+            filters['max_amount'] = float(request.args.get('max_amount'))
+        
+        if 'start_date' in request.args:
+            filters['start_date'] = request.args.get('start_date')
+        
+        if 'end_date' in request.args:
+            filters['end_date'] = request.args.get('end_date')
+        
+        limit = int(request.args.get('limit', 100))
+        offset = int(request.args.get('offset', 0))
+        
+        # Call the controller method
+        result = admin_controller.get_transactions(filters, limit, offset)
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 500
+    
     except Exception as e:
-        logger.error(f"Error getting transactions: {str(e)}")
+        logger.error(f"Error getting transactions: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@finance_admin_bp.route('/create-transaction', methods=['POST'])
+@admin_required
+def create_transaction():
+    """
+    Create a new transaction between players or between player and bank.
+    
+    Request body:
+    - from_player_id: Source player ID (null for bank)
+    - to_player_id: Destination player ID (null for bank)
+    - amount: Transaction amount
+    - transaction_type: Type of transaction
+    - description: Description of the transaction
+    """
+    try:
+        data = request.json
+        
+        if not data:
+            return jsonify({"success": False, "error": "Transaction data is required"}), 400
+        
+        from_player_id = data.get('from_player_id')
+        to_player_id = data.get('to_player_id')
+        amount = data.get('amount')
+        transaction_type = data.get('transaction_type', 'admin_transfer')
+        description = data.get('description', 'Admin created transaction')
+        
+        if amount is None:
+            return jsonify({"success": False, "error": "Amount is required"}), 400
+        
+        if from_player_id is None and to_player_id is None:
+            return jsonify({"success": False, "error": "At least one player ID is required"}), 400
+        
+        # Call the controller method
+        result = admin_controller.create_transaction(
+            from_player_id,
+            to_player_id,
+            amount,
+            transaction_type,
+            description
+        )
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    
+    except Exception as e:
+        logger.error(f"Error creating transaction: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@finance_admin_bp.route('/reset-economy', methods=['POST'])
+@admin_required
+def reset_economy():
+    """
+    Reset the economy to a baseline state.
+    
+    Request body:
+    - reset_player_balances: Whether to reset player cash balances to starting amount (default: false)
+    - reset_bank_balance: Whether to reset bank balance (default: false)
+    - reset_property_values: Whether to reset property values (default: false)
+    - confirmation: Must be set to "CONFIRM_RESET" for safety
+    """
+    try:
+        data = request.json
+        
+        if not data:
+            return jsonify({"success": False, "error": "Reset data is required"}), 400
+        
+        confirmation = data.get('confirmation')
+        
+        if confirmation != "CONFIRM_RESET":
+            return jsonify({"success": False, "error": "Confirmation string 'CONFIRM_RESET' is required"}), 400
+        
+        reset_player_balances = data.get('reset_player_balances', False)
+        reset_bank_balance = data.get('reset_bank_balance', False)
+        reset_property_values = data.get('reset_property_values', False)
+        
+        # Call the controller method
+        result = admin_controller.reset_economy(
+            reset_player_balances,
+            reset_bank_balance,
+            reset_property_values
+        )
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    
+    except Exception as e:
+        logger.error(f"Error resetting economy: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 @finance_admin_bp.route('/audit', methods=['POST'])
 @admin_required
-def trigger_bank_audit():
-    """Trigger a bank audit to verify all accounts and transactions"""
+def audit_economic_system():
+    """
+    Perform a full audit of the economic system.
+    
+    Checks for inconsistencies in player balances, transactions, and property values.
+    
+    Request body (optional):
+    - fix_issues: Whether to attempt to fix discovered issues (default: false)
+    """
     try:
-        audit_result = get_finance_controller().perform_bank_audit()
-        return jsonify(audit_result)
+        data = request.json or {}
+        fix_issues = data.get('fix_issues', False)
+        
+        # Call the controller method
+        result = admin_controller.audit_economic_system(fix_issues)
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 500
+    
     except Exception as e:
-        logger.error(f"Error during bank audit: {str(e)}")
+        logger.error(f"Error auditing economic system: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
-@finance_admin_bp.route('/overview', methods=['GET'])
+@finance_admin_bp.route('/loans', methods=['GET'])
 @admin_required
-def get_finance_overview():
-    """Get basic financial overview for the admin dashboard"""
+def get_all_loans():
+    """
+    Get a list of all active loans in the game.
+    
+    Query parameters:
+    - player_id: Filter by player ID
+    - status: Filter by loan status
+    """
     try:
-        # Get financial stats from controller
-        stats = get_finance_controller().get_financial_stats()
+        # Get filter parameters
+        filters = {}
         
-        # Get current interest rates
-        rates = get_finance_controller().get_interest_rates()
+        if 'player_id' in request.args:
+            filters['player_id'] = int(request.args.get('player_id'))
         
-        # Combine data for overview
-        overview = {
-            "success": True,
-            "stats": stats,
-            "rates": rates
-        }
+        if 'status' in request.args:
+            filters['status'] = request.args.get('status')
         
-        return jsonify(overview)
+        # Call the controller method
+        result = admin_controller.get_all_loans(filters)
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 500
+    
     except Exception as e:
-        logger.error(f"Error getting finance overview: {str(e)}", exc_info=True)
+        logger.error(f"Error getting all loans: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@finance_admin_bp.route('/loans/<int:loan_id>', methods=['PUT'])
+@admin_required
+def modify_loan(loan_id):
+    """
+    Modify an existing loan's terms.
+    
+    Request body may include:
+    - interest_rate: New interest rate
+    - remaining_amount: New remaining amount
+    - term_remaining: New remaining term (in turns)
+    - status: New loan status
+    """
+    try:
+        data = request.json
+        
+        if not data:
+            return jsonify({"success": False, "error": "Loan modification data is required"}), 400
+        
+        # Call the controller method
+        result = admin_controller.modify_loan(loan_id, data)
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    
+    except Exception as e:
+        logger.error(f"Error modifying loan {loan_id}: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@finance_admin_bp.route('/loans', methods=['POST'])
+@admin_required
+def create_loan():
+    """
+    Create a new loan for a player.
+    
+    Request body:
+    - player_id: ID of the player receiving the loan
+    - amount: Loan amount
+    - interest_rate: Interest rate
+    - term: Loan term in turns
+    - reason: Reason for the loan
+    """
+    try:
+        data = request.json
+        
+        if not data:
+            return jsonify({"success": False, "error": "Loan data is required"}), 400
+        
+        player_id = data.get('player_id')
+        amount = data.get('amount')
+        interest_rate = data.get('interest_rate')
+        term = data.get('term')
+        reason = data.get('reason', 'Admin created loan')
+        
+        if player_id is None:
+            return jsonify({"success": False, "error": "Player ID is required"}), 400
+        
+        if amount is None:
+            return jsonify({"success": False, "error": "Amount is required"}), 400
+        
+        if interest_rate is None:
+            return jsonify({"success": False, "error": "Interest rate is required"}), 400
+        
+        if term is None:
+            return jsonify({"success": False, "error": "Term is required"}), 400
+        
+        # Call the controller method
+        result = admin_controller.create_loan(
+            player_id,
+            amount,
+            interest_rate,
+            term,
+            reason
+        )
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    
+    except Exception as e:
+        logger.error(f"Error creating loan: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@finance_admin_bp.route('/audit-player/<int:player_id>', methods=['POST'])
+@admin_required
+def audit_player(player_id):
+    """
+    Perform a financial audit on a specific player.
+    
+    Checks for inconsistencies in the player's balance, properties, and transaction history.
+    
+    Request body (optional):
+    - fix_issues: Whether to attempt to fix discovered issues (default: false)
+    """
+    try:
+        data = request.json or {}
+        fix_issues = data.get('fix_issues', False)
+        
+        # Call the controller method
+        result = admin_controller.audit_player_finances(player_id, fix_issues)
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    
+    except Exception as e:
+        logger.error(f"Error auditing player {player_id}: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@finance_admin_bp.route('/debt-collection', methods=['POST'])
+@admin_required
+def trigger_debt_collection():
+    """
+    Trigger a debt collection cycle.
+    
+    Forces all outstanding debts to be processed, including loan payments, property taxes, etc.
+    
+    Request body (optional):
+    - force_action: Whether to force collection even if players can't pay (default: false)
+    """
+    try:
+        data = request.json or {}
+        force_action = data.get('force_action', False)
+        
+        # Call the controller method
+        result = admin_controller.trigger_debt_collection(force_action)
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    
+    except Exception as e:
+        logger.error(f"Error triggering debt collection: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@finance_admin_bp.route('/economy-stats', methods=['GET'])
+@admin_required
+def get_economy_stats():
+    """
+    Get statistics about the game's economy.
+    
+    Returns information about cash distribution, property values, bank reserves, etc.
+    
+    Query parameters:
+    - time_period: Period for trend data (day, week, month, all)
+    """
+    try:
+        time_period = request.args.get('time_period', 'all')
+        
+        # Call the controller method
+        result = admin_controller.get_economy_stats(time_period)
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 500
+    
+    except Exception as e:
+        logger.error(f"Error getting economy stats: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500 

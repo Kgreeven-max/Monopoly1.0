@@ -24,6 +24,9 @@ import eventlet
 # Set up logger
 logger = logging.getLogger(__name__)
 
+# Global dictionary to track connected players, can be imported by other modules
+connected_players = {}
+
 class SocketController:
     """Controller managing game-specific socket events (e.g., game actions, chat)."""
     

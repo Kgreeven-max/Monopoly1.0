@@ -76,6 +76,10 @@ class FinanceController:
         
         # Give cash to player
         player.cash += amount
+        
+        # Update player's credit score
+        player.update_credit_score('loan_creation', amount, True)
+        
         db.session.add(player)
         db.session.commit()
         
@@ -99,13 +103,15 @@ class FinanceController:
                 "loan_id": loan.id,
                 "amount": amount,
                 "interest_rate": interest_rate,
-                "length_laps": length_laps
+                "length_laps": length_laps,
+                "credit_score": player.credit_score
             })
             
         return {
             "success": True,
             "loan": loan.to_dict(),
-            "transaction_id": transaction.id
+            "transaction_id": transaction.id,
+            "credit_score": player.credit_score
         }
     
     def repay_loan(self, player_id: int, pin: str, loan_id: int, amount: Optional[int] = None) -> Dict:
@@ -165,6 +171,15 @@ class FinanceController:
         if repayment_result["success"]:
             # Deduct from player's cash
             player.cash -= amount
+            
+            # Update player's credit score
+            if repayment_result["loan_status"] == "paid":
+                # Full repayment is better for credit
+                player.update_credit_score('loan_payment', amount, True)
+            else:
+                # Partial payment still helps credit
+                player.update_credit_score('partial_payment', amount, True)
+                
             db.session.add(player)
             
             # Get current game state
@@ -197,10 +212,12 @@ class FinanceController:
                     "player_name": player.username,
                     "loan_id": loan_id,
                     "amount_paid": repayment_result["amount_paid"],
-                    "loan_status": repayment_result["loan_status"]
+                    "loan_status": repayment_result["loan_status"],
+                    "credit_score": player.credit_score
                 })
                 
             repayment_result["transaction_id"] = transaction.id
+            repayment_result["credit_score"] = player.credit_score
             
         return repayment_result
     
@@ -501,46 +518,61 @@ class FinanceController:
         }
     
     def get_interest_rates(self) -> Dict:
-        """Get current interest rates for loans and CDs
+        """Get current interest rates for loans, CDs, and HELOCs
         
         Returns:
             Dictionary with current interest rates
         """
+        # Get the current game state
         game_state = GameState.query.first()
-        economic_state = game_state.inflation_state if game_state else "normal"
         
-        # Base rates by economic state
+        # Base rates (can be adjusted by economic phase)
         base_rates = {
-            "recession": 0.03,    # 3% during recession
-            "normal": 0.05,       # 5% during normal conditions
-            "growth": 0.07,       # 7% during growth
-            "boom": 0.10          # 10% during boom
+            "loan": {
+                "excellent_credit": 0.045,  # 4.5% for excellent credit
+                "good_credit": 0.06,  # 6% for good credit
+                "standard": 0.08,  # 8% standard rate
+                "poor_credit": 0.12,  # 12% for poor credit
+            },
+            "cd": {
+                "short_term": 0.02,  # 2% for 3-lap CDs
+                "medium_term": 0.03,  # 3% for 5-lap CDs
+                "long_term": 0.04,  # 4% for 7-lap CDs
+            },
+            "heloc": {
+                "undeveloped": 0.07,  # 7% for undeveloped properties
+                "standard": 0.055,  # 5.5% standard rate
+                "developed": 0.05,  # 5% for well-developed properties
+            }
         }
         
-        base_rate = base_rates.get(economic_state, 0.05)
+        # Adjust rates based on economic phase
+        if game_state and game_state.inflation_state:
+            phase = game_state.inflation_state
+            
+            # Apply economic phase adjustments
+            phase_adjustments = {
+                "recession": -0.01,  # Lower rates in recession
+                "normal": 0,  # No adjustment in normal phase
+                "growth": 0.005,  # Slightly higher in growth
+                "boom": 0.01  # Higher in boom
+            }
+            
+            adjustment = phase_adjustments.get(phase, 0)
+            
+            # Apply adjustment to all rates
+            for category in base_rates:
+                for rate_name in base_rates[category]:
+                    base_rates[category][rate_name] += adjustment
+                    
+                    # Ensure minimum rates
+                    base_rates[category][rate_name] = max(0.01, base_rates[category][rate_name])
         
-        # Calculate specific rates
         return {
             "success": True,
-            "economic_state": economic_state,
-            "base_rate": base_rate,
-            "rates": {
-                "loan": {
-                    "standard": round(base_rate + 0.02, 3),         # Standard loan
-                    "poor_credit": round(base_rate + 0.05, 3),      # Poor credit premium
-                    "good_credit": round(base_rate, 3)              # Good credit discount
-                },
-                "cd": {
-                    "short_term": round(base_rate - 0.01, 3),       # 3-lap CD
-                    "medium_term": round(base_rate, 3),             # 5-lap CD
-                    "long_term": round(base_rate + 0.01, 3)         # 7-lap CD
-                },
-                "heloc": {
-                    "standard": round(base_rate - 0.01, 3),         # Standard HELOC
-                    "undeveloped": round(base_rate, 3),             # Undeveloped property
-                    "developed": round(base_rate - 0.02, 3)         # Developed property
-                }
-            }
+            "rates": base_rates,
+            "economic_phase": game_state.inflation_state if game_state else "normal",
+            "last_updated": datetime.now().isoformat()
         }
     
     def get_player_loans(self, player_id: int, pin: str = None) -> Dict:
@@ -746,16 +778,20 @@ class FinanceController:
             db.session.add(prop)
             
         # 4. Reset player cash
-        starting_cash = game_state.settings.get("starting_cash", 1500)
+        starting_cash = getattr(GameState.query.first(), 'settings', {}).get("starting_cash", 1500)
         player.cash = starting_cash
         player.bankruptcy_count += 1
+        
+        # 5. Severely damage credit score
+        player.update_credit_score('bankruptcy', total_debt, True)
+        
         db.session.add(player)
         
-        # 5. Get current game state for transaction
+        # 6. Get current game state for transaction
         game_state = GameState.query.first()
         current_lap = game_state.current_lap if game_state else 0
         
-        # 6. Create transaction record
+        # 7. Create transaction record
         transaction = Transaction(
             from_player_id=player_id,
             to_player_id=None,  # To bank
@@ -774,7 +810,9 @@ class FinanceController:
                 "player_name": player.username,
                 "total_debt": total_debt,
                 "properties_lost": len(properties),
-                "new_cash_balance": starting_cash
+                "new_cash_balance": starting_cash,
+                "bankruptcy_count": player.bankruptcy_count,
+                "credit_score": player.credit_score
             })
             
         return {
@@ -785,7 +823,9 @@ class FinanceController:
             "cds_lost": len(cds),
             "cd_value": cd_total,
             "new_cash_balance": starting_cash,
-            "transaction_id": transaction.id
+            "transaction_id": transaction.id,
+            "bankruptcy_count": player.bankruptcy_count,
+            "credit_score": player.credit_score
         }
     
     def _is_eligible_for_loan(self, player: Player, amount: int) -> bool:
@@ -829,21 +869,44 @@ class FinanceController:
         # Get current interest rates
         rates = self.get_interest_rates()["rates"]["loan"]
         
-        # Start with standard rate
-        rate = rates["standard"]
+        # Determine base rate based on credit score
+        credit_rating = player.get_credit_rating()
         
-        # Adjust based on bankruptcy history
-        if player.bankruptcy_count > 0:
-            rate = rates["poor_credit"]
-        elif player.cash > 2000:  # Good cash reserves
+        if credit_rating == "excellent":
+            rate = rates.get("excellent_credit", rates["good_credit"] - 0.005)
+        elif credit_rating == "good":
             rate = rates["good_credit"]
+        elif credit_rating == "fair":
+            rate = rates["standard"]
+        else:  # poor credit
+            rate = rates["poor_credit"]
+            
+        # Add penalty for bankruptcy history
+        if player.bankruptcy_count > 0:
+            rate += 0.01 * min(player.bankruptcy_count, 3)  # Maximum +3% for 3+ bankruptcies
             
         # Small adjustment based on loan amount
         # (larger loans have slightly higher rates)
         if amount > 1000:
             rate += 0.005
+        if amount > 2000:
+            rate += 0.005  # Additional 0.5% for very large loans
             
-        return rate
+        # Get economic factors
+        game_state = GameState.query.first()
+        if game_state and hasattr(game_state, 'inflation_state'):
+            # Economic state affects rates
+            economic_adjustments = {
+                "recession": -0.005,  # Lower rates during recession
+                "normal": 0,
+                "growth": 0.005,  # Higher rates during growth
+                "boom": 0.01  # Higher rates during boom
+            }
+            
+            rate += economic_adjustments.get(game_state.inflation_state, 0)
+        
+        # Ensure minimum rate
+        return max(0.01, rate)  # Minimum 1% interest
     
     def _calculate_cd_interest_rate(self, term_length: int) -> float:
         """Calculate interest rate for a CD based on term length and economic conditions

@@ -1,0 +1,20 @@
+{
+    "ADAPTIVE_DIFFICULTY_ENABLED": true,
+    "ADAPTIVE_DIFFICULTY_INTERVAL": 15,
+    "ADMIN_KEY": "pinopoly-admin",
+    "DATABASE_PATH": "pinopoly.db",
+    "DEBUG": false,
+    "DISPLAY_KEY": "pinopoly-display",
+    "ECONOMIC_CYCLE_ENABLED": true,
+    "ECONOMIC_CYCLE_INTERVAL": 5,
+    "FREE_PARKING_FUND": true,
+    "POLICE_PATROL_ENABLED": true,
+    "POLICE_PATROL_INTERVAL": 45,
+    "PORT": 5000,
+    "PROPERTY_VALUES_FOLLOW_ECONOMY": true,
+    "REMOTE_PLAY_ENABLED": false,
+    "REMOTE_PLAY_TIMEOUT": 60,
+    "SECRET_KEY": "pinopoly-development-key",
+    "SQLALCHEMY_DATABASE_URI": "sqlite:///pinopoly.sqlite",
+    "SQLALCHEMY_TRACK_MODIFICATIONS": false
+}

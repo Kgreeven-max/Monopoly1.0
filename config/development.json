@@ -1,0 +1,7 @@
+{
+    "DEBUG": true,
+    "SECRET_KEY": "pinopoly-development-only-key",
+    "REMOTE_PLAY_ENABLED": true,
+    "REMOTE_PLAY_TIMEOUT": 120,
+    "ECONOMIC_CYCLE_INTERVAL": 2
+} 

@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi-nopoly Admin - Bot Management</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .bot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .bot-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .bot-stat {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .bot-label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .bot-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .bot-table th, .bot-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .bot-table th {
+            background-color: #f2f2f2;
+        }
+        
+        .bot-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .bot-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .tabs {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+        }
+        
+        .tabs button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+        }
+        
+        .tabs button:hover {
+            background-color: #ddd;
+        }
+        
+        .tabs button.active {
+            background-color: #ccc;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 8px;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: black;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .strategy-section {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .strategy-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .strategy-name {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .strategy-description {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .slider-container {
+            margin-bottom: 10px;
+        }
+        
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .slider-value {
+            display: inline-block;
+            width: 30px;
+            text-align: right;
+        }
+        
+        .activity-log {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 20px;
+            font-family: monospace;
+            background-color: #f9f9f9;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px dotted #ddd;
+            padding-bottom: 5px;
+        }
+        
+        .log-time {
+            color: #999;
+            font-size: 0.8em;
+        }
+        
+        .log-message {
+            margin-left: 10px;
+        }
+        
+        .performance-chart {
+            height: 300px;
+            margin-top: 20px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 10px;
+        }
+        
+        .badge-conservative {
+            background-color: #b8e0d2;
+            color: #2d6a4f;
+        }
+        
+        .badge-aggressive {
+            background-color: #f7cad0;
+            color: #a4133c;
+        }
+        
+        .badge-strategic {
+            background-color: #bbd0ff;
+            color: #003566;
+        }
+        
+        .badge-opportunistic {
+            background-color: #ffe5d9;
+            color: #d62828;
+        }
+        
+        .difficulty-easy {
+            color: #2d6a4f;
+        }
+        
+        .difficulty-normal {
+            color: #3a86ff;
+        }
+        
+        .difficulty-hard {
+            color: #d62828;
+        }
+        
+        .bot-detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-robot"></i> Pi-nopoly Admin - Bot Management</h1>
+            <nav>
+                <a href="/admin" class="button"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <a href="/admin_player" class="button"><i class="fas fa-users"></i> Players</a>
+                <a href="/admin_bot" class="button active"><i class="fas fa-robot"></i> Bots</a>
+                <a href="/admin_crime" class="button"><i class="fas fa-shield-alt"></i> Crime</a>
+                <a href="/admin_game_modes" class="button"><i class="fas fa-gamepad"></i> Game Modes</a>
+                <a href="/admin_remote_play" class="button"><i class="fas fa-wifi"></i> Remote Play</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="tabs">
+                <button class="tablink active" onclick="openTab(event, 'overview')">Bot Overview</button>
+                <button class="tablink" onclick="openTab(event, 'management')">Bot Management</button>
+                <button class="tablink" onclick="openTab(event, 'strategies')">Bot Strategies</button>
+                <button class="tablink" onclick="openTab(event, 'activity')">Bot Activity</button>
+                <button class="tablink" onclick="openTab(event, 'performance')">Bot Performance</button>
+            </div>
+            
+            <!-- Bot Overview Tab -->
+            <div id="overview" class="tab-content active">
+                <h2>Bot Overview</h2>
+                <div class="bot-grid">
+                    <div class="bot-card">
+                        <div class="bot-label">Total Bots</div>
+                        <div class="bot-stat" id="total-bots">-</div>
+                    </div>
+                    <div class="bot-card">
+                        <div class="bot-label">Active Bots</div>
+                        <div class="bot-stat" id="active-bots">-</div>
+                    </div>
+                    <div class="bot-card">
+                        <div class="bot-label">Average Performance</div>
+                        <div class="bot-stat" id="avg-performance">-</div>
+                    </div>
+                    <div class="bot-card">
+                        <div class="bot-label">Bot Win Rate</div>
+                        <div class="bot-stat" id="bot-win-rate">-</div>
+                    </div>
+                </div>
+                
+                <div class="search-box">
+                    <input type="text" id="bot-search" placeholder="Search bots...">
+                    <button onclick="searchBots()">Search</button>
+                </div>
+                
+                <table class="bot-table" id="bots-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Difficulty</th>
+                            <th>Cash</th>
+                            <th>Properties</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bots-list">
+                        <!-- Bot rows will be populated dynamically -->
+                    </tbody>
+                </table>
+                
+                <div class="bot-actions">
+                    <button class="button" onclick="openAddBotModal()">Add Bot</button>
+                    <button class="button" onclick="addMultipleBots()">Add Multiple Bots</button>
+                    <button class="button danger" onclick="removeAllBots()">Remove All Bots</button>
+                </div>
+                
+                <div class="bot-type-distribution">
+                    <h3>Bot Type Distribution</h3>
+                    <canvas id="bot-type-chart" width="400" height="200"></canvas>
+                </div>
+            </div>
+            
+            <!-- Bot Management Tab -->
+            <div id="management" class="tab-content">
+                <h2>Bot Management</h2>
+                
+                <div class="management-section">
+                    <h3>Selected Bot: <span id="selected-bot-name">None</span></h3>
+                    
+                    <div class="bot-selector">
+                        <select id="bot-selector" onchange="loadBotDetails()">
+                            <option value="">-- Select Bot --</option>
+                            <!-- Options will be populated dynamically -->
+                        </select>
+                        <button class="button" onclick="refreshBotList()">Refresh List</button>
+                    </div>
+                    
+                    <div class="bot-details" id="bot-details-container">
+                        <p>Select a bot from the dropdown to view and manage details.</p>
+                    </div>
+                    
+                    <div class="management-actions" id="bot-management-actions">
+                        <button class="button" onclick="modifyBotCash()">Modify Cash</button>
+                        <button class="button" onclick="changeBotStrategy()">Change Strategy</button>
+                        <button class="button" onclick="toggleBotActive()">Toggle Active State</button>
+                        <button class="button danger" onclick="removeBot()">Remove Bot</button>
+                    </div>
+                </div>
+                
+                <div class="bot-configuration">
+                    <h3>Bot Configuration</h3>
+                    
+                    <div class="configuration-form">
+                        <form id="bot-config-form">
+                            <div class="form-group">
+                                <label for="bot-name">Bot Name:</label>
+                                <input type="text" id="bot-name" disabled>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="bot-type">Bot Type:</label>
+                                <select id="bot-type" disabled>
+                                    <option value="conservative">Conservative</option>
+                                    <option value="aggressive">Aggressive</option>
+                                    <option value="strategic">Strategic</option>
+                                    <option value="opportunistic">Opportunistic</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="bot-difficulty">Difficulty:</label>
+                                <select id="bot-difficulty">
+                                    <option value="easy">Easy</option>
+                                    <option value="normal">Normal</option>
+                                    <option value="hard">Hard</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="bot-risk-tolerance">Risk Tolerance:</label>
+                                <input type="range" id="bot-risk-tolerance" min="0" max="100" step="5">
+                                <span id="risk-tolerance-value">50</span>%
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="bot-trade-willingness">Trade Willingness:</label>
+                                <input type="range" id="bot-trade-willingness" min="0" max="100" step="5">
+                                <span id="trade-willingness-value">50</span>%
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="bot-development-threshold">Development Threshold:</label>
+                                <input type="range" id="bot-development-threshold" min="0" max="100" step="5">
+                                <span id="development-threshold-value">50</span>%
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="bot-reaction-speed">Reaction Speed (ms):</label>
+                                <input type="number" id="bot-reaction-speed" min="500" max="5000" step="100" value="1000">
+                            </div>
+                            
+                            <button type="submit" class="button">Save Configuration</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bot Strategies Tab -->
+            <div id="strategies" class="tab-content">
+                <h2>Bot Strategies</h2>
+                
+                <div class="strategy-section">
+                    <div class="strategy-header">
+                        <div class="strategy-name">Conservative Strategy</div>
+                        <div class="strategy-actions">
+                            <button class="button" onclick="editStrategy('conservative')">Edit</button>
+                            <button class="button" onclick="testStrategy('conservative')">Test</button>
+                        </div>
+                    </div>
+                    
+                    <div class="strategy-description">
+                        Conservative bots focus on maintaining cash reserves and making safe investments.
+                        They prefer to avoid risky trades and only develop properties when they have a strong cash position.
+                    </div>
+                    
+                    <div class="strategy-parameters">
+                        <div class="slider-container">
+                            <label>Property Purchase Threshold: <span class="slider-value" id="conservative-purchase-value">70</span>%</label>
+                            <input type="range" min="0" max="100" value="70" class="slider" id="conservative-purchase" disabled>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label>Cash Reserve Target: <span class="slider-value" id="conservative-reserve-value">50</span>%</label>
+                            <input type="range" min="0" max="100" value="50" class="slider" id="conservative-reserve" disabled>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label>Development Threshold: <span class="slider-value" id="conservative-development-value">80</span>%</label>
+                            <input type="range" min="0" max="100" value="80" class="slider" id="conservative-development" disabled>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label>Trade Acceptance: <span class="slider-value" id="conservative-trade-value">30</span>%</label>
+                            <input type="range" min="0" max="100" value="30" class="slider" id="conservative-trade" disabled>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="strategy-section">
+                    <div class="strategy-header">
+                        <div class="strategy-name">Aggressive Strategy</div>
+                        <div class="strategy-actions">
+                            <button class="button" onclick="editStrategy('aggressive')">Edit</button>
+                            <button class="button" onclick="testStrategy('aggressive')">Test</button>
+                        </div>
+                    </div>
+                    
+                    <div class="strategy-description">
+                        Aggressive bots prioritize property acquisition and development, even at the risk of cash shortages.
+                        They actively pursue trades and auctions to complete property sets.
+                    </div>
+                    
+                    <div class="strategy-parameters">
+                        <div class="slider-container">
+                            <label>Property Purchase Threshold: <span class="slider-value" id="aggressive-purchase-value">20</span>%</label>
+                            <input type="range" min="0" max="100" value="20" class="slider" id="aggressive-purchase" disabled>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label>Cash Reserve Target: <span class="slider-value" id="aggressive-reserve-value">10</span>%</label>
+                            <input type="range" min="0" max="100" value="10" class="slider" id="aggressive-reserve" disabled>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label>Development Threshold: <span class="slider-value" id="aggressive-development-value">30</span>%</label>
+                            <input type="range" min="0" max="100" value="30" class="slider" id="aggressive-development" disabled>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label>Trade Acceptance: <span class="slider-value" id="aggressive-trade-value">80</span>%</label>
+                            <input type="range" min="0" max="100" value="80" class="slider" id="aggressive-trade" disabled>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="strategy-section">
+                    <div class="strategy-header">
+                        <div class="strategy-name">Strategic Strategy</div>
+                        <div class="strategy-actions">
+                            <button class="button" onclick="editStrategy('strategic')">Edit</button>
+                            <button class="button" onclick="testStrategy('strategic')">Test</button>
+                        </div>
+                    </div>
+                    
+                    <div class="strategy-description">
+                        Strategic bots take a balanced approach, focusing on completing property sets and 
+                        making calculated investments based on return-on-investment analysis.
+                    </div>
+                    
+                    <div class="strategy-parameters">
+                        <div class="slider-container">
+                            <label>Property Purchase Threshold: <span class="slider-value" id="strategic-purchase-value">50</span>%</label>
+                            <input type="range" min="0" max="100" value="50" class="slider" id="strategic-purchase" disabled>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label>Cash Reserve Target: <span class="slider-value" id="strategic-reserve-value">30</span>%</label>
+                            <input type="range" min="0" max="100" value="30" class="slider" id="strategic-reserve" disabled>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label>Development Threshold: <span class="slider-value" id="strategic-development-value">60</span>%</label>
+                            <input type="range" min="0" max="100" value="60" class="slider" id="strategic-development" disabled>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label>Trade Acceptance: <span class="slider-value" id="strategic-trade-value">50</span>%</label>
+                            <input type="range" min="0" max="100" value="50" class="slider" id="strategic-trade" disabled>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="strategy-section">
+                    <div class="strategy-header">
+                        <div class="strategy-name">Opportunistic Strategy</div>
+                        <div class="strategy-actions">
+                            <button class="button" onclick="editStrategy('opportunistic')">Edit</button>
+                            <button class="button" onclick="testStrategy('opportunistic')">Test</button>
+                        </div>
+                    </div>
+                    
+                    <div class="strategy-description">
+                        Opportunistic bots adapt their strategy based on the game state and other players' behaviors.
+                        They look for bargains and special opportunities, particularly during economic downturns.
+                    </div>
+                    
+                    <div class="strategy-parameters">
+                        <div class="slider-container">
+                            <label>Property Purchase Threshold: <span class="slider-value" id="opportunistic-purchase-value">40</span>%</label>
+                            <input type="range" min="0" max="100" value="40" class="slider" id="opportunistic-purchase" disabled>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label>Cash Reserve Target: <span class="slider-value" id="opportunistic-reserve-value">40</span>%</label>
+                            <input type="range" min="0" max="100" value="40" class="slider" id="opportunistic-reserve" disabled>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label>Development Threshold: <span class="slider-value" id="opportunistic-development-value">50</span>%</label>
+                            <input type="range" min="0" max="100" value="50" class="slider" id="opportunistic-development" disabled>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label>Trade Acceptance: <span class="slider-value" id="opportunistic-trade-value">70</span>%</label>
+                            <input type="range" min="0" max="100" value="70" class="slider" id="opportunistic-trade" disabled>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="strategy-actions">
+                    <button class="button" onclick="createCustomStrategy()">Create Custom Strategy</button>
+                    <button class="button" onclick="resetDefaultStrategies()">Reset to Defaults</button>
+                </div>
+            </div>
+            
+            <!-- Bot Activity Tab -->
+            <div id="activity" class="tab-content">
+                <h2>Bot Activity</h2>
+                
+                <div class="activity-filters">
+                    <div class="form-group">
+                        <label for="activity-bot-filter">Filter by Bot:</label>
+                        <select id="activity-bot-filter" onchange="filterActivity()">
+                            <option value="">All Bots</option>
+                            <!-- Options will be populated dynamically -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="activity-type-filter">Filter by Activity Type:</label>
+                        <select id="activity-type-filter" onchange="filterActivity()">
+                            <option value="">All Activities</option>
+                            <option value="property">Property Transactions</option>
+                            <option value="dice">Dice Rolls</option>
+                            <option value="trade">Trades</option>
+                            <option value="development">Development</option>
+                            <option value="auction">Auctions</option>
+                            <option value="decision">Decision Points</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="activity-time-filter">Time Range:</label>
+                        <select id="activity-time-filter" onchange="filterActivity()">
+                            <option value="1h">Last Hour</option>
+                            <option value="12h">Last 12 Hours</option>
+                            <option value="24h" selected>Last 24 Hours</option>
+                            <option value="7d">Last 7 Days</option>
+                            <option value="all">All Time</option>
+                        </select>
+                    </div>
+                    
+                    <button class="button" onclick="refreshActivity()">Refresh Activity</button>
+                </div>
+                
+                <div class="activity-log" id="bot-activity-log">
+                    <!-- Activity log entries will be populated dynamically -->
+                    <div class="log-entry">
+                        <span class="log-time">2025-05-16 10:30:45</span>
+                        <span class="log-message">[StrategicBot_01] Rolled 6,4 and moved to Boardwalk</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">2025-05-16 10:30:48</span>
+                        <span class="log-message">[StrategicBot_01] Purchased Boardwalk for $400</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">2025-05-16 10:31:15</span>
+                        <span class="log-message">[AggressiveBot_02] Rolled 3,2 and moved to Community Chest</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">2025-05-16 10:31:20</span>
+                        <span class="log-message">[AggressiveBot_02] Drew card: "Advance to Go, collect $200"</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">2025-05-16 10:31:25</span>
+                        <span class="log-message">[AggressiveBot_02] Moved to Go and collected $200</span>
+                    </div>
+                </div>
+                
+                <div class="decision-analysis">
+                    <h3>Bot Decision Analysis</h3>
+                    <p>Select a bot decision from the log to view detailed analysis of the decision-making process.</p>
+                    
+                    <div id="decision-detail" class="decision-detail">
+                        <!-- Decision details will be populated when a decision is selected -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bot Performance Tab -->
+            <div id="performance" class="tab-content">
+                <h2>Bot Performance</h2>
+                
+                <div class="performance-filters">
+                    <div class="form-group">
+                        <label for="performance-type-filter">Bot Type:</label>
+                        <select id="performance-type-filter" onchange="updatePerformanceCharts()">
+                            <option value="">All Types</option>
+                            <option value="conservative">Conservative</option>
+                            <option value="aggressive">Aggressive</option>
+                            <option value="strategic">Strategic</option>
+                            <option value="opportunistic">Opportunistic</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="performance-difficulty-filter">Difficulty:</label>
+                        <select id="performance-difficulty-filter" onchange="updatePerformanceCharts()">
+                            <option value="">All Difficulties</option>
+                            <option value="easy">Easy</option>
+                            <option value="normal">Normal</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="performance-time-filter">Time Range:</label>
+                        <select id="performance-time-filter" onchange="updatePerformanceCharts()">
+                            <option value="1d">Last 24 Hours</option>
+                            <option value="7d" selected>Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                            <option value="all">All Time</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="performance-metrics">
+                    <div class="bot-grid">
+                        <div class="bot-card">
+                            <div class="bot-label">Games Played</div>
+                            <div class="bot-stat" id="games-played">42</div>
+                        </div>
+                        <div class="bot-card">
+                            <div class="bot-label">Win Rate</div>
+                            <div class="bot-stat" id="win-rate">32%</div>
+                        </div>
+                        <div class="bot-card">
+                            <div class="bot-label">Avg. Finish Position</div>
+                            <div class="bot-stat" id="avg-position">2.4</div>
+                        </div>
+                        <div class="bot-card">
+                            <div class="bot-label">Avg. Game Duration</div>
+                            <div class="bot-stat" id="avg-duration">45 min</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="performance-charts">
+                    <div class="chart-container">
+                        <h3>Win Rate by Bot Type</h3>
+                        <canvas id="win-rate-chart" class="performance-chart"></canvas>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>Average Net Worth Over Time</h3>
+                        <canvas id="net-worth-chart" class="performance-chart"></canvas>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>Property Acquisition Rate</h3>
+                        <canvas id="property-acquisition-chart" class="performance-chart"></canvas>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3>Strategy Effectiveness</h3>
+                        <canvas id="strategy-effectiveness-chart" class="performance-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="leaderboard-section">
+                    <h3>Bot Leaderboard</h3>
+                    <table class="bot-table" id="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Bot Name</th>
+                                <th>Type</th>
+                                <th>Difficulty</th>
+                                <th>Games</th>
+                                <th>Win Rate</th>
+                                <th>Avg. Net Worth</th>
+                                <th>Properties/Game</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-list">
+                            <!-- Leaderboard entries will be populated dynamically -->
+                            <tr>
+                                <td>1</td>
+                                <td>StrategicBot_03</td>
+                                <td><span class="badge badge-strategic">Strategic</span></td>
+                                <td><span class="difficulty-hard">Hard</span></td>
+                                <td>15</td>
+                                <td>53%</td>
+                                <td>$3,245</td>
+                                <td>12.3</td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>AggressiveBot_01</td>
+                                <td><span class="badge badge-aggressive">Aggressive</span></td>
+                                <td><span class="difficulty-normal">Normal</span></td>
+                                <td>18</td>
+                                <td>44%</td>
+                                <td>$2,890</td>
+                                <td>14.2</td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>OpportunisticBot_02</td>
+                                <td><span class="badge badge-opportunistic">Opportunistic</span></td>
+                                <td><span class="difficulty-hard">Hard</span></td>
+                                <td>12</td>
+                                <td>42%</td>
+                                <td>$2,750</td>
+                                <td>11.8</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add Bot Modal -->
+    <div id="add-bot-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModals()">&times;</span>
+            <h2>Add Bot Player</h2>
+            <form id="add-bot-form">
+                <div class="form-group">
+                    <label for="new-bot-name">Bot Name (optional):</label>
+                    <input type="text" id="new-bot-name" placeholder="Random name will be generated if empty">
+                </div>
+                <div class="form-group">
+                    <label for="new-bot-type">Bot Type:</label>
+                    <select id="new-bot-type">
+                        <option value="conservative">Conservative</option>
+                        <option value="aggressive">Aggressive</option>
+                        <option value="strategic">Strategic</option>
+                        <option value="opportunistic">Opportunistic</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="new-bot-difficulty">Difficulty:</label>
+                    <select id="new-bot-difficulty">
+                        <option value="easy">Easy</option>
+                        <option value="normal">Normal</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="new-bot-starting-cash">Starting Cash:</label>
+                    <input type="number" id="new-bot-starting-cash" value="1500">
+                </div>
+                <button type="submit" class="button">Add Bot</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Multiple Bots Modal -->
+    <div id="add-multiple-bots-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModals()">&times;</span>
+            <h2>Add Multiple Bots</h2>
+            <form id="add-multiple-bots-form">
+                <div class="form-group">
+                    <label for="multi-bot-count">Number of Bots:</label>
+                    <input type="number" id="multi-bot-count" min="1" max="10" value="3">
+                </div>
+                <div class="form-group">
+                    <label for="multi-bot-type">Bot Type Distribution:</label>
+                    <select id="multi-bot-type">
+                        <option value="mixed">Mixed (Random Types)</option>
+                        <option value="conservative">All Conservative</option>
+                        <option value="aggressive">All Aggressive</option>
+                        <option value="strategic">All Strategic</option>
+                        <option value="opportunistic">All Opportunistic</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="multi-bot-difficulty">Difficulty Level:</label>
+                    <select id="multi-bot-difficulty">
+                        <option value="mixed">Mixed Difficulties</option>
+                        <option value="easy">All Easy</option>
+                        <option value="normal">All Normal</option>
+                        <option value="hard">All Hard</option>
+                        <option value="progressive">Progressive (Easy to Hard)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="multi-bot-starting-cash">Starting Cash:</label>
+                    <input type="number" id="multi-bot-starting-cash" value="1500">
+                </div>
+                <button type="submit" class="button">Add Bots</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modify Bot Cash Modal -->
+    <div id="modify-bot-cash-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModals()">&times;</span>
+            <h2>Modify Bot Cash</h2>
+            <form id="modify-bot-cash-form">
+                <div class="form-group">
+                    <label for="modify-cash-bot-id">Bot:</label>
+                    <select id="modify-cash-bot-id" required>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="modify-cash-amount">Amount:</label>
+                    <input type="number" id="modify-cash-amount" required>
+                    <small>Use positive value to add cash, negative to remove cash</small>
+                </div>
+                <div class="form-group">
+                    <label for="modify-cash-reason">Reason:</label>
+                    <input type="text" id="modify-cash-reason" placeholder="Admin adjustment">
+                </div>
+                <button type="submit" class="button">Modify Cash</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Bot Strategy Modal -->
+    <div id="change-strategy-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModals()">&times;</span>
+            <h2>Change Bot Strategy</h2>
+            <form id="change-strategy-form">
+                <div class="form-group">
+                    <label for="strategy-bot-id">Bot:</label>
+                    <select id="strategy-bot-id" required>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="new-bot-strategy">New Strategy:</label>
+                    <select id="new-bot-strategy" required>
+                        <option value="conservative">Conservative</option>
+                        <option value="aggressive">Aggressive</option>
+                        <option value="strategic">Strategic</option>
+                        <option value="opportunistic">Opportunistic</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="strategy-change-reason">Reason:</label>
+                    <input type="text" id="strategy-change-reason" placeholder="Strategy adjustment">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="preserve-parameters" checked>
+                        Preserve custom parameter settings when possible
+                    </label>
+                </div>
+                <button type="submit" class="button">Change Strategy</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Strategy Modal -->
+    <div id="edit-strategy-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModals()">&times;</span>
+            <h2>Edit Strategy: <span id="edit-strategy-name">Conservative</span></h2>
+            <form id="edit-strategy-form">
+                <input type="hidden" id="edit-strategy-type" value="">
+                
+                <div class="form-group">
+                    <label for="edit-strategy-description">Strategy Description:</label>
+                    <textarea id="edit-strategy-description" rows="3"></textarea>
+                </div>
+                
+                <div class="slider-container">
+                    <label>Property Purchase Threshold: <span class="slider-value" id="edit-purchase-value">70</span>%</label>
+                    <input type="range" min="0" max="100" value="70" class="slider" id="edit-purchase">
+                </div>
+                
+                <div class="slider-container">
+                    <label>Cash Reserve Target: <span class="slider-value" id="edit-reserve-value">50</span>%</label>
+                    <input type="range" min="0" max="100" value="50" class="slider" id="edit-reserve">
+                </div>
+                
+                <div class="slider-container">
+                    <label>Development Threshold: <span class="slider-value" id="edit-development-value">80</span>%</label>
+                    <input type="range" min="0" max="100" value="80" class="slider" id="edit-development">
+                </div>
+                
+                <div class="slider-container">
+                    <label>Trade Acceptance: <span class="slider-value" id="edit-trade-value">30</span>%</label>
+                    <input type="range" min="0" max="100" value="30" class="slider" id="edit-trade">
+                </div>
+                
+                <div class="form-group">
+                    <button type="submit" class="button">Save Strategy</button>
+                    <button type="button" class="button" onclick="resetStrategy()">Reset to Default</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Custom Strategy Modal -->
+    <div id="custom-strategy-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModals()">&times;</span>
+            <h2>Create Custom Strategy</h2>
+            <form id="custom-strategy-form">
+                <div class="form-group">
+                    <label for="custom-strategy-name">Strategy Name:</label>
+                    <input type="text" id="custom-strategy-name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="custom-strategy-description">Strategy Description:</label>
+                    <textarea id="custom-strategy-description" rows="3" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="custom-strategy-base">Base Strategy:</label>
+                    <select id="custom-strategy-base">
+                        <option value="none">None (Start from Scratch)</option>
+                        <option value="conservative">Conservative</option>
+                        <option value="aggressive">Aggressive</option>
+                        <option value="strategic">Strategic</option>
+                        <option value="opportunistic">Opportunistic</option>
+                    </select>
+                </div>
+                
+                <div class="slider-container">
+                    <label>Property Purchase Threshold: <span class="slider-value" id="custom-purchase-value">50</span>%</label>
+                    <input type="range" min="0" max="100" value="50" class="slider" id="custom-purchase">
+                </div>
+                
+                <div class="slider-container">
+                    <label>Cash Reserve Target: <span class="slider-value" id="custom-reserve-value">40</span>%</label>
+                    <input type="range" min="0" max="100" value="40" class="slider" id="custom-reserve">
+                </div>
+                
+                <div class="slider-container">
+                    <label>Development Threshold: <span class="slider-value" id="custom-development-value">60</span>%</label>
+                    <input type="range" min="0" max="100" value="60" class="slider" id="custom-development">
+                </div>
+                
+                <div class="slider-container">
+                    <label>Trade Acceptance: <span class="slider-value" id="custom-trade-value">50</span>%</label>
+                    <input type="range" min="0" max="100" value="50" class="slider" id="custom-trade">
+                </div>
+                
+                <div class="form-group">
+                    <button type="submit" class="button">Create Strategy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Tab handling
+        function openTab(evt, tabName) {
+            const tabContents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove("active");
+            }
+            
+            const tablinks = document.getElementsByClassName("tablink");
+            for (let i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+            
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+            
+            // Load data based on tab
+            if (tabName === 'overview') {
+                loadBotsOverview();
+            } else if (tabName === 'management') {
+                populateBotSelector();
+            } else if (tabName === 'strategies') {
+                // No immediate action needed, strategies are statically displayed
+            } else if (tabName === 'activity') {
+                loadBotActivity();
+            } else if (tabName === 'performance') {
+                loadBotPerformance();
+            }
+        }
+        
+        // Modal handling
+        function openAddBotModal() {
+            document.getElementById('add-bot-modal').style.display = 'block';
+        }
+        
+        function addMultipleBots() {
+            document.getElementById('add-multiple-bots-modal').style.display = 'block';
+        }
+        
+        function closeModals() {
+            const modals = document.getElementsByClassName('modal');
+            for (let i = 0; i < modals.length; i++) {
+                modals[i].style.display = 'none';
+            }
+        }
+        
+        function editStrategy(strategyType) {
+            // Set the strategy type in the hidden field
+            document.getElementById('edit-strategy-type').value = strategyType;
+            
+            // Update the strategy name in the header
+            const strategyNames = {
+                'conservative': 'Conservative',
+                'aggressive': 'Aggressive',
+                'strategic': 'Strategic',
+                'opportunistic': 'Opportunistic'
+            };
+            document.getElementById('edit-strategy-name').textContent = strategyNames[strategyType];
+            
+            // Load the current values for this strategy
+            // In a real application, these would come from the server
+            const values = {
+                'conservative': {
+                    description: 'Conservative bots focus on maintaining cash reserves and making safe investments. They prefer to avoid risky trades and only develop properties when they have a strong cash position.',
+                    purchase: 70,
+                    reserve: 50,
+                    development: 80,
+                    trade: 30
+                },
+                'aggressive': {
+                    description: 'Aggressive bots prioritize property acquisition and development, even at the risk of cash shortages. They actively pursue trades and auctions to complete property sets.',
+                    purchase: 20,
+                    reserve: 10,
+                    development: 30,
+                    trade: 80
+                },
+                'strategic': {
+                    description: 'Strategic bots take a balanced approach, focusing on completing property sets and making calculated investments based on return-on-investment analysis.',
+                    purchase: 50,
+                    reserve: 30,
+                    development: 60,
+                    trade: 50
+                },
+                'opportunistic': {
+                    description: 'Opportunistic bots adapt their strategy based on the game state and other players\' behaviors. They look for bargains and special opportunities, particularly during economic downturns.',
+                    purchase: 40,
+                    reserve: 40,
+                    development: 50,
+                    trade: 70
+                }
+            };
+            
+            // Set the form values
+            const strategy = values[strategyType];
+            document.getElementById('edit-strategy-description').value = strategy.description;
+            document.getElementById('edit-purchase').value = strategy.purchase;
+            document.getElementById('edit-purchase-value').textContent = strategy.purchase;
+            document.getElementById('edit-reserve').value = strategy.reserve;
+            document.getElementById('edit-reserve-value').textContent = strategy.reserve;
+            document.getElementById('edit-development').value = strategy.development;
+            document.getElementById('edit-development-value').textContent = strategy.development;
+            document.getElementById('edit-trade').value = strategy.trade;
+            document.getElementById('edit-trade-value').textContent = strategy.trade;
+            
+            // Show the modal
+            document.getElementById('edit-strategy-modal').style.display = 'block';
+        }
+        
+        function createCustomStrategy() {
+            document.getElementById('custom-strategy-modal').style.display = 'block';
+        }
+        
+        // Data management functions
+        function fetchBots() {
+            // In a real application, this would call your API
+            // For demonstration, we'll return mock data
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve([
+                        {
+                            id: 1,
+                            name: 'StrategicBot_01',
+                            type: 'strategic',
+                            difficulty: 'normal',
+                            cash: 1850,
+                            properties: 7,
+                            status: 'active',
+                            is_bot: true
+                        },
+                        {
+                            id: 2,
+                            name: 'AggressiveBot_01',
+                            type: 'aggressive',
+                            difficulty: 'hard',
+                            cash: 620,
+                            properties: 12,
+                            status: 'active',
+                            is_bot: true
+                        },
+                        {
+                            id: 3,
+                            name: 'ConservativeBot_01',
+                            type: 'conservative',
+                            difficulty: 'easy',
+                            cash: 2200,
+                            properties: 4,
+                            status: 'active',
+                            is_bot: true
+                        },
+                        {
+                            id: 4,
+                            name: 'OpportunisticBot_01',
+                            type: 'opportunistic',
+                            difficulty: 'normal',
+                            cash: 1350,
+                            properties: 9,
+                            status: 'inactive',
+                            is_bot: true
+                        }
+                    ]);
+                }, 300);
+            });
+        }
+        
+        function loadBotsOverview() {
+            fetchBots().then(bots => {
+                // Update stats
+                document.getElementById('total-bots').textContent = bots.length;
+                document.getElementById('active-bots').textContent = bots.filter(b => b.status === 'active').length;
+                document.getElementById('avg-performance').textContent = '72%'; // Mock data
+                document.getElementById('bot-win-rate').textContent = '31%'; // Mock data
+                
+                // Update table
+                const tableBody = document.getElementById('bots-list');
+                tableBody.innerHTML = '';
+                
+                bots.forEach(bot => {
+                    const row = document.createElement('tr');
+                    
+                    // Define badge classes for bot types
+                    const badgeClass = `badge badge-${bot.type}`;
+                    // Define difficulty classes
+                    const difficultyClass = `difficulty-${bot.difficulty}`;
+                    
+                    row.innerHTML = `
+                        <td>${bot.id}</td>
+                        <td>${bot.name}</td>
+                        <td><span class="${badgeClass}">${capitalizeFirstLetter(bot.type)}</span></td>
+                        <td><span class="${difficultyClass}">${capitalizeFirstLetter(bot.difficulty)}</span></td>
+                        <td>$${bot.cash}</td>
+                        <td>${bot.properties}</td>
+                        <td>${capitalizeFirstLetter(bot.status)}</td>
+                        <td>
+                            <button onclick="viewBot(${bot.id})">View</button>
+                            <button onclick="modifyBotCash(${bot.id})">Cash</button>
+                            <button onclick="toggleBotActive(${bot.id})">${bot.status === 'active' ? 'Deactivate' : 'Activate'}</button>
+                        </td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+                
+                // Update bot type distribution chart
+                updateBotTypeChart(bots);
+            });
+        }
+        
+        function updateBotTypeChart(bots) {
+            const types = {};
+            bots.forEach(bot => {
+                types[bot.type] = (types[bot.type] || 0) + 1;
+            });
+            
+            const ctx = document.getElementById('bot-type-chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(types).map(capitalizeFirstLetter),
+                    datasets: [{
+                        data: Object.values(types),
+                        backgroundColor: [
+                            '#b8e0d2', // Conservative
+                            '#f7cad0', // Aggressive
+                            '#bbd0ff', // Strategic
+                            '#ffe5d9'  // Opportunistic
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+        
+        function populateBotSelector() {
+            const selectElement = document.getElementById('bot-selector');
+            selectElement.innerHTML = '<option value="">-- Select Bot --</option>';
+            
+            fetchBots().then(bots => {
+                bots.forEach(bot => {
+                    const option = document.createElement('option');
+                    option.value = bot.id;
+                    option.textContent = `${bot.name} (${capitalizeFirstLetter(bot.type)})`;
+                    selectElement.appendChild(option);
+                });
+            });
+        }
+        
+        function loadBotDetails() {
+            const botId = document.getElementById('bot-selector').value;
+            if (!botId) {
+                document.getElementById('bot-details-container').innerHTML = 
+                    '<p>Select a bot from the dropdown to view and manage details.</p>';
+                document.getElementById('selected-bot-name').textContent = 'None';
+                document.getElementById('bot-management-actions').style.display = 'none';
+                return;
+            }
+            
+            fetchBotDetails(botId).then(bot => {
+                document.getElementById('selected-bot-name').textContent = bot.name;
+                document.getElementById('bot-management-actions').style.display = 'flex';
+                
+                // Populate form fields with bot values
+                document.getElementById('bot-name').value = bot.name;
+                document.getElementById('bot-type').value = bot.type;
+                document.getElementById('bot-difficulty').value = bot.difficulty;
+                document.getElementById('bot-risk-tolerance').value = bot.risk_tolerance;
+                document.getElementById('risk-tolerance-value').textContent = bot.risk_tolerance;
+                document.getElementById('bot-trade-willingness').value = bot.trade_willingness;
+                document.getElementById('trade-willingness-value').textContent = bot.trade_willingness;
+                document.getElementById('bot-development-threshold').value = bot.development_threshold;
+                document.getElementById('development-threshold-value').textContent = bot.development_threshold;
+                document.getElementById('bot-reaction-speed').value = bot.reaction_speed;
+                
+                // Generate detailed bot info
+                const detailsHtml = `
+                    <div class="bot-detail-grid">
+                        <div class="bot-detail-section">
+                            <h4>Basic Info</h4>
+                            <p><strong>ID:</strong> ${bot.id}</p>
+                            <p><strong>Name:</strong> ${bot.name}</p>
+                            <p><strong>Type:</strong> <span class="badge badge-${bot.type}">${capitalizeFirstLetter(bot.type)}</span></p>
+                            <p><strong>Difficulty:</strong> <span class="difficulty-${bot.difficulty}">${capitalizeFirstLetter(bot.difficulty)}</span></p>
+                            <p><strong>Status:</strong> ${capitalizeFirstLetter(bot.status)}</p>
+                            
+                            <h4>Financial Info</h4>
+                            <p><strong>Cash:</strong> $${bot.cash}</p>
+                            <p><strong>Net Worth:</strong> $${bot.net_worth}</p>
+                            <p><strong>Properties Owned:</strong> ${bot.properties.length}</p>
+                            <p><strong>Property Value:</strong> $${bot.property_value}</p>
+                        </div>
+                        
+                        <div class="bot-detail-section">
+                            <h4>Strategy Parameters</h4>
+                            <p><strong>Risk Tolerance:</strong> ${bot.risk_tolerance}%</p>
+                            <p><strong>Trade Willingness:</strong> ${bot.trade_willingness}%</p>
+                            <p><strong>Development Threshold:</strong> ${bot.development_threshold}%</p>
+                            <p><strong>Reaction Speed:</strong> ${bot.reaction_speed}ms</p>
+                            
+                            <h4>Performance</h4>
+                            <p><strong>Games Played:</strong> ${bot.games_played}</p>
+                            <p><strong>Wins:</strong> ${bot.wins}</p>
+                            <p><strong>Win Rate:</strong> ${(bot.wins / bot.games_played * 100).toFixed(1)}%</p>
+                            <p><strong>Average Finish Position:</strong> ${bot.avg_position}</p>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('bot-details-container').innerHTML = detailsHtml;
+            });
+        }
+        
+        function fetchBotDetails(botId) {
+            // In a real application, this would call your API
+            // For demonstration, we'll return mock data
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve({
+                        id: botId,
+                        name: `Bot_${botId}`,
+                        type: ['strategic', 'aggressive', 'conservative', 'opportunistic'][botId % 4],
+                        difficulty: ['easy', 'normal', 'hard'][botId % 3],
+                        cash: 1500 + (botId * 100),
+                        net_worth: 2500 + (botId * 150),
+                        property_value: 1000 + (botId * 50),
+                        status: botId % 5 === 0 ? 'inactive' : 'active',
+                        risk_tolerance: 30 + (botId * 7) % 60,
+                        trade_willingness: 40 + (botId * 9) % 50,
+                        development_threshold: 50 + (botId * 5) % 40,
+                        reaction_speed: 1000 + (botId * 100),
+                        properties: Array(botId % 10 + 3).fill().map((_, i) => ({ id: i, name: `Property ${i}` })),
+                        games_played: 10 + (botId % 15),
+                        wins: 2 + (botId % 5),
+                        avg_position: 2.5
+                    });
+                }, 300);
+            });
+        }
+        
+        function loadBotActivity() {
+            // Populate bot filter
+            const botFilter = document.getElementById('activity-bot-filter');
+            botFilter.innerHTML = '<option value="">All Bots</option>';
+            
+            fetchBots().then(bots => {
+                bots.forEach(bot => {
+                    const option = document.createElement('option');
+                    option.value = bot.id;
+                    option.textContent = bot.name;
+                    botFilter.appendChild(option);
+                });
+            });
+            
+            // For demo purposes, we'll leave the activity log as is
+            // In a real app, you would load actual activity data
+        }
+        
+        function loadBotPerformance() {
+            // Performance data is already mocked in the HTML for demo purposes
+            // In a real app, you would fetch and display actual performance data
+            
+            // Initialize charts with mock data
+            initCharts();
+        }
+        
+        function initCharts() {
+            // Win rate by bot type chart
+            const winRateCtx = document.getElementById('win-rate-chart').getContext('2d');
+            new Chart(winRateCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Conservative', 'Aggressive', 'Strategic', 'Opportunistic'],
+                    datasets: [{
+                        label: 'Win Rate (%)',
+                        data: [28, 32, 45, 36],
+                        backgroundColor: [
+                            '#b8e0d2', // Conservative
+                            '#f7cad0', // Aggressive
+                            '#bbd0ff', // Strategic
+                            '#ffe5d9'  // Opportunistic
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            
+            // Net worth over time chart
+            const netWorthCtx = document.getElementById('net-worth-chart').getContext('2d');
+            new Chart(netWorthCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Start', 'Turn 5', 'Turn 10', 'Turn 15', 'Turn 20', 'Turn 25', 'End'],
+                    datasets: [
+                        {
+                            label: 'Conservative',
+                            data: [1500, 1600, 1850, 2100, 2400, 2750, 3100],
+                            borderColor: '#2d6a4f',
+                            backgroundColor: 'rgba(184, 224, 210, 0.2)'
+                        },
+                        {
+                            label: 'Aggressive',
+                            data: [1500, 1200, 950, 1400, 2200, 3500, 2900],
+                            borderColor: '#a4133c',
+                            backgroundColor: 'rgba(247, 202, 208, 0.2)'
+                        },
+                        {
+                            label: 'Strategic',
+                            data: [1500, 1550, 1800, 2200, 2800, 3300, 3800],
+                            borderColor: '#003566',
+                            backgroundColor: 'rgba(187, 208, 255, 0.2)'
+                        },
+                        {
+                            label: 'Opportunistic',
+                            data: [1500, 1450, 1700, 2000, 2600, 3100, 3400],
+                            borderColor: '#d62828',
+                            backgroundColor: 'rgba(255, 229, 217, 0.2)'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            
+            // Additional charts would be initialized here
+        }
+        
+        // Helper functions
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBotsOverview();
+            
+            // Set up range slider value displays
+            const rangeSliders = document.querySelectorAll('input[type=range]');
+            rangeSliders.forEach(slider => {
+                slider.addEventListener('input', function() {
+                    const valueDisplay = document.getElementById(`${this.id}-value`);
+                    if (valueDisplay) {
+                        valueDisplay.textContent = this.value;
+                    }
+                });
+            });
+            
+            // Set up form submission handlers
+            document.getElementById('add-bot-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                // In a real app, this would call your API to add a bot
+                alert('Bot added successfully!');
+                closeModals();
+                loadBotsOverview();
+            });
+            
+            document.getElementById('add-multiple-bots-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                // In a real app, this would call your API to add multiple bots
+                const count = document.getElementById('multi-bot-count').value;
+                alert(`${count} bots added successfully!`);
+                closeModals();
+                loadBotsOverview();
+            });
+            
+            document.getElementById('bot-config-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                // In a real app, this would call your API to update bot configuration
+                alert('Bot configuration updated successfully!');
+            });
+            
+            document.getElementById('edit-strategy-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                // In a real app, this would call your API to update strategy parameters
+                const strategyType = document.getElementById('edit-strategy-type').value;
+                alert(`${capitalizeFirstLetter(strategyType)} strategy updated successfully!`);
+                closeModals();
+            });
+            
+            document.getElementById('custom-strategy-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                // In a real app, this would call your API to create a new strategy
+                const strategyName = document.getElementById('custom-strategy-name').value;
+                alert(`Custom strategy "${strategyName}" created successfully!`);
+                closeModals();
+            });
+        });
+        
+        // Bot action functions
+        function viewBot(botId) {
+            document.getElementById('bot-selector').value = botId;
+            loadBotDetails();
+            
+            // Switch to management tab
+            const event = { currentTarget: document.querySelector('button[onclick="openTab(event, \'management\')"]') };
+            openTab(event, 'management');
+        }
+        
+        function modifyBotCash(botId) {
+            // Populate the bot dropdown
+            const selectElement = document.getElementById('modify-cash-bot-id');
+            selectElement.innerHTML = '';
+            
+            fetchBots().then(bots => {
+                bots.forEach(bot => {
+                    const option = document.createElement('option');
+                    option.value = bot.id;
+                    option.textContent = `${bot.name} ($${bot.cash})`;
+                    if (bot.id == botId) {
+                        option.selected = true;
+                    }
+                    selectElement.appendChild(option);
+                });
+                
+                document.getElementById('modify-cash-modal').style.display = 'block';
+            });
+        }
+        
+        function changeBotStrategy() {
+            const botId = document.getElementById('bot-selector').value;
+            
+            // Populate the bot dropdown
+            const selectElement = document.getElementById('strategy-bot-id');
+            selectElement.innerHTML = '';
+            
+            fetchBots().then(bots => {
+                bots.forEach(bot => {
+                    const option = document.createElement('option');
+                    option.value = bot.id;
+                    option.textContent = `${bot.name} (${capitalizeFirstLetter(bot.type)})`;
+                    if (bot.id == botId) {
+                        option.selected = true;
+                    }
+                    selectElement.appendChild(option);
+                });
+                
+                document.getElementById('change-strategy-modal').style.display = 'block';
+            });
+        }
+        
+        function toggleBotActive(botId) {
+            // In a real app, this would call your API to toggle the bot's active state
+            alert(`Bot ${botId} status toggled!`);
+            loadBotsOverview();
+        }
+        
+        function removeBot(botId) {
+            if (!botId) {
+                botId = document.getElementById('bot-selector').value;
+            }
+            
+            if (confirm(`Are you sure you want to remove Bot ${botId}?`)) {
+                // In a real app, this would call your API to remove the bot
+                alert(`Bot ${botId} removed successfully!`);
+                loadBotsOverview();
+                document.getElementById('bot-selector').value = '';
+                document.getElementById('bot-details-container').innerHTML = 
+                    '<p>Select a bot from the dropdown to view and manage details.</p>';
+                document.getElementById('selected-bot-name').textContent = 'None';
+                document.getElementById('bot-management-actions').style.display = 'none';
+            }
+        }
+        
+        function removeAllBots() {
+            if (confirm('Are you sure you want to remove ALL bots? This action cannot be undone.')) {
+                // In a real app, this would call your API to remove all bots
+                alert('All bots removed successfully!');
+                loadBotsOverview();
+            }
+        }
+        
+        function testStrategy(strategyType) {
+            // In a real app, this would run a simulation of the strategy
+            alert(`Testing ${strategyType} strategy...\n\nSimulation results:\n- Win rate: 37%\n- Average cash: $2,450\n- Average properties: 8.3\n- Average game position: 2.1`);
+        }
+        
+        function resetStrategy() {
+            const strategyType = document.getElementById('edit-strategy-type').value;
+            if (confirm(`Are you sure you want to reset the ${strategyType} strategy to default values?`)) {
+                // Re-populate the form with default values
+                editStrategy(strategyType);
+            }
+        }
+        
+        function resetDefaultStrategies() {
+            if (confirm('Are you sure you want to reset ALL strategies to their default values?')) {
+                // In a real app, this would call your API to reset all strategies
+                alert('All strategies reset to default values!');
+            }
+        }
+        
+        function filterActivity() {
+            // In a real app, this would filter the activity log based on selections
+            alert('Activity filter applied!');
+        }
+        
+        function refreshActivity() {
+            // In a real app, this would refresh the activity log
+            alert('Activity log refreshed!');
+        }
+        
+        function updatePerformanceCharts() {
+            // In a real app, this would update the performance charts based on selected filters
+            alert('Performance charts updated!');
+        }
+    </script>
+</body>
+</html> 
