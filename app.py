@@ -753,6 +753,8 @@ def setup_scheduled_tasks():
                     )
                 
         # Initial scheduling of tasks
+        # Commenting out problematic scheduler tasks temporarily
+        """
         if app.config['ADAPTIVE_DIFFICULTY_ENABLED']:
             socketio.start_background_task(
                 run_delayed_task, 
@@ -784,6 +786,7 @@ def setup_scheduled_tasks():
                 trigger_random_economic_event, 
                 app.config.get('INITIAL_ECONOMIC_EVENT_DELAY', 15) * 60  # Convert minutes to seconds
             )
+        """
     else:
         if not economic_controller:
             logging.warning("Economic cycle controller not found in app config. Economic updates will not run automatically.")

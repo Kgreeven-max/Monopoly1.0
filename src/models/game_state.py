@@ -261,41 +261,40 @@ class GameState(db.Model):
         # ... (rest of existing logic) ...
         pass
 
-    def reset(self): # Added reset method based on GameController usage
-        """Resets the game state for a new game, preserving game_id and settings."""
-        logger = logging.getLogger(__name__)
-        logger.info(f"Resetting GameState for game_id: {self.game_id}")
+    def reset(self):
+        """Reset the game state but keep the same ID"""
+        logging.getLogger(__name__).info(f"Resetting GameState for game_id: {self.game_id}")
         
-        # Preserve game_id and potentially some settings if desired
-        # Keep: game_id, difficulty, mode, _settings (if applicable)
+        # Generate a new UUID for the game
+        import uuid
+        self.game_id = str(uuid.uuid4())
         
-        # Reset turn/player state
+        # Reset all game state fields to defaults
         self.current_player_id = None
         self.player_order = None
         self.current_lap = 0
-        self.turn_number = 0
-        self.expected_action_type = None
-        self.expected_action_details = None
-        
-        # Reset financial/economic state
+        self.total_laps = 0
         self.community_fund = 0
         self.inflation_state = 'stable'
         self.inflation_factor = 1.0
-        # self.tax_rate = 0.1 # Keep configured tax rate?
-        
-        # Reset time and status
-        self.start_time = None # Reset start time
+        self.tax_rate = 0.1
+        self.start_time = datetime.utcnow()
         self.end_time = None
-        self.status = 'Waiting' # Reset status to Waiting or Setup
-        
-        # Reset temporary state
-        self.temporary_effects = []
+        self.status = 'setup'
+        # Keep the difficulty setting
+        # self.difficulty = 'normal'
+        self._temporary_effects = '[]'
         self.last_event_lap = 0
         self.police_activity = 1.0
+        self.turn_timer = None
+        self.turn_number = 0
+        # Keep the mode setting
+        # self.mode = 'classic'
+        self._settings = None
+        self.expected_action_type = None
+        self._expected_action_details_json = None
         
-        # Keep game configuration like auction_required, multipliers etc.
-        
-        # Note: Resetting associated Players and Properties needs to happen separately
-        # (e.g., in GameController.create_new_game or a dedicated reset service)
+        # Don't commit here - let the caller handle the commit
+        # This prevents issues with the caller's transaction management
 
 # End of GameState class 

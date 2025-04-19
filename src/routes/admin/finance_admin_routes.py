@@ -501,4 +501,106 @@ def get_economy_stats():
     
     except Exception as e:
         logger.error(f"Error getting economy stats: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@finance_admin_bp.route('/overview', methods=['GET'])
+@admin_required
+def get_financial_overview():
+    """
+    Get a comprehensive overview of the financial system.
+    
+    Returns summary statistics on loans, transactions, player finances, and economic indicators.
+    """
+    try:
+        # Get finance controller
+        finance_ctrl = get_finance_controller()
+        
+        # Get admin controller
+        admin_ctrl = AdminController()
+        
+        # Get game state
+        game_state = GameState.get_instance()
+        current_lap = game_state.current_lap if game_state else 0
+        
+        # Get all players
+        players = Player.query.filter_by(in_game=True).all()
+        player_count = len(players)
+        
+        # Get loan statistics
+        loans = Loan.query.all()
+        active_loans = sum(1 for loan in loans if loan.is_active)
+        total_loan_value = sum(loan.outstanding_balance for loan in loans if loan.is_active)
+        
+        # Get transaction statistics
+        transactions = Transaction.query.order_by(Transaction.timestamp.desc()).limit(100).all()
+        transaction_count = Transaction.query.count()
+        recent_transaction_volume = sum(abs(t.amount) for t in transactions)
+        
+        # Get cash statistics
+        total_player_cash = sum(player.cash for player in players)
+        avg_player_cash = total_player_cash / player_count if player_count > 0 else 0
+        richest_player = max(players, key=lambda p: p.cash) if player_count > 0 else None
+        richest_player_data = {
+            "id": richest_player.id,
+            "username": richest_player.username,
+            "cash": richest_player.cash
+        } if richest_player else None
+        
+        # Get property statistics
+        from src.models.property import Property
+        properties = Property.query.all()
+        bank_owned = sum(1 for p in properties if not p.owner_id)
+        player_owned = sum(1 for p in properties if p.owner_id)
+        mortgaged = sum(1 for p in properties if p.is_mortgaged)
+        
+        # Calculate economic health indicators
+        debt_ratio = total_loan_value / total_player_cash if total_player_cash > 0 else 0
+        liquidity_index = total_player_cash / (total_loan_value + 1)  # Add 1 to avoid division by zero
+        
+        # Check if game_state has free_parking_fund attribute
+        free_parking_fund = 0
+        if game_state and hasattr(game_state, 'free_parking_fund'):
+            free_parking_fund = game_state.free_parking_fund
+        
+        # Return comprehensive overview
+        return jsonify({
+            "success": True,
+            "game_state": {
+                "current_lap": current_lap,
+                "game_id": game_state.game_id if game_state else None,
+                "free_parking_fund": free_parking_fund
+            },
+            "players": {
+                "count": player_count,
+                "total_cash": total_player_cash,
+                "average_cash": avg_player_cash,
+                "richest_player": richest_player_data
+            },
+            "loans": {
+                "total_count": len(loans),
+                "active_count": active_loans,
+                "total_active_value": total_loan_value,
+                "avg_loan_value": total_loan_value / active_loans if active_loans > 0 else 0
+            },
+            "transactions": {
+                "total_count": transaction_count,
+                "recent_volume": recent_transaction_volume,
+                "recent_count": len(transactions)
+            },
+            "properties": {
+                "total_count": len(properties),
+                "bank_owned": bank_owned,
+                "player_owned": player_owned,
+                "mortgaged": mortgaged,
+                "mortgage_rate": mortgaged / len(properties) if properties else 0
+            },
+            "economic_indicators": {
+                "debt_ratio": debt_ratio,
+                "liquidity_index": liquidity_index,
+                "market_activity": transaction_count / (current_lap + 1) if current_lap > 0 else transaction_count
+            }
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error fetching finance overview: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500 

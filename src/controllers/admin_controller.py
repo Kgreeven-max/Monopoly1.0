@@ -65,7 +65,7 @@ class AdminController:
             return {"success": False, "error": "Failed to retrieve player details"}
 
     def reset_game(self):
-        """Resets the game by creating a new game through the GameController."""
+        """Resets the game by updating the existing game state."""
         try:
             # Get GameController from app_config
             game_controller = current_app.config.get('game_controller')
@@ -73,18 +73,66 @@ class AdminController:
                 logger.error("GameController not found in app config")
                 return {"success": False, "error": "Game controller not initialized"}
 
-            # Use GameController to create a new game with default settings
-            result = game_controller.create_new_game()
+            # Get current game state 
+            from src.models.game_state import GameState
+            game_state = GameState.get_instance()
             
-            if result.get('success'):
-                logger.info(f"Game reset successfully. New game ID: {result.get('game_id')}")
-                return result
-            else:
-                logger.error(f"Failed to reset game: {result.get('error')}")
-                return result
+            if not game_state:
+                logger.error("No game state found")
+                return {"success": False, "error": "Game state not found"}
                 
+            # Reset the game state directly instead of creating a new one
+            game_state.reset()
+            
+            # Reset all players still in game
+            from src.models.player import Player
+            from src.models.property import Property
+            
+            players = Player.query.filter_by(in_game=True).all()
+            for player in players:
+                player.position = 0
+                player.cash = 1500  # Default starting cash
+                player.in_game = False  # Remove all players
+                player.is_in_jail = False
+                player.jail_turns = 0
+                
+                # Reset player's properties
+                properties = Property.query.filter_by(owner_id=player.id).all()
+                for prop in properties:
+                    prop.owner_id = None
+                    prop.is_mortgaged = False
+                    prop.houses = 0
+                    prop.hotel = False
+                    db.session.add(prop)
+                
+                db.session.add(player)
+            
+            # Clear all bots
+            bots = Player.query.filter_by(is_bot=True).all()
+            for bot in bots:
+                bot.in_game = False
+                db.session.add(bot)
+                
+            # Clear the active_bots dictionary if it exists
+            from src.controllers.bot_controller import active_bots
+            active_bots.clear()
+            
+            db.session.commit()
+            
+            # Initialize properties for this game
+            if hasattr(game_controller, '_initialize_properties'):
+                game_controller._initialize_properties(game_state.game_id)
+            
+            logger.info(f"Game reset successfully. Game ID: {game_state.game_id}")
+            return {
+                "success": True,
+                "game_id": game_state.game_id,
+                "message": "Game reset successfully"
+            }
+                    
         except Exception as e:
-            logger.error(f"Error resetting game: {e}", exc_info=True)
+            db.session.rollback()
+            logger.error(f"Failed to reset game: {e}", exc_info=True)
             return {"success": False, "error": f"Failed to reset game: {str(e)}"}
     
     def modify_player_cash(self, player_id, amount, reason):
@@ -2451,3 +2499,178 @@ class AdminController:
         except Exception as e:
             logger.error(f"Error getting jail status: {e}", exc_info=True)
             return {"success": False, "error": f"Failed to get jail status: {str(e)}"}
+
+    def get_transactions(self, filters=None, limit=100, offset=0):
+        """
+        Get transaction history with filtering options.
+        
+        Args:
+            filters (dict): Filter criteria (player_id, type, min_amount, max_amount, etc.)
+            limit (int): Maximum number of transactions to return
+            offset (int): Offset for pagination
+            
+        Returns:
+            Dictionary with transaction results
+        """
+        try:
+            query = Transaction.query
+            
+            # Apply filters if provided
+            if filters:
+                if 'player_id' in filters:
+                    player_id = filters['player_id']
+                    query = query.filter((Transaction.from_player_id == player_id) | 
+                                        (Transaction.to_player_id == player_id))
+                
+                if 'type' in filters:
+                    query = query.filter(Transaction.transaction_type == filters['type'])
+                
+                if 'min_amount' in filters:
+                    query = query.filter(Transaction.amount >= filters['min_amount'])
+                
+                if 'max_amount' in filters:
+                    query = query.filter(Transaction.amount <= filters['max_amount'])
+                
+                if 'start_date' in filters:
+                    start_date = datetime.datetime.fromisoformat(filters['start_date'])
+                    query = query.filter(Transaction.timestamp >= start_date)
+                
+                if 'end_date' in filters:
+                    end_date = datetime.datetime.fromisoformat(filters['end_date'])
+                    query = query.filter(Transaction.timestamp <= end_date)
+            
+            # Get total count for pagination
+            total = query.count()
+            
+            # Apply pagination
+            transactions = query.order_by(Transaction.timestamp.desc()).limit(limit).offset(offset).all()
+            
+            # Format transactions
+            transactions_list = []
+            for transaction in transactions:
+                # Get player names for readability
+                from_player_name = None
+                to_player_name = None
+                
+                if transaction.from_player_id:
+                    from_player = Player.query.get(transaction.from_player_id)
+                    if from_player:
+                        from_player_name = from_player.username
+                
+                if transaction.to_player_id:
+                    to_player = Player.query.get(transaction.to_player_id)
+                    if to_player:
+                        to_player_name = to_player.username
+                
+                transactions_list.append({
+                    "id": transaction.id,
+                    "from_player_id": transaction.from_player_id,
+                    "from_player_name": from_player_name,
+                    "to_player_id": transaction.to_player_id,
+                    "to_player_name": to_player_name,
+                    "amount": transaction.amount,
+                    "transaction_type": transaction.transaction_type,
+                    "description": transaction.description,
+                    "timestamp": transaction.timestamp.isoformat(),
+                    "lap_number": transaction.lap_number
+                })
+            
+            return {
+                "success": True,
+                "transactions": transactions_list,
+                "total": total,
+                "limit": limit,
+                "offset": offset
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting transactions: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}
+    
+    def get_all_loans(self, filters=None):
+        """
+        Get all loans in the system with filtering options.
+        
+        Args:
+            filters (dict): Filter criteria (player_id, status, etc.)
+            
+        Returns:
+            Dictionary with loans results
+        """
+        try:
+            query = Loan.query
+            
+            # Apply filters if provided
+            if filters:
+                if 'player_id' in filters:
+                    query = query.filter(Loan.player_id == filters['player_id'])
+                
+                if 'status' in filters:
+                    # Map 'status' to 'is_active'
+                    is_active = filters['status'] == 'active'
+                    query = query.filter(Loan.is_active == is_active)
+                
+                if 'loan_type' in filters:
+                    query = query.filter(Loan.loan_type == filters['loan_type'])
+                
+                if 'min_amount' in filters:
+                    query = query.filter(Loan.amount >= filters['min_amount'])
+                
+                if 'max_amount' in filters:
+                    query = query.filter(Loan.amount <= filters['max_amount'])
+            
+            # Get total statistics
+            total_loans = query.count()
+            active_loans = query.filter(Loan.is_active == True).count()
+            
+            # Get the loans
+            loans = query.all()
+            
+            # Gather total loan values
+            total_principal = sum(loan.amount for loan in loans)
+            total_current_value = sum(loan.outstanding_balance for loan in loans)
+            
+            # Format loans
+            loans_list = []
+            for loan in loans:
+                # Get player name for readability
+                player_name = None
+                player = Player.query.get(loan.player_id)
+                if player:
+                    player_name = player.username
+                
+                loans_list.append({
+                    "id": loan.id,
+                    "player_id": loan.player_id,
+                    "player_name": player_name,
+                    "amount": loan.amount,
+                    "interest_rate": loan.interest_rate,
+                    "current_value": loan.outstanding_balance,
+                    "status": 'active' if loan.is_active else 'paid',
+                    "loan_type": loan.loan_type,
+                    "creation_lap": loan.start_lap,
+                    "length_laps": loan.length_laps,
+                    "due_lap": loan.start_lap + loan.length_laps,
+                    "last_payment_lap": None,  # Not available in current model
+                    "property_id": loan.property_id,
+                    "creation_date": loan.created_at.isoformat() if loan.created_at else None,
+                    "is_active": loan.is_active
+                })
+            
+            # Get game state for current lap
+            game_state = GameState.get_instance()
+            current_lap = game_state.current_lap if game_state else 0
+            
+            return {
+                "success": True,
+                "loans": loans_list,
+                "total_loans": total_loans,
+                "active_loans": active_loans,
+                "total_principal": total_principal,
+                "total_current_value": total_current_value,
+                "current_lap": current_lap
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting all loans: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}

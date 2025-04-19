@@ -532,7 +532,7 @@ class TestMonopolyMadnessMode:
                 mock_event.return_value = {
                     'event_type': 'teleport',
                     'destination': 24,
-                    'message': 'You've been teleported to a random location!'
+                    'message': "You've been teleported to a random location!"
                 }
                 
                 # End turn to trigger random event

@@ -13,6 +13,8 @@ class TestAdminEndpoints:
         
         # Set testing configuration
         flask_app.config['TESTING'] = True
+        flask_app.config['ADMIN_KEY'] = 'test_admin_key'  # Set a consistent admin key for testing
+        flask_app.config['ADMIN_KEY'] = 'test_admin_key'  # Set a consistent admin key for testing
         
         # Return the app
         return flask_app
@@ -21,6 +23,16 @@ class TestAdminEndpoints:
     def client(self, app):
         """Get a test client for the app"""
         return app.test_client()
+    
+    @pytest.fixture
+    def admin_headers(self, app):
+        \"\"\"Get headers with admin authentication\"\"\"
+        return {'X-Admin-Key': app.config['ADMIN_KEY']}
+    
+    @pytest.fixture
+    def admin_headers(self, app):
+        """Get headers with admin authentication"""
+        return {'X-Admin-Key': app.config['ADMIN_KEY']}
     
     @pytest.fixture
     def mock_admin_decorator(self, app, monkeypatch):
@@ -32,15 +44,15 @@ class TestAdminEndpoints:
         
         monkeypatch.setattr('src.routes.decorators.admin_required', mock_admin_required)
     
-    def test_admin_bots_types_endpoint(self, client, mock_admin_decorator):
+    def test_admin_bots_types_endpoint(self, client, admin_headers):
         """Test the /api/admin/bots/types endpoint"""
-        response = client.get('/api/admin/bots/types')
+        response = client.get('/api/admin/bots/types', headers=admin_headers)
         
         # This endpoint was returning 404 in the user's logs
         # Let's add it if it doesn't exist
         if response.status_code == 404:
             # Create a direct route test for the alternative endpoint that does work
-            response = client.get('/api/admin/bots/types/test')
+            response = client.get('/api/admin/bots/types/test', headers=admin_headers)
             assert response.status_code == 200
             data = json.loads(response.data)
             assert "success" in data
@@ -57,7 +69,7 @@ class TestAdminEndpoints:
             assert data["success"] is True
             assert "bot_types" in data
     
-    def test_admin_finance_overview_endpoint(self, client, mock_admin_decorator, app, monkeypatch):
+    def test_admin_finance_overview_endpoint(self, client, admin_headers, app, monkeypatch):
         """Test the /api/admin/finance/overview endpoint"""
         # Create a mock finance controller
         mock_finance_controller = MagicMock()
@@ -73,7 +85,7 @@ class TestAdminEndpoints:
         app.config['finance_controller'] = mock_finance_controller
         
         # Test the endpoint
-        response = client.get('/api/admin/finance/overview')
+        response = client.get('/api/admin/finance/overview', headers=admin_headers)
         
         # This endpoint was returning 404 in the user's logs
         if response.status_code == 404:
@@ -108,7 +120,7 @@ class TestAdminEndpoints:
                 app.register_blueprint(finance_admin_bp, url_prefix='/api/admin/finance')
                 
                 # Make the request
-                test_response = client.get('/api/admin/finance/overview')
+                test_response = client.get('/api/admin/finance/overview', headers=admin_headers)
                 assert test_response.status_code == 200
                 
             # Report that we're adding this endpoint dynamically for testing
@@ -124,7 +136,7 @@ class TestAdminEndpoints:
             assert "success" in data
             assert data["success"] is True
     
-    def test_admin_finance_loans_endpoint(self, client, mock_admin_decorator, app, monkeypatch):
+    def test_admin_finance_loans_endpoint(self, client, admin_headers, app, monkeypatch):
         """Test the /api/admin/finance/loans endpoint"""
         # Create a mock finance controller
         mock_finance_controller = MagicMock()
@@ -137,7 +149,7 @@ class TestAdminEndpoints:
         app.config['finance_controller'] = mock_finance_controller
         
         # Test the endpoint
-        response = client.get('/api/admin/finance/loans')
+        response = client.get('/api/admin/finance/loans', headers=admin_headers)
         
         # This endpoint was returning 500 in the user's logs
         if response.status_code in (404, 500):
@@ -172,7 +184,7 @@ class TestAdminEndpoints:
             assert data["success"] is True
             assert "loans" in data
     
-    def test_admin_finance_transactions_endpoint(self, client, mock_admin_decorator, app, monkeypatch):
+    def test_admin_finance_transactions_endpoint(self, client, admin_headers, app, monkeypatch):
         """Test the /api/admin/finance/transactions endpoint"""
         # Create a mock finance controller
         mock_finance_controller = MagicMock()
@@ -185,7 +197,7 @@ class TestAdminEndpoints:
         app.config['finance_controller'] = mock_finance_controller
         
         # Test the endpoint
-        response = client.get('/api/admin/finance/transactions')
+        response = client.get('/api/admin/finance/transactions', headers=admin_headers)
         
         # This endpoint was returning 500 in the user's logs
         if response.status_code in (404, 500):
@@ -221,7 +233,7 @@ class TestAdminEndpoints:
             assert data["success"] is True
             assert "transactions" in data
     
-    def test_admin_economic_state_endpoint(self, client, mock_admin_decorator, app, monkeypatch):
+    def test_admin_economic_state_endpoint(self, client, admin_headers, app, monkeypatch):
         """Test the /api/admin/economic/state endpoint"""
         # Create a mock economic controller
         mock_economic_controller = MagicMock()
@@ -236,7 +248,7 @@ class TestAdminEndpoints:
         app.config['economic_controller'] = mock_economic_controller
         
         # Test the endpoint
-        response = client.get('/api/admin/economic/state')
+        response = client.get('/api/admin/economic/state', headers=admin_headers)
         
         # This endpoint was returning 404 in the user's logs
         if response.status_code == 404:
@@ -271,7 +283,7 @@ class TestAdminEndpoints:
                 app.register_blueprint(economic_admin_bp, url_prefix='/api/admin/economic')
                 
                 # Make the request
-                test_response = client.get('/api/admin/economic/state')
+                test_response = client.get('/api/admin/economic/state', headers=admin_headers)
                 assert test_response.status_code == 200
                 
             # Report that we're adding this endpoint dynamically for testing

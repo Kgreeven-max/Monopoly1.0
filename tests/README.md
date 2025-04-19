@@ -1,3 +1,51 @@
+# Testing Structure
+
+This document outlines the correct structure for tests in the project to prevent duplication and confusion.
+
+## Test Organization
+
+Tests should be organized according to the following structure:
+
+- `tests/` - Base directory for all tests
+  - `api/` - Tests for API endpoints
+    - `admin_api/` - Admin API endpoint tests
+    - `player_api/` - Player API endpoint tests
+    - `game_api/` - Game-related API endpoint tests
+  - `models/` - Tests for database models
+  - `controllers/` - Tests for controller logic
+  - `game_logic/` - Tests for game logic
+  - `unit/` - Unit tests for utility functions and helpers
+
+## Duplicate Tests
+
+The following test files are duplicated and should be consolidated:
+
+1. ✅ Admin Dashboard Tests:
+   - Primary: `tests/api/admin_api/test_admin_dashboard.py`
+   - Duplicate (deprecated): `tests/admin/test_admin_dashboard.py`
+   - Duplicate (deprecated): `tests/test_admin_endpoints.py`
+
+2. ✅ Auction Admin Routes:
+   - Primary: `tests/routes/admin/test_auction_admin_routes.py`
+   - Duplicate (deprecated): `tests/test_auction_admin_routes.py`
+
+## Authentication in Tests
+
+All tests for authenticated endpoints should:
+
+1. Include the appropriate authentication headers
+2. Use the fixtures defined in `tests/conftest.py` for authentication
+3. Not rely on monkeypatching authentication decorators unless absolutely necessary
+
+## Guidelines for Writing Tests
+
+1. Use descriptive test names that indicate what is being tested
+2. Include assertions that clearly verify the expected behavior
+3. Mock external dependencies where appropriate
+4. Clean up after tests to leave the database in a clean state
+5. Use fixtures to set up common test data
+6. Add new tests to the appropriate directory based on the structure above
+
 # Monopoly Tests
 
 This directory contains tests for the Monopoly application to ensure components function correctly.

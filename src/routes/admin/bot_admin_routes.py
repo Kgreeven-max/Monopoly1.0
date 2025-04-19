@@ -28,7 +28,7 @@ def add_bot():
     else:
         return jsonify(result), 400
 
-@bot_admin_bp.route('/bots/types', methods=['GET'])
+@bot_admin_bp.route('/types', methods=['GET'])
 @admin_required
 def get_bot_types():
     """Get list of available bot types and difficulty levels"""

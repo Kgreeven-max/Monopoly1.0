@@ -2192,6 +2192,47 @@
         }
         
         // --- End Economy Tab Functions ---
+
+        // --- Game Mode Tab Functions ---
+        
+        // Implement the missing endSelectedGame function
+        function endSelectedGame() {
+            if (selectedGameId) {
+                if (confirm(`Are you sure you want to end game #${selectedGameId}? This cannot be undone.`)) {
+                    endGame(selectedGameId);
+                }
+            } else {
+                showAlert('warning', 'Please select a game to end.');
+            }
+        }
+        
+        // End a specific game
+        function endGame(gameId) {
+            showLoading(true);
+            
+            fetch(`/api/admin/games/${gameId}/end`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': adminKey
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('success', `Game #${gameId} has been ended.`);
+                        loadActiveGames(); // Refresh the list
+                    } else {
+                        showAlert('error', 'Error ending game: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    showAlert('error', 'Error ending game: ' + error.message);
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
     </script>
 </body>
 </html> 

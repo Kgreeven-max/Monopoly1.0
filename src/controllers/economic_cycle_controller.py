@@ -81,121 +81,137 @@ class EconomicCycleController:
     
     def process_economic_cycle(self, game_id):
         """
-        Process an economic cycle update for a game.
+        Process the economic cycle for a given game.
         
         Args:
-            game_id (str): The ID of the game.
+            game_id: ID of the game to process
             
         Returns:
-            dict: A dictionary with the results of the economic cycle update.
+            Dict with success status and economic state
         """
-        logger.info(f"Processing economic cycle for game {game_id}")
+        self.logger.info(f"Processing economic cycle for game {game_id}")
         
         try:
-            # Get the game state
-            game_state = GameState.query.get(game_id)
-            if not game_state:
-                logger.error(f"Game {game_id} not found")
-                return {"success": False, "error": "Game not found"}
+            # Always use Flask's application context for database operations in scheduled tasks
+            from flask import current_app
             
-            # Get the current economic state
-            current_state = game_state.economic_state or "stable"
-            
-            # Determine the next economic state
-            next_state = self._determine_next_economic_state(current_state)
-            
-            # Update inflation based on the economic state
-            current_inflation = game_state.inflation_rate or 0.0
-            inflation_change = ECONOMIC_STATES[next_state]["inflation_modifier"]
-            new_inflation = max(min(current_inflation + inflation_change, 0.15), -0.05)  # Cap between -5% and 15%
-            
-            # Calculate interest rates for different financial instruments
-            base_loan_rate = 0.05  # 5% base
-            base_cd_rate = 0.03    # 3% base
-            base_heloc_rate = 0.06 # 6% base
-            
-            interest_rates = {
-                "loan": base_loan_rate * ECONOMIC_STATES[next_state]["loan_interest_modifier"],
-                "cd": base_cd_rate * ECONOMIC_STATES[next_state]["cd_interest_modifier"],
-                "heloc": base_heloc_rate * ECONOMIC_STATES[next_state]["heloc_interest_modifier"]
-            }
-            
-            # Apply economic changes to properties if configured
-            if game_state.config and game_state.config.get("property_values_follow_economy", True):
-                self._update_property_values(game_id, ECONOMIC_STATES[next_state]["property_value_modifier"])
-            
-            # Update game state with new economic values
-            game_state.economic_state = next_state
-            game_state.inflation_rate = new_inflation
-            game_state.last_economic_update = datetime.utcnow()
-            
-            # Store interest rates
-            if game_state.interest_rates:
-                try:
-                    current_rates = json.loads(game_state.interest_rates)
-                except json.JSONDecodeError:
-                    current_rates = {}
+            # Check if we need to create an app context
+            if not current_app._get_current_object():
+                from app import app
+                with app.app_context():
+                    return self._process_economic_cycle_internal(game_id)
             else:
-                current_rates = {}
-                
-            current_rates.update(interest_rates)
-            game_state.interest_rates = json.dumps(current_rates)
-            
-            # Add to game log
-            log_entry = {
-                "type": "economic_cycle_update",
-                "previous_state": current_state,
-                "new_state": next_state,
-                "inflation_rate": new_inflation,
-                "interest_rates": interest_rates,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-            
-            if game_state.game_log:
-                try:
-                    current_log = json.loads(game_state.game_log)
-                except json.JSONDecodeError:
-                    current_log = []
-            else:
-                current_log = []
-                
-            current_log.append(log_entry)
-            game_state.game_log = json.dumps(current_log)
-            
-            # Calculate new bank multiplier for money lending
-            bank_multiplier = ECONOMIC_STATES[next_state]["bank_money_multiplier"]
-            
-            # Process economic effects on active loans and CDs
-            self._process_loan_interest_changes(game_id, interest_rates["loan"])
-            self._process_cd_interest_changes(game_id, interest_rates["cd"])
-            
-            # Commit changes to database
-            db.session.commit()
-            
-            # Emit an event to notify clients
-            economic_update = {
-                "game_id": game_id,
-                "economic_state": next_state,
-                "economic_description": ECONOMIC_STATES[next_state]["description"],
-                "inflation_rate": new_inflation,
-                "interest_rates": interest_rates,
-                "color": ECONOMIC_STATES[next_state]["color"],
-                "timestamp": datetime.utcnow().isoformat()
-            }
-            self.socketio.emit('economic_update', economic_update, room=game_id)
-            
-            return {
-                "success": True,
-                "previous_state": current_state,
-                "new_state": next_state,
-                "inflation_rate": new_inflation,
-                "interest_rates": interest_rates
-            }
+                return self._process_economic_cycle_internal(game_id)
             
         except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error processing economic cycle: {str(e)}", exc_info=True)
+            self.logger.error(f"Error processing economic cycle: {str(e)}", exc_info=True)
+            # Try rollback in case transaction was started
+            try:
+                db.session.rollback()
+            except:
+                pass
             return {"success": False, "error": str(e)}
+        
+    def _process_economic_cycle_internal(self, game_id):
+        """Internal method to process economic cycle with application context"""
+        # Get game state
+        game_state = GameState.query.filter_by(game_id=game_id).first()
+        if not game_state:
+            return {"success": False, "error": "Game state not found"}
+            
+        # Get the current economic state
+        current_state = game_state.economic_state or "stable"
+        
+        # Determine the next economic state
+        next_state = self._determine_next_economic_state(current_state)
+        
+        # Update inflation based on the economic state
+        current_inflation = game_state.inflation_rate or 0.0
+        inflation_change = ECONOMIC_STATES[next_state]["inflation_modifier"]
+        new_inflation = max(min(current_inflation + inflation_change, 0.15), -0.05)  # Cap between -5% and 15%
+        
+        # Calculate interest rates for different financial instruments
+        base_loan_rate = 0.05  # 5% base
+        base_cd_rate = 0.03    # 3% base
+        base_heloc_rate = 0.06 # 6% base
+        
+        interest_rates = {
+            "loan": base_loan_rate * ECONOMIC_STATES[next_state]["loan_interest_modifier"],
+            "cd": base_cd_rate * ECONOMIC_STATES[next_state]["cd_interest_modifier"],
+            "heloc": base_heloc_rate * ECONOMIC_STATES[next_state]["heloc_interest_modifier"]
+        }
+        
+        # Apply economic changes to properties if configured
+        if game_state.config and game_state.config.get("property_values_follow_economy", True):
+            self._update_property_values(game_id, ECONOMIC_STATES[next_state]["property_value_modifier"])
+        
+        # Update game state with new economic values
+        game_state.economic_state = next_state
+        game_state.inflation_rate = new_inflation
+        game_state.last_economic_update = datetime.utcnow()
+        
+        # Store interest rates
+        if game_state.interest_rates:
+            try:
+                current_rates = json.loads(game_state.interest_rates)
+            except json.JSONDecodeError:
+                current_rates = {}
+        else:
+            current_rates = {}
+            
+        current_rates.update(interest_rates)
+        game_state.interest_rates = json.dumps(current_rates)
+        
+        # Add to game log
+        log_entry = {
+            "type": "economic_cycle_update",
+            "previous_state": current_state,
+            "new_state": next_state,
+            "inflation_rate": new_inflation,
+            "interest_rates": interest_rates,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        if game_state.game_log:
+            try:
+                current_log = json.loads(game_state.game_log)
+            except json.JSONDecodeError:
+                current_log = []
+        else:
+            current_log = []
+            
+        current_log.append(log_entry)
+        game_state.game_log = json.dumps(current_log)
+        
+        # Calculate new bank multiplier for money lending
+        bank_multiplier = ECONOMIC_STATES[next_state]["bank_money_multiplier"]
+        
+        # Process economic effects on active loans and CDs
+        self._process_loan_interest_changes(game_id, interest_rates["loan"])
+        self._process_cd_interest_changes(game_id, interest_rates["cd"])
+        
+        # Commit changes to database
+        db.session.commit()
+        
+        # Emit an event to notify clients
+        economic_update = {
+            "game_id": game_id,
+            "economic_state": next_state,
+            "economic_description": ECONOMIC_STATES[next_state]["description"],
+            "inflation_rate": new_inflation,
+            "interest_rates": interest_rates,
+            "color": ECONOMIC_STATES[next_state]["color"],
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        self.socketio.emit('economic_update', economic_update, room=game_id)
+        
+        return {
+            "success": True,
+            "previous_state": current_state,
+            "new_state": next_state,
+            "inflation_rate": new_inflation,
+            "interest_rates": interest_rates
+        }
     
     def _determine_next_economic_state(self, current_state):
         """
