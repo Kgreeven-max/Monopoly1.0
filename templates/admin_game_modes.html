@@ -1223,25 +1223,39 @@ const GameModesAdmin = (function() {
     
     // Render analytics data
     function renderAnalytics(data) {
-        // Update metrics
-        document.getElementById('analytics-total-games').textContent = data.total_games;
-        document.getElementById('analytics-avg-duration').textContent = formatDuration(data.avg_duration_minutes);
-        document.getElementById('analytics-avg-players').textContent = data.avg_players.toFixed(1);
-        document.getElementById('analytics-avg-turns').textContent = data.avg_turns.toFixed(0);
+        // Add null checks for all elements before updating them
+        const totalGamesEl = document.getElementById('analytics-total-games');
+        const avgDurationEl = document.getElementById('analytics-avg-duration');
+        const avgPlayersEl = document.getElementById('analytics-avg-players');
+        const avgTurnsEl = document.getElementById('analytics-avg-turns');
         
-        // Render charts
-        renderModePopularityChart(data.mode_distribution);
-        renderDurationByModeChart(data.duration_by_mode);
-        renderCompletionRateChart(data.completion_rate_by_mode);
-        renderPlayerCountTrendChart(data.player_count_trend);
+        // Update metrics safely
+        if (totalGamesEl) totalGamesEl.textContent = data.total_games;
+        if (avgDurationEl) avgDurationEl.textContent = formatDuration(data.avg_duration_minutes);
+        if (avgPlayersEl) avgPlayersEl.textContent = data.avg_players.toFixed(1);
+        if (avgTurnsEl) avgTurnsEl.textContent = data.avg_turns.toFixed(0);
         
-        // Render performance table
-        renderModePerformanceTable(data.mode_performance);
+        // Render charts - only if data exists
+        if (data.mode_distribution) renderModePopularityChart(data.mode_distribution);
+        if (data.duration_by_mode) renderDurationByModeChart(data.duration_by_mode);
+        if (data.completion_rate_by_mode) renderCompletionRateChart(data.completion_rate_by_mode);
+        if (data.player_count_trend) renderPlayerCountTrendChart(data.player_count_trend);
+        
+        // Render performance table - only if data exists
+        if (data.mode_performance) renderModePerformanceTable(data.mode_performance);
     }
     
     // Render mode popularity chart
     function renderModePopularityChart(data) {
-        const ctx = document.getElementById('mode-popularity-chart').getContext('2d');
+        const canvasEl = document.getElementById('mode-popularity-chart');
+        if (!canvasEl) {
+            // Canvas element doesn't exist, log an error and return
+            console.error('Cannot find mode-popularity-chart element');
+            return;
+        }
+        
+        const ctx = canvasEl.getContext('2d');
+        if (!ctx) return;
         
         // Destroy existing chart if it exists
         if (window.modePopularityChart) {
@@ -1545,6 +1559,123 @@ const GameModesAdmin = (function() {
             });
     }
     
+    // Render game modes in the UI
+    function renderModes() {
+        if (!availableModes) return;
+        
+        // Clear previous mode lists
+        const standardContainer = document.getElementById('standard-modes-container');
+        const specialtyContainer = document.getElementById('specialty-modes-container');
+        
+        // Add null checks
+        if (!standardContainer || !specialtyContainer) {
+            console.error('Cannot find mode containers');
+            return;
+        }
+        
+        standardContainer.innerHTML = '';
+        specialtyContainer.innerHTML = '';
+        
+        // Populate standard modes
+        if (availableModes.standard && availableModes.standard.length > 0) {
+            availableModes.standard.forEach(mode => {
+                const modeItem = document.createElement('div');
+                modeItem.className = 'list-group-item mode-item';
+                modeItem.dataset.modeId = mode.id;
+                modeItem.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${mode.name}</h6>
+                            <small>${mode.description.substring(0, 80)}${mode.description.length > 80 ? '...' : ''}</small>
+                        </div>
+                        <span class="badge bg-primary">${mode.difficulty}</span>
+                    </div>
+                `;
+                
+                // Add click event to select mode
+                modeItem.addEventListener('click', () => {
+                    // Remove active class from all modes
+                    document.querySelectorAll('.mode-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    
+                    // Add active class to selected mode
+                    modeItem.classList.add('active');
+                    
+                    // Update selected mode
+                    selectedMode = mode.id;
+                    
+                    // Render mode description
+                    renderModeDescription(mode.id);
+                    
+                    // Enable select button
+                    const selectBtn = document.getElementById('select-mode-btn');
+                    if (selectBtn) selectBtn.disabled = false;
+                });
+                
+                standardContainer.appendChild(modeItem);
+            });
+        } else {
+            standardContainer.innerHTML = '<div class="list-group-item text-center">No standard modes available</div>';
+        }
+        
+        // Populate specialty modes
+        if (availableModes.specialty && availableModes.specialty.length > 0) {
+            availableModes.specialty.forEach(mode => {
+                const modeItem = document.createElement('div');
+                modeItem.className = 'list-group-item mode-item';
+                modeItem.dataset.modeId = mode.id;
+                modeItem.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${mode.name}</h6>
+                            <small>${mode.description.substring(0, 80)}${mode.description.length > 80 ? '...' : ''}</small>
+                        </div>
+                        <span class="badge bg-info">${mode.difficulty}</span>
+                    </div>
+                `;
+                
+                // Add click event to select mode
+                modeItem.addEventListener('click', () => {
+                    // Remove active class from all modes
+                    document.querySelectorAll('.mode-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    
+                    // Add active class to selected mode
+                    modeItem.classList.add('active');
+                    
+                    // Update selected mode
+                    selectedMode = mode.id;
+                    
+                    // Render mode description
+                    renderModeDescription(mode.id);
+                    
+                    // Enable select button
+                    const selectBtn = document.getElementById('select-mode-btn');
+                    if (selectBtn) selectBtn.disabled = false;
+                });
+                
+                specialtyContainer.appendChild(modeItem);
+            });
+        } else {
+            specialtyContainer.innerHTML = '<div class="list-group-item text-center">No specialty modes available</div>';
+        }
+        
+        // Check if there's a currently selected mode to highlight
+        if (selectedMode) {
+            const modeElement = document.querySelector(`.mode-item[data-mode-id="${selectedMode}"]`);
+            if (modeElement) {
+                modeElement.classList.add('active');
+                renderModeDescription(selectedMode);
+                
+                // Enable select button
+                const selectBtn = document.getElementById('select-mode-btn');
+                if (selectBtn) selectBtn.disabled = false;
+            }
+        }
+    }
+    
     // Load current game mode settings
     function loadCurrentModeSettings() {
         if (!gameId) {
@@ -1626,6 +1757,11 @@ const GameModesAdmin = (function() {
     // Render mode settings
     function renderModeSettings(modeId, existingSettings = null) {
         const settingsContainer = document.getElementById('settings-container');
+        // Add null check
+        if (!settingsContainer) {
+            console.error('Cannot find settings-container element');
+            return;
+        }
         
         // If we don't have a mode selected, show a message
         if (!modeId) {
@@ -1883,10 +2019,13 @@ const GameModesAdmin = (function() {
             return;
         }
         
-        showLoading(true);
-        
-        // Get settings from form
+        // Get settings form - add null check
         const form = document.getElementById('mode-settings-form');
+        if (!form) {
+            showAlert('error', 'Settings form not found');
+            return;
+        }
+        
         const formData = new FormData(form);
         const settings = {};
         
@@ -2036,7 +2175,9 @@ const GameModesAdmin = (function() {
     };
 })();
 
-// Initialization when page loads
+// Initialize game mode data - VARIABLES FIRST
+let gameModes = []; // Initialize variable before any function calls
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initial load
     loadGameModesOverview();
@@ -2081,10 +2222,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Initialize game mode data
-loadAvailableModes();
-loadActiveGames();
-initCharts();
+// Load data after DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Now call these only after DOM is ready
+    loadAvailableModes();
+    loadActiveGames();
+    initCharts();
+});
 
 // Tab handling function
 function openTab(evt, tabName) {

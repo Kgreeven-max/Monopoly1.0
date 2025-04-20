@@ -964,6 +964,172 @@ class PropertyController:
         
         return True
 
+    def get_all_properties(self):
+        """Get all properties in the database"""
+        try:
+            properties = Property.query.all()
+            
+            # If no properties exist, initialize default properties
+            if not properties:
+                self.initialize_default_properties()
+                properties = Property.query.all()
+            
+            return {
+                "success": True,
+                "properties": [property.to_dict() for property in properties]
+            }
+        except Exception as e:
+            self.logger.error(f"Error getting all properties: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    def initialize_default_properties(self):
+        """Initialize default properties if none exist"""
+        try:
+            self.logger.info("Initializing default properties")
+            
+            # Check if properties already exist
+            if Property.query.count() > 0:
+                self.logger.info("Properties already exist, skipping initialization")
+                return
+            
+            # Basic property types
+            property_colors = [
+                {"name": "Brown", "houses_price": 50},
+                {"name": "Light Blue", "houses_price": 50},
+                {"name": "Pink", "houses_price": 100},
+                {"name": "Orange", "houses_price": 100},
+                {"name": "Red", "houses_price": 150},
+                {"name": "Yellow", "houses_price": 150},
+                {"name": "Green", "houses_price": 200},
+                {"name": "Blue", "houses_price": 200}
+            ]
+            
+            # Create some default properties
+            properties_data = [
+                {"name": "Mediterranean Avenue", "price": 60, "position": 1, "group": "Brown"},
+                {"name": "Baltic Avenue", "price": 60, "position": 3, "group": "Brown"},
+                {"name": "Oriental Avenue", "price": 100, "position": 6, "group": "Light Blue"},
+                {"name": "Vermont Avenue", "price": 100, "position": 8, "group": "Light Blue"},
+                {"name": "Connecticut Avenue", "price": 120, "position": 9, "group": "Light Blue"},
+                {"name": "St. Charles Place", "price": 140, "position": 11, "group": "Pink"},
+                {"name": "States Avenue", "price": 140, "position": 13, "group": "Pink"},
+                {"name": "Virginia Avenue", "price": 160, "position": 14, "group": "Pink"},
+                {"name": "St. James Place", "price": 180, "position": 16, "group": "Orange"},
+                {"name": "Tennessee Avenue", "price": 180, "position": 18, "group": "Orange"},
+                {"name": "New York Avenue", "price": 200, "position": 19, "group": "Orange"},
+                {"name": "Kentucky Avenue", "price": 220, "position": 21, "group": "Red"},
+                {"name": "Indiana Avenue", "price": 220, "position": 23, "group": "Red"},
+                {"name": "Illinois Avenue", "price": 240, "position": 24, "group": "Red"},
+                {"name": "Atlantic Avenue", "price": 260, "position": 26, "group": "Yellow"},
+                {"name": "Ventnor Avenue", "price": 260, "position": 27, "group": "Yellow"},
+                {"name": "Marvin Gardens", "price": 280, "position": 29, "group": "Yellow"},
+                {"name": "Pacific Avenue", "price": 300, "position": 31, "group": "Green"},
+                {"name": "North Carolina Avenue", "price": 300, "position": 32, "group": "Green"},
+                {"name": "Pennsylvania Avenue", "price": 320, "position": 34, "group": "Green"},
+                {"name": "Park Place", "price": 350, "position": 37, "group": "Blue"},
+                {"name": "Boardwalk", "price": 400, "position": 39, "group": "Blue"}
+            ]
+            
+            # Create properties
+            for prop_data in properties_data:
+                group = prop_data["group"]
+                color_data = next((c for c in property_colors if c["name"] == group), None)
+                houses_price = color_data["houses_price"] if color_data else 100
+                
+                # Calculate rents based on price
+                base_rent = int(prop_data["price"] * 0.1)  # 10% of price
+                
+                # Create property
+                new_property = Property(
+                    name=prop_data["name"],
+                    price=prop_data["price"],
+                    current_price=prop_data["price"],
+                    position=prop_data["position"],
+                    group=prop_data["group"],
+                    rent=base_rent,
+                    rent_1_house=base_rent * 5,
+                    rent_2_houses=base_rent * 15,
+                    rent_3_houses=base_rent * 30,
+                    rent_4_houses=base_rent * 40,
+                    rent_hotel=base_rent * 50,
+                    houses_price=houses_price,
+                    is_mortgaged=False,
+                    houses=0,
+                    owner_id=None
+                )
+                
+                db.session.add(new_property)
+            
+            # Add railroad properties
+            railroads = [
+                {"name": "Reading Railroad", "position": 5},
+                {"name": "Pennsylvania Railroad", "position": 15},
+                {"name": "B&O Railroad", "position": 25},
+                {"name": "Short Line", "position": 35}
+            ]
+            
+            for railroad in railroads:
+                new_railroad = Property(
+                    name=railroad["name"],
+                    price=200,
+                    current_price=200,
+                    position=railroad["position"],
+                    group="Railroad",
+                    rent=25,
+                    rent_1_house=50,
+                    rent_2_houses=100,
+                    rent_3_houses=200,
+                    rent_4_houses=200,
+                    rent_hotel=200,
+                    houses_price=0,
+                    is_mortgaged=False,
+                    houses=0,
+                    owner_id=None
+                )
+                
+                db.session.add(new_railroad)
+            
+            # Add utility properties
+            utilities = [
+                {"name": "Electric Company", "position": 12},
+                {"name": "Water Works", "position": 28}
+            ]
+            
+            for utility in utilities:
+                new_utility = Property(
+                    name=utility["name"],
+                    price=150,
+                    current_price=150,
+                    position=utility["position"],
+                    group="Utility",
+                    rent=0,  # Special calculation based on dice roll
+                    rent_1_house=0,
+                    rent_2_houses=0,
+                    rent_3_houses=0,
+                    rent_4_houses=0,
+                    rent_hotel=0,
+                    houses_price=0,
+                    is_mortgaged=False,
+                    houses=0,
+                    owner_id=None
+                )
+                
+                db.session.add(new_utility)
+            
+            # Commit all properties to the database
+            db.session.commit()
+            
+            self.logger.info(f"Successfully initialized {len(properties_data) + len(railroads) + len(utilities)} properties")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error initializing default properties: {e}")
+            db.session.rollback()
+            return False
+
 # --- Registration Function --- 
 
 def register_property_events(socketio_instance, app_config):

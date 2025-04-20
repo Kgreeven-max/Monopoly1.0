@@ -1230,7 +1230,13 @@
                 if (data.success) {
                     // Update financial stats
                     const statsElement = document.getElementById('finance-stats');
-                    const stats = data.stats;
+                    if (!statsElement) {
+                        console.error('finance-stats element not found');
+                        return;
+                    }
+                    
+                    // Check if stats exists before trying to access properties
+                    const stats = data.stats || {};
                     
                     let statsHtml = `
                         <table class="table">
@@ -1245,7 +1251,13 @@
                     
                     // Update interest rates
                     const ratesElement = document.getElementById('interest-rates');
-                    const rates = data.rates;
+                    if (!ratesElement) {
+                        console.error('interest-rates element not found');
+                        return;
+                    }
+                    
+                    // Check if rates exists before trying to access properties
+                    const rates = data.rates || {};
                     
                     if (rates && rates.rates) {
                         let ratesHtml = `
@@ -1270,14 +1282,32 @@
                     }
                 } else {
                     console.error('Failed to fetch finance overview:', data.error);
-                    document.getElementById('finance-stats').innerHTML = `<p class="text-danger">Error loading financial statistics: ${data.error}</p>`;
-                    document.getElementById('interest-rates').innerHTML = `<p class="text-danger">Error loading interest rates: ${data.error}</p>`;
+                    
+                    // Safely update DOM elements only if they exist
+                    const statsElement = document.getElementById('finance-stats');
+                    if (statsElement) {
+                        statsElement.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
+                    }
+                    
+                    const ratesElement = document.getElementById('interest-rates');
+                    if (ratesElement) {
+                        ratesElement.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error fetching finance overview:', error);
-                document.getElementById('finance-stats').innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
-                document.getElementById('interest-rates').innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+                
+                // Safely update DOM elements only if they exist
+                const statsElement = document.getElementById('finance-stats');
+                if (statsElement) {
+                    statsElement.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+                }
+                
+                const ratesElement = document.getElementById('interest-rates');
+                if (ratesElement) {
+                    ratesElement.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+                }
             });
         }
         

@@ -1,13 +1,367 @@
 from flask import Blueprint, jsonify, request
 import logging
+import datetime
 from src.controllers.admin_controller import AdminController
 from src.routes.decorators import admin_required
+from src.models.player import Player
+from src.models.game_state import GameState
 
 logger = logging.getLogger(__name__)
 game_admin_bp = Blueprint('game_admin', __name__, url_prefix='')
 
 # Assumes AdminController instance is accessible
 admin_controller = AdminController()
+
+@game_admin_bp.route('/games/active', methods=['GET'])
+@admin_required
+def get_active_games():
+    """
+    Get a list of all active games in the system.
+    
+    This API returns basic information about active games including players, game mode, and status.
+    """
+    try:
+        # Get game state
+        game_state = GameState.get_instance()
+        
+        if not game_state:
+            logger.warning("No active game state found in get_active_games")
+            return jsonify({
+                "success": False,
+                "error": "No active game state found"
+            }), 404
+        
+        # Ensure game_id is present and valid
+        if not game_state.game_id:
+            logger.warning("Game state exists but has no game_id")
+            return jsonify({
+                "success": False,
+                "error": "Game state missing game_id"
+            }), 500
+        
+        # Get active players
+        active_players = Player.query.filter_by(in_game=True).all()
+        player_count = len(active_players)
+        
+        logger.debug(f"Found {player_count} active players for game {game_state.game_id}")
+        
+        # For now we only have one game in this system, 
+        # but structure the response to support multiple games in the future
+        game_data = {
+            "id": game_state.game_id,
+            "mode": "standard",  # Placeholder - would be from game settings
+            "player_count": player_count,
+            "max_players": 8,  # Placeholder - would be from game settings
+            "current_lap": game_state.current_lap,
+            "current_turn_player": None,  # Would need to find the current player
+            "status": "active" if game_state.game_active else "inactive",
+            "duration_minutes": 0,  # Placeholder - would calculate from start time
+            "created_at": datetime.datetime.now().isoformat(),  # Placeholder
+            "settings": {
+                "starting_cash": 1500,  # Standard values
+                "go_salary": 200,
+                "free_parking_collects_fees": True,
+                "auction_enabled": True,
+                "max_turns": None,
+                "max_time_minutes": None
+            }
+        }
+        
+        # Find the current player if possible
+        if game_state.current_player_id:
+            try:
+                current_player = Player.query.get(game_state.current_player_id)
+                if current_player:
+                    game_data["current_turn_player"] = current_player.username
+            except Exception as player_error:
+                logger.warning(f"Error getting current player: {player_error}")
+                # Continue without current player info
+        
+        # Calculate game duration if start_time is available
+        if hasattr(game_state, 'start_time') and game_state.start_time:
+            start_time = game_state.start_time
+            if isinstance(start_time, str):
+                try:
+                    start_time = datetime.datetime.fromisoformat(start_time)
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Error parsing start_time: {e}")
+                    start_time = None
+            
+            if start_time:
+                duration = datetime.datetime.now() - start_time
+                game_data["duration_minutes"] = int(duration.total_seconds() / 60)
+        
+        response_data = {
+            "success": True,
+            "games": [game_data]
+        }
+        
+        # Try to create the response once to catch any serialization errors
+        try:
+            response = jsonify(response_data)
+            return response, 200
+        except Exception as json_error:
+            logger.error(f"JSON serialization error: {json_error}", exc_info=True)
+            return jsonify({
+                "success": False,
+                "error": f"JSON serialization error: {str(json_error)}"
+            }), 500
+    
+    except Exception as e:
+        logger.error(f"Error getting active games: {e}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": f"Failed to get active games: {str(e)}"
+        }), 500
+
+@game_admin_bp.route('/games/<string:game_id>', methods=['GET'])
+@admin_required
+def get_game_details(game_id):
+    """
+    Get detailed information about a specific game.
+    
+    This API returns detailed information including players, properties, and game settings.
+    """
+    try:
+        # Get game state
+        game_state = GameState.get_instance()
+        
+        if not game_state or game_state.game_id != game_id:
+            return jsonify({
+                "success": False,
+                "error": "Game not found"
+            }), 404
+        
+        # Get players in this game
+        players = Player.query.filter_by(in_game=True).all()
+        
+        # Format player data
+        player_data = []
+        for player in players:
+            player_data.append({
+                "id": player.id,
+                "name": player.username,
+                "type": "bot" if player.is_bot else "human",
+                "cash": player.cash,
+                "position": player.position,
+                "is_in_jail": player.is_in_jail,
+                "jail_turns": player.jail_turns,
+                "property_count": len(player.properties) if hasattr(player, 'properties') else 0
+            })
+        
+        # Build detailed game response
+        game_details = {
+            "id": game_state.game_id,
+            "name": "Pi-nopoly Game",  # Placeholder
+            "mode": "standard",  # Placeholder
+            "status": "active" if game_state.game_active else "inactive",
+            "created_at": datetime.datetime.now().isoformat(),  # Placeholder
+            "current_lap": game_state.current_lap,
+            "current_turn_player": None,  # Will be set below if available
+            "duration_minutes": 0,  # Placeholder - would calculate from start time
+            "players": player_data,
+            "settings": {
+                "starting_cash": 1500,  # Standard values
+                "go_salary": 200,
+                "free_parking_collects_fees": True,
+                "auction_enabled": True,
+                "max_turns": None,
+                "max_time_minutes": None
+            }
+        }
+        
+        # Find the current player if possible
+        if game_state.current_player_id:
+            current_player = Player.query.get(game_state.current_player_id)
+            if current_player:
+                game_details["current_turn_player"] = current_player.username
+        
+        # Calculate game duration if start_time is available
+        if hasattr(game_state, 'start_time') and game_state.start_time:
+            start_time = game_state.start_time
+            if isinstance(start_time, str):
+                try:
+                    start_time = datetime.datetime.fromisoformat(start_time)
+                except (ValueError, TypeError):
+                    start_time = None
+            
+            if start_time:
+                duration = datetime.datetime.now() - start_time
+                game_details["duration_minutes"] = int(duration.total_seconds() / 60)
+        
+        return jsonify({
+            "success": True,
+            "game": game_details
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error getting game details for game {game_id}: {e}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": f"Failed to get game details: {str(e)}"
+        }), 500
+
+@game_admin_bp.route('/games/<string:game_id>/end', methods=['POST'])
+@admin_required
+def end_game(game_id):
+    """
+    End a specific game.
+    
+    This API forcefully ends a game, marking it as inactive and players as not in game.
+    """
+    try:
+        # Get game state
+        game_state = GameState.get_instance()
+        
+        if not game_state or game_state.game_id != game_id:
+            return jsonify({
+                "success": False,
+                "error": "Game not found"
+            }), 404
+        
+        # Mark game as inactive
+        game_state.game_active = False
+        
+        # Mark all players as not in game
+        players = Player.query.filter_by(in_game=True).all()
+        for player in players:
+            player.in_game = False
+        
+        # Save changes to database
+        from src.models import db
+        db.session.commit()
+        
+        # Emit game ended event if socketio is available
+        from flask import current_app
+        socketio = current_app.config.get('socketio')
+        if socketio:
+            socketio.emit('game_ended', {
+                "game_id": game_id,
+                "message": "Game has been ended by an administrator"
+            })
+        
+        return jsonify({
+            "success": True,
+            "message": f"Game {game_id} has been ended",
+            "players_removed": len(players)
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error ending game {game_id}: {e}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": f"Failed to end game: {str(e)}"
+        }), 500
+
+@game_admin_bp.route('/games/analytics', methods=['GET'])
+@admin_required
+def get_game_analytics():
+    """
+    Get analytics data for games over a period of time.
+    
+    Query parameters:
+    - days: Number of days to analyze (default: 30)
+    """
+    try:
+        # Get the number of days from query parameters
+        days = int(request.args.get('days', 30))
+        
+        # Get game state
+        game_state = GameState.get_instance()
+        
+        if not game_state:
+            return jsonify({
+                "success": False,
+                "error": "No active game state found"
+            }), 404
+        
+        # Get current date and time
+        now = datetime.datetime.now()
+        
+        # Calculate start date
+        start_date = now - datetime.timedelta(days=days)
+        
+        # Get all players
+        players = Player.query.all()
+        active_players = [p for p in players if p.in_game]
+        
+        # Placeholder analytics data
+        analytics = {
+            "period": {
+                "days": days,
+                "start_date": start_date.isoformat(),
+                "end_date": now.isoformat()
+            },
+            "players": {
+                "total": len(players),
+                "active": len(active_players),
+                "bots": len([p for p in players if p.is_bot]),
+                "humans": len([p for p in players if not p.is_bot])
+            },
+            "game_stats": {
+                "current_lap": game_state.current_lap,
+                "average_turns_per_game": game_state.current_lap,  # Placeholder - would average over multiple games
+                "average_game_duration_minutes": 0,  # Placeholder
+                "games_completed": 0,  # Placeholder
+                "games_in_progress": 1 if game_state.game_active else 0
+            },
+            "economic_stats": {
+                "total_money_in_circulation": sum(p.cash for p in players),
+                "average_player_cash": sum(p.cash for p in active_players) / len(active_players) if active_players else 0,
+                "property_ownership_rate": 0  # Placeholder - would calculate based on properties
+            },
+            "charts": {
+                "player_activity": generate_placeholder_chart_data(days),
+                "cash_distribution": {
+                    "labels": ["0-500", "501-1000", "1001-1500", "1501-2000", "2001+"],
+                    "data": [
+                        len([p for p in active_players if p.cash <= 500]),
+                        len([p for p in active_players if p.cash > 500 and p.cash <= 1000]),
+                        len([p for p in active_players if p.cash > 1000 and p.cash <= 1500]),
+                        len([p for p in active_players if p.cash > 1500 and p.cash <= 2000]),
+                        len([p for p in active_players if p.cash > 2000])
+                    ]
+                }
+            }
+        }
+        
+        return jsonify({
+            "success": True,
+            "analytics": analytics
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error getting game analytics: {e}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": f"Failed to get game analytics: {str(e)}"
+        }), 500
+
+def generate_placeholder_chart_data(days):
+    """
+    Generate placeholder data for a time series chart.
+    
+    Args:
+        days: Number of days to generate data for
+    
+    Returns:
+        Dictionary with labels and data arrays
+    """
+    labels = []
+    data = []
+    
+    # Generate a label and data point for each day
+    for i in range(days):
+        date = (datetime.datetime.now() - datetime.timedelta(days=days-i-1)).strftime('%m/%d')
+        labels.append(date)
+        # Random data between 0 and 10
+        import random
+        data.append(random.randint(0, 10))
+    
+    return {
+        "labels": labels,
+        "data": data
+    }
 
 @game_admin_bp.route('/modify-state', methods=['POST'])
 @admin_required

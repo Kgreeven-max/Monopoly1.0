@@ -1,100 +1,114 @@
 from flask import Blueprint, jsonify, request, current_app
-from src.routes.decorators import admin_required
 import logging
+from src.models.game_state import GameState
+from src.routes.decorators import admin_required
+from src.models.economic_cycle_manager import EconomicCycleManager
 
 logger = logging.getLogger(__name__)
+economic_admin_bp = Blueprint('economic_admin', __name__, url_prefix='/economic')
 
-economic_admin_bp = Blueprint('economic_admin', __name__)
+# Get or create economic manager
+def get_economic_manager():
+    """Get or create the economic cycle manager"""
+    economic_manager = current_app.config.get('economic_manager')
+    if not economic_manager:
+        economic_manager = EconomicCycleManager(
+            socketio=current_app.config.get('socketio'),
+            banker=current_app.config.get('banker')
+        )
+        current_app.config['economic_manager'] = economic_manager
+    return economic_manager
 
-@economic_admin_bp.route('/economic/state', methods=['GET'])
+@economic_admin_bp.route('/state', methods=['GET'])
 @admin_required
 def get_economic_state():
-    """Get the current economic state for admin view"""
+    """Get the current economic state"""
     try:
-        # Get the economic cycle manager from app config
-        economic_manager = current_app.config.get('economic_manager')
-        
-        if not economic_manager:
-            logger.error("Economic manager not found in app config")
-            return jsonify({
-                "success": False,
-                "error": "Economic manager not initialized"
-            }), 500
-        
-        # Get current economic state
+        economic_manager = get_economic_manager()
         result = economic_manager.get_current_economic_state()
         
-        if not result.get('success', False):
-            logger.error(f"Error getting economic state: {result.get('error', 'Unknown error')}")
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
             return jsonify(result), 500
-        
-        # Add configuration info to result
-        result['config'] = {
-            'economic_cycle_enabled': current_app.config.get('ECONOMIC_CYCLE_ENABLED', True),
-            'economic_cycle_interval': current_app.config.get('ECONOMIC_CYCLE_INTERVAL', 5),
-            'property_values_follow_economy': current_app.config.get('PROPERTY_VALUES_FOLLOW_ECONOMY', True),
-        }
-        
-        return jsonify(result)
-        
+            
     except Exception as e:
         logger.error(f"Error in get_economic_state: {str(e)}", exc_info=True)
-        return jsonify({
-            "success": False,
-            "error": f"Internal server error: {str(e)}"
-        }), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
-@economic_admin_bp.route('/economic/force-state', methods=['POST'])
+@economic_admin_bp.route('/state', methods=['POST'])
 @admin_required
-def force_economic_state():
-    """Force the economic cycle to a specific state (admin only)"""
+def update_economic_state():
+    """Force the economic cycle to a specific state"""
     try:
-        # Get the economic cycle manager from app config
-        economic_manager = current_app.config.get('economic_manager')
+        data = request.json
+        if not data or 'state' not in data:
+            return jsonify({"success": False, "error": "Missing required parameter: state"}), 400
+            
+        state = data['state']
+        admin_key = request.headers.get('X-Admin-Key')
         
-        if not economic_manager:
-            logger.error("Economic manager not found in app config")
-            return jsonify({
-                "success": False,
-                "error": "Economic manager not initialized"
-            }), 500
-        
-        # Get the requested state from the request body
-        state = request.json.get('state')
-        admin_key = request.json.get('admin_key')
-        
-        if not state:
-            logger.warning("Missing state parameter in force_economic_state request")
-            return jsonify({
-                "success": False,
-                "error": "Missing state parameter"
-            }), 400
-        
-        # Validate state parameter
-        valid_states = ["recession", "normal", "growth", "boom"]
-        if state not in valid_states:
-            logger.warning(f"Invalid state parameter in force_economic_state request: {state}")
-            return jsonify({
-                "success": False,
-                "error": f"Invalid state parameter. Must be one of: {', '.join(valid_states)}"
-            }), 400
-        
-        # Force the economic state
+        economic_manager = get_economic_manager()
         result = economic_manager.force_economic_state(state, admin_key)
         
-        if not result.get('success', False):
-            logger.error(f"Error forcing economic state: {result.get('error', 'Unknown error')}")
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
             return jsonify(result), 400
+            
+    except Exception as e:
+        logger.error(f"Error updating economic state: {str(e)}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@economic_admin_bp.route('/cycle', methods=['POST'])
+@admin_required
+def cycle_economy():
+    """Manually trigger an economic cycle update"""
+    try:
+        economic_manager = get_economic_manager()
+        result = economic_manager.update_economic_cycle()
         
-        logger.info(f"Economic state forced to {state} by admin")
-        return jsonify(result)
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 500
+            
+    except Exception as e:
+        logger.error(f"Error cycling economy: {str(e)}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@economic_admin_bp.route('/history', methods=['GET'])
+@admin_required
+def get_economic_history():
+    """Get the economic phase change history"""
+    try:
+        from src.models.economic_phase_change import EconomicPhaseChange
+        
+        # Get phase change history
+        phase_changes = EconomicPhaseChange.query.order_by(EconomicPhaseChange.timestamp.desc()).limit(20).all()
+        
+        history = []
+        for change in phase_changes:
+            history.append({
+                "id": change.id,
+                "lap_number": change.lap_number,
+                "old_state": change.old_state,
+                "new_state": change.new_state,
+                "inflation_factor": change.inflation_factor,
+                "total_cash": change.total_cash,
+                "total_property_value": change.total_property_value,
+                "timestamp": change.timestamp.isoformat(),
+                "description": change.description
+            })
+        
+        return jsonify({
+            "success": True,
+            "history": history
+        }), 200
         
     except Exception as e:
-        logger.error(f"Error in force_economic_state: {str(e)}", exc_info=True)
-        return jsonify({
-            "success": False,
-            "error": f"Internal server error: {str(e)}"
-        }), 500
+        logger.error(f"Error getting economic history: {str(e)}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @economic_admin_bp.route('/economic/toggle', methods=['POST'])
 @admin_required

@@ -334,6 +334,43 @@ def get_property_market_analysis():
         logger.error(f"Error getting property market analysis: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
+@property_admin_bp.route('/properties', methods=['GET'])
+@admin_required
+def get_properties():
+    """
+    Get all properties in the system.
+    
+    Returns a list of all properties with their details.
+    """
+    try:
+        # Get property controller
+        from flask import current_app
+        property_controller = current_app.config.get('property_controller')
+        
+        if property_controller and hasattr(property_controller, 'get_all_properties'):
+            # Use the new method that auto-initializes properties if none exist
+            result = property_controller.get_all_properties()
+            return jsonify(result), 200 if result.get('success') else 500
+        
+        # Fallback to direct database query
+        from src.models.property import Property
+        properties = Property.query.all()
+        
+        # Convert to list of dictionaries for JSON response
+        property_list = [prop.to_dict() for prop in properties]
+        
+        return jsonify({
+            "success": True,
+            "properties": property_list
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting properties: {e}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
 # Add routes for admin actions like mortgage/unmortgage, develop properties later 
 
 # Removed the registration function

@@ -31,11 +31,26 @@ def register_game_mode_routes(app):
 @game_mode_bp.route('/', methods=['GET'])
 def get_available_modes():
     """Get list of available game modes"""
-    modes = game_mode_controller.get_available_modes()
-    return jsonify({
-        "success": True,
-        "modes": modes
-    })
+    try:
+        modes = game_mode_controller.get_available_modes()
+        
+        if not modes:
+            logger.warning("No game modes available from controller")
+            # Return empty but valid structure
+            modes = {"standard": [], "specialty": []}
+        
+        return jsonify({
+            "success": True,
+            "modes": modes
+        })
+    except Exception as e:
+        logger.error(f"Error getting available game modes: {e}", exc_info=True)
+        # Return empty but valid structure in case of error
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "modes": {"standard": [], "specialty": []}
+        }), 500
 
 @game_mode_bp.route('/select/<game_id>', methods=['POST'])
 @admin_required

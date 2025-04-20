@@ -76,6 +76,7 @@ from src.controllers.economic_cycle_controller import EconomicCycleController, r
 from src.migrations.add_free_parking_fund import run_migration
 from src.migrations.add_credit_score import run_migration as run_credit_score_migration
 from src.migrations.add_updated_at_column import run_migration as run_updated_at_migration
+from src.migrations.add_inflation_rate import run_migration as run_inflation_rate_migration
 from src.controllers.trade_controller import TradeController # Import TradeController
 from src.routes.trade_routes import trade_routes # Import trade routes
 
@@ -151,6 +152,16 @@ with app.app_context(): # Use app context to access db/config safely
             logging.warning('Failed to run updated_at column migration.')
     except Exception as e:
         logging.error(f'Error running updated_at column migration: {str(e)}', exc_info=True)
+    
+    # Run migration to add inflation_rate and base_interest_rate columns to game_state table
+    try:
+        inflation_rate_migration_result = run_inflation_rate_migration()
+        if inflation_rate_migration_result:
+            logging.info('Successfully ran inflation_rate and base_interest_rate migration.')
+        else:
+            logging.warning('Failed to run inflation_rate and base_interest_rate migration.')
+    except Exception as e:
+        logging.error(f'Error running inflation_rate and base_interest_rate migration: {str(e)}', exc_info=True)
     
     # Ensure GameState instance exists and has a game_id
     # Use a direct SQL query instead of ORM to avoid issues with missing columns
@@ -342,7 +353,7 @@ register_game_routes(app, game_controller)
 register_property_routes(app)
 # register_auction_routes(app)   # Auction routes - not found, commented out
 # Use centralized admin routes registration instead of individual blueprints
-register_admin_routes(app, app.config)
+register_admin_routes(app)
 # register_bot_event_routes(app) # File not found
 register_special_space_routes(app)
 register_finance_routes(app)
@@ -1038,6 +1049,11 @@ def handle_create_bot(data):
     except Exception as e:
         app.logger.error(f"Error creating bot: {str(e)}", exc_info=True)
         socketio.emit('bot_event', {'error': f'Failed to save new bot player: {str(e)}'}, room=request.sid)
+
+# Catch-all route for handling 404 errors
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('error.html', error_code=404, error_message="Page not found"), 404
 
 # Run the app
 if __name__ == '__main__':

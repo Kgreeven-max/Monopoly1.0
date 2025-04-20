@@ -18,6 +18,8 @@ class GameState(db.Model):
     community_fund = db.Column(db.Integer, default=0)
     inflation_state = db.Column(db.String(20), default='stable')  # stable, inflation, deflation, recession, boom
     inflation_factor = db.Column(db.Float, default=1.0)
+    inflation_rate = db.Column(db.Float, default=0.03)  # Added missing attribute
+    base_interest_rate = db.Column(db.Float, default=0.05)  # Added missing attribute
     tax_rate = db.Column(db.Float, default=0.1)  # 10% default
     start_time = db.Column(db.DateTime, default=datetime.utcnow)
     end_time = db.Column(db.DateTime, nullable=True)  # End time for timed games
@@ -105,6 +107,8 @@ class GameState(db.Model):
             'community_fund': self.community_fund,
             'inflation_state': self.inflation_state,
             'inflation_factor': self.inflation_factor,
+            'inflation_rate': self.inflation_rate,
+            'base_interest_rate': self.base_interest_rate,
             'tax_rate': self.tax_rate,
             'difficulty': self.difficulty,
             'game_duration_minutes': self.calculate_duration_minutes(),
@@ -277,6 +281,8 @@ class GameState(db.Model):
         self.community_fund = 0
         self.inflation_state = 'stable'
         self.inflation_factor = 1.0
+        self.inflation_rate = 0.03
+        self.base_interest_rate = 0.05
         self.tax_rate = 0.1
         self.start_time = datetime.utcnow()
         self.end_time = None

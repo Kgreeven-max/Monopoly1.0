@@ -8,6 +8,7 @@ from src.routes.admin.finance_admin_routes import finance_admin_bp
 from src.routes.admin.property_admin_routes import property_admin_bp
 from src.routes.admin.auction_admin_routes import auction_admin_bp
 from src.routes.admin.audit_admin_routes import audit_admin_bp
+from src.routes.admin.economic_admin_routes import economic_admin_bp
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,41 +17,57 @@ logger = logging.getLogger(__name__)
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
 # Register all admin blueprints - improved to prevent re-registration issues
-def register_admin_routes(app, app_config=None):
-    """Register admin routes while preserving the blueprint structure.
-    Directly register all sub-blueprints with the main Flask app to avoid nested blueprint issues.
+def register_admin_routes(app):
+    """Register all admin routes with Flask app"""
     
-    Args:
-        app: Flask application instance
-        app_config: Optional application config dictionary
-    """
-    logger.info("Registering admin routes with Flask app while maintaining blueprint structure")
+    # Create the main admin blueprint
+    admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
     
-    # Register the main admin blueprint for its own routes
-    if admin_bp.name not in app.blueprints:
-        app.register_blueprint(admin_bp)
-        logger.info(f"Main admin blueprint '{admin_bp.name}' registered")
+    # Register main admin blueprint with app
+    app.register_blueprint(admin_bp)
+    logger.info("Main admin blueprint 'admin' registered")
     
-    # Register each admin sub-blueprint directly with the Flask app
-    # We maintain the correct URL prefixes to preserve the route structure
-    blueprint_registrations = [
-        (game_admin_bp, '/api/admin'),
-        (player_admin_bp, '/api/admin/players'),
-        (bot_admin_bp, '/api/admin/bots'),
-        (event_admin_bp, '/api/admin/events'),
-        (crime_admin_bp, '/api/admin/crime'),
-        (finance_admin_bp, '/api/admin/finance'),
-        (property_admin_bp, '/api/admin/properties'),
-        (auction_admin_bp, '/api/admin/auctions'),
-        (audit_admin_bp, '/api/admin/audit')
-    ]
+    # Import and register admin sub-blueprints
+    from src.routes.admin.game_admin_routes import game_admin_bp
+    from src.routes.admin.player_admin_routes import player_admin_bp
+    from src.routes.admin.bot_admin_routes import bot_admin_bp
+    from src.routes.admin.event_admin_routes import event_admin_bp
+    from src.routes.admin.crime_admin_routes import crime_admin_bp
+    from src.routes.admin.finance_admin_routes import finance_admin_bp
+    from src.routes.admin.property_admin_routes import property_admin_bp
+    from src.routes.admin.auction_admin_routes import auction_admin_bp
+    from src.routes.admin.audit_admin_routes import audit_admin_bp
+    from src.routes.admin.economic_admin_routes import economic_admin_bp
     
-    # Register each blueprint directly with app if not already registered
-    for blueprint, url_prefix in blueprint_registrations:
-        if blueprint.name not in app.blueprints:
-            app.register_blueprint(blueprint, url_prefix=url_prefix)
-            logger.info(f"Admin sub-blueprint '{blueprint.name}' registered with prefix '{url_prefix}'")
-        else:
-            logger.info(f"Admin sub-blueprint '{blueprint.name}' already registered, skipping")
+    # Register sub-blueprints with appropriate prefixes
+    app.register_blueprint(game_admin_bp, url_prefix='/api/admin')
+    logger.info(f"Admin sub-blueprint 'game_admin' registered with prefix '/api/admin'")
+    
+    app.register_blueprint(player_admin_bp, url_prefix='/api/admin/players')
+    logger.info(f"Admin sub-blueprint 'player_admin' registered with prefix '/api/admin/players'")
+    
+    app.register_blueprint(bot_admin_bp, url_prefix='/api/admin/bots')
+    logger.info(f"Admin sub-blueprint 'bot_admin' registered with prefix '/api/admin/bots'")
+    
+    app.register_blueprint(event_admin_bp, url_prefix='/api/admin/events')
+    logger.info(f"Admin sub-blueprint 'event_admin' registered with prefix '/api/admin/events'")
+    
+    app.register_blueprint(crime_admin_bp, url_prefix='/api/admin/crime')
+    logger.info(f"Admin sub-blueprint 'crime_admin' registered with prefix '/api/admin/crime'")
+    
+    app.register_blueprint(finance_admin_bp, url_prefix='/api/admin/finance')
+    logger.info(f"Admin sub-blueprint 'finance_admin' registered with prefix '/api/admin/finance'")
+    
+    app.register_blueprint(property_admin_bp, url_prefix='/api/admin/properties')
+    logger.info(f"Admin sub-blueprint 'property_admin' registered with prefix '/api/admin/properties'")
+    
+    app.register_blueprint(auction_admin_bp, url_prefix='/api/admin/auctions')
+    logger.info(f"Admin sub-blueprint 'auction_admin' registered with prefix '/api/admin/auctions'")
+    
+    app.register_blueprint(audit_admin_bp, url_prefix='/api/admin/audit')
+    logger.info(f"Admin sub-blueprint 'audit_admin' registered with prefix '/api/admin/audit'")
+    
+    app.register_blueprint(economic_admin_bp, url_prefix='/api/admin')
+    logger.info(f"Admin sub-blueprint 'economic_admin' registered with prefix '/api/admin'")
     
     logger.info("Admin routes registration complete")
