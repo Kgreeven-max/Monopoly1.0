@@ -168,4 +168,12 @@ class CommunityFund:
         return {
             "balance": self._funds,
             "updated_at": datetime.now().isoformat()
-        } 
+        }
+
+    def get_balance(self) -> int:
+        """Get the current balance of the community fund
+        
+        Returns:
+            Current fund balance
+        """
+        return self._funds 

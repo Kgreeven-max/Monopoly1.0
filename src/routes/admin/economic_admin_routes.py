@@ -22,18 +22,48 @@ def get_economic_manager():
 @economic_admin_bp.route('/state', methods=['GET'])
 @admin_required
 def get_economic_state():
-    """Get the current economic state"""
+    """Get the current economic state of the game."""
     try:
-        economic_manager = get_economic_manager()
-        result = economic_manager.get_current_economic_state()
-        
-        if result.get('success'):
-            return jsonify(result), 200
-        else:
-            return jsonify(result), 500
+        # Get game state
+        game_state = GameState.query.first()
+        if not game_state:
+            return jsonify({
+                "success": False, 
+                "error": "Game state not found"
+            }), 404
             
+        # Get economic state data
+        economic_state = {
+            "current_state": game_state.economic_cycle_state if hasattr(game_state, 'economic_cycle_state') else "normal",
+            "inflation_rate": game_state.inflation_rate if hasattr(game_state, 'inflation_rate') else 0.0,
+            "base_interest_rate": game_state.base_interest_rate if hasattr(game_state, 'base_interest_rate') else 0.05,
+            "cycle_position": game_state.economic_cycle_position if hasattr(game_state, 'economic_cycle_position') else 0,
+            "last_cycle_update": game_state.economic_cycle_updated if hasattr(game_state, 'economic_cycle_updated') else None
+        }
+        
+        # Add descriptions for economic states
+        state_descriptions = {
+            "recession": "Economic downturn. Property values decrease, interest rates increase.",
+            "normal": "Stable economy. Standard property values and interest rates.",
+            "growth": "Growing economy. Property values increase slightly, interest rates decrease slightly.",
+            "boom": "Economic boom. Property values increase significantly, interest rates decrease significantly."
+        }
+        
+        economic_state["state_description"] = state_descriptions.get(economic_state["current_state"], "Unknown economic state")
+        
+        # Add cycle timing information
+        economic_controller = current_app.config.get('economic_controller')
+        if economic_controller:
+            economic_state["auto_cycle_enabled"] = getattr(economic_controller, 'auto_cycle_enabled', True)
+            economic_state["cycle_interval_minutes"] = current_app.config.get('ECONOMIC_CYCLE_INTERVAL', 5)
+            
+        return jsonify({
+            "success": True,
+            "economic_state": economic_state
+        })
+    
     except Exception as e:
-        logger.error(f"Error in get_economic_state: {str(e)}", exc_info=True)
+        logger.error(f"Error getting economic state: {str(e)}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 @economic_admin_bp.route('/state', methods=['POST'])
@@ -110,7 +140,7 @@ def get_economic_history():
         logger.error(f"Error getting economic history: {str(e)}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
-@economic_admin_bp.route('/economic/toggle', methods=['POST'])
+@economic_admin_bp.route('/toggle', methods=['POST'])
 @admin_required
 def toggle_economic_cycle():
     """Enable or disable the economic cycle (admin only)"""
@@ -150,7 +180,7 @@ def toggle_economic_cycle():
             "error": f"Internal server error: {str(e)}"
         }), 500
 
-@economic_admin_bp.route('/economic/update-now', methods=['POST'])
+@economic_admin_bp.route('/update-now', methods=['POST'])
 @admin_required
 def update_economic_cycle_now():
     """Trigger an immediate update of the economic cycle (admin only)"""
@@ -195,7 +225,7 @@ def update_economic_cycle_now():
             "error": f"Internal server error: {str(e)}"
         }), 500
 
-@economic_admin_bp.route('/economic/trigger-event', methods=['POST'])
+@economic_admin_bp.route('/trigger-event', methods=['POST'])
 @admin_required
 def trigger_economic_event():
     """Trigger a random or specific economic event (admin only)"""

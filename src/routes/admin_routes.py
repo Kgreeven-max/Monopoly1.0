@@ -67,7 +67,7 @@ def register_admin_routes(app):
     app.register_blueprint(audit_admin_bp, url_prefix='/api/admin/audit')
     logger.info(f"Admin sub-blueprint 'audit_admin' registered with prefix '/api/admin/audit'")
     
-    app.register_blueprint(economic_admin_bp, url_prefix='/api/admin')
-    logger.info(f"Admin sub-blueprint 'economic_admin' registered with prefix '/api/admin'")
+    app.register_blueprint(economic_admin_bp, url_prefix='/api/admin/economic')
+    logger.info(f"Admin sub-blueprint 'economic_admin' registered with prefix '/api/admin/economic'")
     
     logger.info("Admin routes registration complete")

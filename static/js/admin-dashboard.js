@@ -238,10 +238,14 @@ function updatePlayersTable(players) {
     }
     
     players.forEach(player => {
+        // Safely get player money/cash value, defaulting to 0 if neither exists
+        const playerMoney = player.money !== undefined ? player.money : 
+                           (player.cash !== undefined ? player.cash : 0);
+        
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${player.username}</td>
-            <td>$${player.cash}</td>
+            <td>$${playerMoney}</td>
             <td>${player.position}</td>
             <td>${player.properties ? player.properties.length : 0}</td>
             <td>${player.in_game ? (player.is_bot ? 'Bot (Active)' : 'Human (Active)') : 'Inactive'}</td>
@@ -753,4 +757,165 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Set up refresh interval for status
     setInterval(fetchSystemStatus, 10000); // Refresh every 10 seconds
-}); 
+});
+
+// Create a function to handle finance tab initialization
+function initializeFinanceTab() {
+    console.log('Initializing finance tab...');
+    refreshFinancialOverview();
+    refreshLoans();
+    refreshTransactions();
+}
+
+// Add a function to retry fetching financial data
+function refreshFinancialOverview(retryCount = 0) {
+    console.log('Refreshing financial overview...');
+    const maxRetries = 3;
+    
+    fetch('/api/admin/finance/overview', {
+        method: 'GET',
+        headers: {
+            'X-Admin-Key': window.adminKey
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Update financial stats
+            const statsElement = safeGetElement('finance-stats');
+            if (statsElement) {
+                // Check if stats exists before trying to access properties
+                const stats = data.stats || {};
+                
+                let statsHtml = `
+                    <table class="table">
+                        <tr><th>Total Money in Game:</th><td>$${stats.total_money || 0}</td></tr>
+                        <tr><th>Bank Reserves:</th><td>$${stats.bank_reserves || 0}</td></tr>
+                        <tr><th>Player Holdings:</th><td>$${stats.player_holdings || 0}</td></tr>
+                        <tr><th>Community Fund:</th><td>$${stats.community_fund || 0}</td></tr>
+                        <tr><th>Total Active Loans:</th><td>$${stats.loans_total || 0}</td></tr>
+                    </table>
+                `;
+                statsElement.innerHTML = statsHtml;
+            }
+            
+            // Update interest rates
+            const ratesElement = safeGetElement('interest-rates');
+            if (ratesElement) {
+                // Check if rates exists before trying to access properties
+                const rates = data.rates || {};
+                
+                if (rates && rates.rates) {
+                    let ratesHtml = `
+                        <p><strong>Economic State:</strong> ${loadFinancialData({ economic_state: rates.economic_state }).economic_state}</p>
+                        <p><strong>Base Rate:</strong> ${(rates.base_rate * 100).toFixed(1)}%</p>
+                        <h6>Loan Rates:</h6>
+                        <ul>
+                            <li>Standard: ${(rates.rates.loan.standard * 100).toFixed(1)}%</li>
+                            <li>Good Credit: ${(rates.rates.loan.good_credit * 100).toFixed(1)}%</li>
+                            <li>Poor Credit: ${(rates.rates.loan.poor_credit * 100).toFixed(1)}%</li>
+                        </ul>
+                        <h6>CD Rates:</h6>
+                        <ul>
+                            <li>Short Term (3 laps): ${(rates.rates.cd.short_term * 100).toFixed(1)}%</li>
+                            <li>Medium Term (5 laps): ${(rates.rates.cd.medium_term * 100).toFixed(1)}%</li>
+                            <li>Long Term (7 laps): ${(rates.rates.cd.long_term * 100).toFixed(1)}%</li>
+                        </ul>
+                    `;
+                    ratesElement.innerHTML = ratesHtml;
+                } else {
+                    ratesElement.innerHTML = '<p>No interest rate data available</p>';
+                }
+            }
+        } else {
+            console.error('Failed to fetch finance overview:', data.error);
+            
+            // Safely update DOM elements only if they exist
+            const statsElement = safeGetElement('finance-stats');
+            if (statsElement) {
+                statsElement.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
+            }
+            
+            const ratesElement = safeGetElement('interest-rates');
+            if (ratesElement) {
+                ratesElement.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching finance overview:', error);
+        
+        // Safely update DOM elements only if they exist
+        const statsElement = safeGetElement('finance-stats');
+        if (statsElement) {
+            statsElement.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+        }
+        
+        const ratesElement = safeGetElement('interest-rates');
+        if (ratesElement) {
+            ratesElement.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+        }
+        
+        // Retry if we haven't exceeded max retries
+        if (retryCount < maxRetries) {
+            console.log(`Retrying financial overview fetch (attempt ${retryCount + 1} of ${maxRetries})...`);
+            setTimeout(() => {
+                refreshFinancialOverview(retryCount + 1);
+            }, 1000 * (retryCount + 1)); // Exponential backoff
+        } else {
+            // Use fallback data if all retries fail
+            provideFallbackFinancialData();
+        }
+    });
+}
+
+// Provide fallback financial data if the API fails
+function provideFallbackFinancialData() {
+    console.log('Using fallback financial data...');
+    
+    const statsElement = safeGetElement('finance-stats');
+    if (statsElement) {
+        let statsHtml = `
+            <div class="alert alert-warning">
+                <p><strong>Using fallback data - API connection failed</strong></p>
+            </div>
+            <table class="table">
+                <tr><th>Total Money in Game:</th><td>$15,000</td></tr>
+                <tr><th>Bank Reserves:</th><td>$10,000</td></tr>
+                <tr><th>Player Holdings:</th><td>$5,000</td></tr>
+                <tr><th>Community Fund:</th><td>$0</td></tr>
+                <tr><th>Total Active Loans:</th><td>$0</td></tr>
+            </table>
+        `;
+        statsElement.innerHTML = statsHtml;
+    }
+    
+    const ratesElement = safeGetElement('interest-rates');
+    if (ratesElement) {
+        let ratesHtml = `
+            <div class="alert alert-warning">
+                <p><strong>Using fallback data - API connection failed</strong></p>
+            </div>
+            <p><strong>Economic State:</strong> Normal</p>
+            <p><strong>Base Rate:</strong> 5.0%</p>
+            <h6>Loan Rates:</h6>
+            <ul>
+                <li>Standard: 7.0%</li>
+                <li>Good Credit: 5.0%</li>
+                <li>Poor Credit: 10.0%</li>
+            </ul>
+            <h6>CD Rates:</h6>
+            <ul>
+                <li>Short Term (3 laps): 4.0%</li>
+                <li>Medium Term (5 laps): 5.0%</li>
+                <li>Long Term (7 laps): 6.0%</li>
+            </ul>
+        `;
+        ratesElement.innerHTML = ratesHtml;
+    }
+} 

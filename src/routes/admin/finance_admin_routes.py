@@ -10,6 +10,7 @@ from src.controllers.finance_controller import FinanceController
 from src.routes.decorators import admin_required
 from src.utils.errors import GameError
 from src.controllers.admin_controller import AdminController
+from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 finance_admin_bp = Blueprint('finance_admin', __name__, url_prefix='/finance')
@@ -291,20 +292,39 @@ def audit_economic_system():
     - fix_issues: Whether to attempt to fix discovered issues (default: false)
     """
     try:
-        data = request.json or {}
-        fix_issues = data.get('fix_issues', False)
+        # Handle empty request body gracefully
+        fix_issues = False
+        
+        try:
+            # Try to get JSON data, but don't fail if there is none
+            data = request.get_json(silent=True) or {}
+            fix_issues = data.get('fix_issues', False)
+            logger.info(f"Audit requested with fix_issues={fix_issues}")
+        except Exception as e:
+            logger.warning(f"No JSON data provided or invalid JSON: {str(e)}")
+            data = {}
         
         # Call the controller method
+        logger.info("Calling admin_controller.audit_economic_system")
         result = admin_controller.audit_economic_system(fix_issues)
+        logger.info(f"Audit completed with success={result.get('success')}")
         
         if result.get('success'):
+            logger.info(f"Audit successful: {result.get('message', 'No message')}")
+            logger.info(f"Issues found: {result.get('issues_found', 0)}, Issues fixed: {result.get('issues_fixed', 0)}")
             return jsonify(result), 200
         else:
+            logger.error(f"Audit failed: {result.get('error', 'No error message provided')}")
             return jsonify(result), 500
     
     except Exception as e:
         logger.error(f"Error auditing economic system: {e}", exc_info=True)
-        return jsonify({"success": False, "error": str(e)}), 500
+        error_response = {
+            "success": False, 
+            "error": str(e),
+            "traceback": str(e.__traceback__)
+        }
+        return jsonify(error_response), 500
 
 @finance_admin_bp.route('/loans', methods=['GET'])
 @admin_required
@@ -514,152 +534,115 @@ def get_economy_stats():
 @finance_admin_bp.route('/overview', methods=['GET'])
 @admin_required
 def get_financial_overview():
-    """
-    Get a comprehensive overview of the financial system.
-    
-    Returns summary statistics on loans, transactions, player finances, and economic indicators.
-    """
+    """Get financial system overview for the admin dashboard."""
     try:
-        # Create a basic default response structure
-        default_response = {
-            "success": True,
-            "game_state": {
-                "current_lap": 0,
-                "game_id": None,
-                "free_parking_fund": 0
-            },
-            "players": {
-                "count": 0,
-                "total_cash": 0,
-                "average_cash": 0,
-                "richest_player": None
-            },
-            "loans": {
-                "total_count": 0,
-                "active_count": 0,
-                "total_active_value": 0,
-                "avg_loan_value": 0
-            },
-            "transactions": {
-                "total_count": 0,
-                "recent_volume": 0,
-                "recent_count": 0
-            },
-            "properties": {
-                "total_count": 0,
-                "bank_owned": 0,
-                "player_owned": 0,
-                "mortgaged": 0,
-                "mortgage_rate": 0
-            },
-            "economic_indicators": {
-                "debt_ratio": 0,
-                "liquidity_index": 0,
-                "market_activity": 0
+        # Get player financial data from AdminController
+        financial_data = admin_controller.get_player_financial_data()
+        if not financial_data.get('success'):
+            return jsonify({
+                "success": False, 
+                "error": financial_data.get('error', 'Failed to retrieve player financial data')
+            }), 500
+
+        # Get game state for economic data
+        game_state = GameState.query.first()
+        if not game_state:
+            return jsonify({
+                "success": False, 
+                "error": "Game state not found"
+            }), 500
+
+        # Get community fund balance - use balance property instead of get_balance method
+        community_fund = current_app.config.get('community_fund')
+        community_fund_balance = 0
+        
+        # Try different ways to get the community fund balance
+        if community_fund:
+            if hasattr(community_fund, 'balance'):
+                community_fund_balance = community_fund.balance
+            elif hasattr(community_fund, 'get_balance'):
+                community_fund_balance = community_fund.get_balance()
+            elif hasattr(community_fund, 'fund_balance'):
+                community_fund_balance = community_fund.fund_balance
+            elif hasattr(community_fund, 'amount'):
+                community_fund_balance = community_fund.amount
+            # Add fallback for free_parking_fund in game_state
+            elif game_state and hasattr(game_state, 'free_parking_fund'):
+                community_fund_balance = game_state.free_parking_fund
+
+        # Count active loans
+        active_loans = Loan.query.filter_by(is_active=True).count()
+        loan_total = db.session.query(func.sum(Loan.amount)).filter_by(is_active=True).scalar() or 0
+
+        # Calculate bank reserves (if banker has balance property)
+        banker = current_app.config.get('banker')
+        bank_reserves = 0
+        if banker:
+            if hasattr(banker, 'balance'):
+                bank_reserves = banker.balance
+            elif hasattr(banker, 'get_balance'):
+                bank_reserves = banker.get_balance()
+            elif hasattr(banker, 'money'):
+                bank_reserves = banker.money
+            elif hasattr(banker, 'cash'):
+                bank_reserves = banker.cash
+            else:
+                # Fallback estimate
+                bank_reserves = 1500 * 10
+
+        # Build stats object
+        stats = {
+            "total_money": financial_data.get('total_money', 0),
+            "bank_reserves": bank_reserves,
+            "player_holdings": financial_data.get('total_money', 0),
+            "community_fund": community_fund_balance,
+            "loans_count": active_loans,
+            "loans_total": loan_total,
+            "player_count": financial_data.get('total_players', 0)
+        }
+
+        # Get interest rates based on economic state
+        base_rate = game_state.base_interest_rate if hasattr(game_state, 'base_interest_rate') else 0.05
+        economic_state = game_state.economic_cycle_state if hasattr(game_state, 'economic_cycle_state') else "normal"
+        
+        # Apply economic state modifier to rates
+        state_modifiers = {
+            "recession": 0.02,  # Higher rates during recession
+            "normal": 0.0,      # Base rate during normal times
+            "growth": -0.01,    # Lower rates during growth
+            "boom": -0.02       # Lowest rates during boom
+        }
+        
+        modifier = state_modifiers.get(economic_state, 0.0)
+        
+        # Define rate structure
+        rates = {
+            "base_rate": base_rate,
+            "economic_state": economic_state,
+            "rates": {
+                "loan": {
+                    "standard": base_rate + modifier + 0.02,
+                    "good_credit": base_rate + modifier,
+                    "poor_credit": base_rate + modifier + 0.05
+                },
+                "cd": {
+                    "short_term": base_rate - 0.01,
+                    "medium_term": base_rate,
+                    "long_term": base_rate + 0.01
+                },
+                "heloc": base_rate + 0.03
             }
         }
         
-        # Get game state
-        game_state = GameState.get_instance()
-        if not game_state:
-            logger.warning("No game state instance found")
-            return jsonify(default_response), 200
-            
-        current_lap = game_state.current_lap if game_state else 0
+        return jsonify({
+            "success": True,
+            "stats": stats,
+            "rates": rates
+        })
         
-        # Ensure current_lap is not None before comparison
-        if current_lap is None:
-            current_lap = 0
-        
-        # Update game state in response
-        default_response["game_state"]["current_lap"] = current_lap
-        default_response["game_state"]["game_id"] = game_state.game_id if game_state else None
-        
-        # Check if game_state has free_parking_fund attribute
-        if game_state and hasattr(game_state, 'free_parking_fund'):
-            default_response["game_state"]["free_parking_fund"] = game_state.free_parking_fund
-        
-        try:
-            # Get all players - handle empty case
-            players = Player.query.filter_by(in_game=True).all() or []
-            player_count = len(players)
-            
-            # Update players in response
-            default_response["players"]["count"] = player_count
-            
-            if player_count > 0:
-                # Get cash statistics
-                total_player_cash = sum(player.cash for player in players)
-                avg_player_cash = total_player_cash / player_count
-                richest_player = max(players, key=lambda p: p.cash)
-                
-                default_response["players"]["total_cash"] = total_player_cash
-                default_response["players"]["average_cash"] = avg_player_cash
-                default_response["players"]["richest_player"] = {
-                    "id": richest_player.id,
-                    "username": richest_player.username,
-                    "cash": richest_player.cash
-                }
-        except Exception as player_error:
-            logger.error(f"Error processing player data: {player_error}")
-            
-        try:
-            # Get loan statistics - handle empty case
-            loans = Loan.query.all() or []
-            active_loans = sum(1 for loan in loans if loan.is_active)
-            total_loan_value = sum(loan.outstanding_balance for loan in loans if loan.is_active)
-            
-            default_response["loans"]["total_count"] = len(loans)
-            default_response["loans"]["active_count"] = active_loans
-            default_response["loans"]["total_active_value"] = total_loan_value
-            default_response["loans"]["avg_loan_value"] = total_loan_value / active_loans if active_loans > 0 else 0
-        except Exception as loan_error:
-            logger.error(f"Error processing loan data: {loan_error}")
-            
-        try:
-            # Get transaction statistics - handle empty case
-            transactions = Transaction.query.order_by(Transaction.timestamp.desc()).limit(100).all() or []
-            transaction_count = Transaction.query.count() or 0
-            recent_transaction_volume = sum(abs(t.amount) for t in transactions)
-            
-            default_response["transactions"]["total_count"] = transaction_count
-            default_response["transactions"]["recent_volume"] = recent_transaction_volume
-            default_response["transactions"]["recent_count"] = len(transactions)
-        except Exception as transaction_error:
-            logger.error(f"Error processing transaction data: {transaction_error}")
-            
-        try:
-            # Get property statistics - handle empty case
-            from src.models.property import Property
-            properties = Property.query.all() or []
-            bank_owned = sum(1 for p in properties if not p.owner_id)
-            player_owned = sum(1 for p in properties if p.owner_id)
-            mortgaged = sum(1 for p in properties if p.is_mortgaged)
-            
-            default_response["properties"]["total_count"] = len(properties)
-            default_response["properties"]["bank_owned"] = bank_owned
-            default_response["properties"]["player_owned"] = player_owned
-            default_response["properties"]["mortgaged"] = mortgaged
-            default_response["properties"]["mortgage_rate"] = mortgaged / len(properties) if properties else 0
-        except Exception as property_error:
-            logger.error(f"Error processing property data: {property_error}")
-            
-        # Calculate economic health indicators
-        try:
-            if default_response["players"]["total_cash"] > 0:
-                debt_ratio = default_response["loans"]["total_active_value"] / default_response["players"]["total_cash"]
-                default_response["economic_indicators"]["debt_ratio"] = debt_ratio
-                
-            liquidity_index = default_response["players"]["total_cash"] / (default_response["loans"]["total_active_value"] + 1)  # Add 1 to avoid division by zero
-            default_response["economic_indicators"]["liquidity_index"] = liquidity_index
-            
-            market_activity = default_response["transactions"]["total_count"] / (current_lap + 1) if current_lap > 0 else default_response["transactions"]["total_count"]
-            default_response["economic_indicators"]["market_activity"] = market_activity
-        except Exception as indicator_error:
-            logger.error(f"Error calculating economic indicators: {indicator_error}")
-        
-        return jsonify(default_response), 200
-    
     except Exception as e:
-        logger.error(f"Error fetching finance overview: {e}", exc_info=True)
-        return jsonify({"success": False, "error": str(e)}), 500 
+        logger.error(f"Error getting financial overview: {str(e)}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500 

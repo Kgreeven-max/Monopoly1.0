@@ -228,7 +228,137 @@
 
                             <!-- Finance Tab -->
                             <div class="tab-pane fade" id="finance" role="tabpanel" aria-labelledby="finance-tab">
-                                <!-- Finance tab content here -->
+                                <h2>Financial Management</h2>
+                                
+                                <!-- Financial Overview Section -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="card">
+                                            <div class="card-header bg-primary text-white">
+                                                <h5 class="mb-0">Financial Overview</h5>
+                                            </div>
+                                            <div class="card-body" id="finance-stats">
+                                                <div class="d-flex justify-content-center">
+                                                    <div class="spinner-border text-primary" role="status">
+                                                        <span class="visually-hidden">Loading...</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="card">
+                                            <div class="card-header bg-primary text-white">
+                                                <h5 class="mb-0">Interest Rates</h5>
+                                            </div>
+                                            <div class="card-body" id="interest-rates">
+                                                <div class="d-flex justify-content-center">
+                                                    <div class="spinner-border text-primary" role="status">
+                                                        <span class="visually-hidden">Loading...</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Financial Controls Section -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-header bg-primary text-white">
+                                                <h5 class="mb-0">Actions</h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="d-flex gap-2">
+                                                    <button class="btn btn-outline-primary" onclick="initializeFinanceTab()">
+                                                        <i class="bi bi-arrow-repeat"></i> Refresh All Data
+                                                    </button>
+                                                    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#adjust-player-money-modal">
+                                                        <i class="bi bi-cash"></i> Adjust Player Money
+                                                    </button>
+                                                    <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#create-loan-modal">
+                                                        <i class="bi bi-bank"></i> Create Loan
+                                                    </button>
+                                                    <button class="btn btn-outline-warning" onclick="triggerBankAudit()">
+                                                        <i class="bi bi-shield-check"></i> Audit System
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Loans Section -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                                <h5 class="mb-0">Active Loans</h5>
+                                                <button class="btn btn-sm btn-light" onclick="refreshLoans()">
+                                                    <i class="bi bi-arrow-repeat"></i> Refresh
+                                                </button>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="table-responsive">
+                                                    <table class="table table-striped table-bordered table-hover">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>ID</th>
+                                                                <th>Player</th>
+                                                                <th>Amount</th>
+                                                                <th>Interest</th>
+                                                                <th>Due Date</th>
+                                                                <th>Actions</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="active-loans-table">
+                                                            <tr>
+                                                                <td colspan="6" class="text-center">Loading loans...</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Transactions Section -->
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                                <h5 class="mb-0">Recent Transactions</h5>
+                                                <button class="btn btn-sm btn-light" onclick="refreshTransactions()">
+                                                    <i class="bi bi-arrow-repeat"></i> Refresh
+                                                </button>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="table-responsive">
+                                                    <table class="table table-striped table-bordered table-hover">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Time</th>
+                                                                <th>Type</th>
+                                                                <th>From</th>
+                                                                <th>To</th>
+                                                                <th>Amount</th>
+                                                                <th>Reason</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="transactions-table">
+                                                            <tr>
+                                                                <td colspan="6" class="text-center">Loading transactions...</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             
                             <!-- Economy Tab -->
@@ -429,33 +559,25 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <h6>Current Balance: <span id="community-fund-balance">$0</span></h6>
-                    </div>
-                    <div class="mb-4">
-                        <label class="form-label">Actions</label>
-                        <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-outline-success" onclick="adjustCommunityFund('add')">Add to Fund</button>
-                            <button type="button" class="btn btn-outline-warning" onclick="adjustCommunityFund('withdraw')">Withdraw from Fund</button>
-                            <button type="button" class="btn btn-outline-danger" onclick="adjustCommunityFund('reset')">Reset Fund to Zero</button>
-                        </div>
-                    </div>
-                    <div id="community-fund-adjustment-form" style="display: none;">
-                        <hr>
-                        <h6 id="community-fund-action-title">Adjust Fund</h6>
+                    <form id="manage-community-fund-form">
                         <div class="mb-3">
-                            <label for="community-fund-amount" class="form-label">Amount ($)</label>
-                            <input type="number" class="form-control" id="community-fund-amount" min="0" required>
+                            <label for="community-fund-balance" class="form-label">Current Balance</label>
+                            <input type="text" class="form-control" id="community-fund-balance" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="community-fund-adjustment" class="form-label">Adjustment Amount ($)</label>
+                            <input type="number" class="form-control" id="community-fund-adjustment" required>
+                            <div class="form-text">Use positive value to add money, negative to subtract.</div>
                         </div>
                         <div class="mb-3">
                             <label for="community-fund-reason" class="form-label">Reason</label>
-                            <input type="text" class="form-control" id="community-fund-reason" placeholder="e.g., Annual interest" required>
+                            <input type="text" class="form-control" id="community-fund-reason" placeholder="e.g., Luxury tax" required>
                         </div>
-                        <button type="button" class="btn btn-primary" onclick="submitCommunityFundAdjustment()">Submit</button>
-                    </div>
+                    </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitCommunityFundAdjustment()">Submit Adjustment</button>
                 </div>
             </div>
         </div>
@@ -466,7 +588,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="create-loan-modal-label">Issue New Loan</h5>
+                    <h5 class="modal-title" id="create-loan-modal-label">Create Loan</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -479,26 +601,32 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label for="loan-amount" class="form-label">Loan Amount ($)</label>
-                            <input type="number" class="form-control" id="loan-amount" min="50" max="1000" step="50" required>
+                            <label for="loan-type" class="form-label">Loan Type</label>
+                            <select class="form-select" id="loan-type" required>
+                                <option value="standard">Standard Loan</option>
+                                <option value="cd">Certificate of Deposit (CD)</option>
+                                <option value="heloc">Home Equity Line of Credit (HELOC)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="loan-amount" class="form-label">Amount ($)</label>
+                            <input type="number" class="form-control" id="loan-amount" required min="1">
                         </div>
                         <div class="mb-3">
                             <label for="loan-interest-rate" class="form-label">Interest Rate (%)</label>
-                            <input type="number" class="form-control" id="loan-interest-rate" min="0" max="100" step="0.5" value="10" required>
+                            <input type="number" class="form-control" id="loan-interest-rate" step="0.1" min="0" max="100" required>
+                            <div class="form-text">Standard rate based on current economic conditions.</div>
                         </div>
                         <div class="mb-3">
-                            <label for="loan-term" class="form-label">Term (rounds)</label>
-                            <input type="number" class="form-control" id="loan-term" min="1" max="20" value="5" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="loan-reason" class="form-label">Reason</label>
-                            <input type="text" class="form-control" id="loan-reason" placeholder="e.g., Property development" required>
+                            <label for="loan-term" class="form-label">Term (Rounds/Laps)</label>
+                            <input type="number" class="form-control" id="loan-term" required min="1" max="20">
+                            <div class="form-text">Number of game rounds until maturity or full payment required.</div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="submitCreateLoan()">Issue Loan</button>
+                    <button type="button" class="btn btn-primary" onclick="submitCreateLoan()">Create Loan</button>
                 </div>
             </div>
         </div>
@@ -1133,35 +1261,51 @@
             return string.charAt(0).toUpperCase() + string.slice(1);
         }
         
+        // Utility function to format transaction types
         function formatTransactionType(type) {
-            if (!type) return '';
-            // Replace underscores with spaces and capitalize each word
-            return type.split('_')
-                .map(word => capitalizeFirstLetter(word))
-                .join(' ');
+            if (!type) return 'Unknown';
+            
+            // Format camelCase or snake_case to Title Case
+            return type
+                .replace(/([A-Z])/g, ' $1') // Insert space before capital letters
+                .replace(/_/g, ' ') // Replace underscores with spaces
+                .replace(/^\w/, c => c.toUpperCase()); // Capitalize first letter
         }
         
-        // Loading and Formatting Functions
-        function loadFinancialData(financialData) {
-            if (!financialData) return null;
+        // Utility function to safely access DOM elements and handle missing elements
+        function safeGetElement(id) {
+            const element = document.getElementById(id);
+            if (!element) {
+                console.warn(`Element with ID "${id}" not found in the DOM`);
+                return null;
+            }
+            return element;
+        }
+        
+        // Format financial data for display
+        function loadFinancialData(data) {
+            if (!data) return {};
             
-            // Format financial type names
-            const formattedData = {
-                ...financialData,
-                type: capitalizeFirstLetter(financialData.type || ''),
-                status: capitalizeFirstLetter(financialData.status || ''),
-                economic_state: capitalizeFirstLetter(financialData.economic_state || 'normal')
-            };
+            // Create a copy to avoid modifying the original
+            const formattedData = {...data};
             
-            // Format currency values if they exist
-            if (financialData.amount) {
-                formattedData.formattedAmount = `$${financialData.amount.toLocaleString()}`;
+            // Format economic state
+            if (formattedData.economic_state) {
+                const state = formattedData.economic_state;
+                formattedData.economic_state = state.charAt(0).toUpperCase() + state.slice(1);
             }
             
-            // Format percentage values if they exist
-            if (financialData.interest_rate !== undefined) {
-                // Convert decimal to percentage (e.g., 0.05 -> 5%)
-                formattedData.formattedInterestRate = `${(financialData.interest_rate * 100).toFixed(1)}%`;
+            // Format interest rates
+            if (formattedData.interest_rate || formattedData.interest) {
+                const rate = formattedData.interest_rate || formattedData.interest;
+                const numericRate = parseFloat(rate);
+                if (!isNaN(numericRate)) {
+                    formattedData.formattedInterestRate = numericRate.toLocaleString(undefined, {
+                        style: 'percent',
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 2
+                    });
+                }
             }
             
             return formattedData;
@@ -1176,9 +1320,7 @@
                 console.log('Adding shown.bs.tab event listener to finance-tab');
                 financeTab.addEventListener('shown.bs.tab', function(event) {
                     console.log('Finance tab clicked/shown - event triggered');
-                    refreshFinancialOverview();
-                    refreshLoans();
-                    refreshTransactions();
+                    initializeFinanceTab();
                 });
             }
             
@@ -1229,67 +1371,61 @@
             .then(data => {
                 if (data.success) {
                     // Update financial stats
-                    const statsElement = document.getElementById('finance-stats');
-                    if (!statsElement) {
-                        console.error('finance-stats element not found');
-                        return;
+                    const statsElement = safeGetElement('finance-stats');
+                    if (statsElement) {
+                        // Check if stats exists before trying to access properties
+                        const stats = data.stats || {};
+                        
+                        let statsHtml = `
+                            <table class="table">
+                                <tr><th>Total Money in Game:</th><td>$${stats.total_money || 0}</td></tr>
+                                <tr><th>Bank Reserves:</th><td>$${stats.bank_reserves || 0}</td></tr>
+                                <tr><th>Player Holdings:</th><td>$${stats.player_holdings || 0}</td></tr>
+                                <tr><th>Community Fund:</th><td>$${stats.community_fund || 0}</td></tr>
+                                <tr><th>Total Active Loans:</th><td>$${stats.loans_total || 0}</td></tr>
+                            </table>
+                        `;
+                        statsElement.innerHTML = statsHtml;
                     }
-                    
-                    // Check if stats exists before trying to access properties
-                    const stats = data.stats || {};
-                    
-                    let statsHtml = `
-                        <table class="table">
-                            <tr><th>Total Money in Game:</th><td>$${stats.total_money || 0}</td></tr>
-                            <tr><th>Bank Reserves:</th><td>$${stats.bank_reserves || 0}</td></tr>
-                            <tr><th>Player Holdings:</th><td>$${stats.player_holdings || 0}</td></tr>
-                            <tr><th>Community Fund:</th><td>$${stats.community_fund || 0}</td></tr>
-                            <tr><th>Total Active Loans:</th><td>$${stats.loans_total || 0}</td></tr>
-                        </table>
-                    `;
-                    statsElement.innerHTML = statsHtml;
                     
                     // Update interest rates
-                    const ratesElement = document.getElementById('interest-rates');
-                    if (!ratesElement) {
-                        console.error('interest-rates element not found');
-                        return;
-                    }
-                    
-                    // Check if rates exists before trying to access properties
-                    const rates = data.rates || {};
-                    
-                    if (rates && rates.rates) {
-                        let ratesHtml = `
-                            <p><strong>Economic State:</strong> ${loadFinancialData({ economic_state: rates.economic_state }).economic_state}</p>
-                            <p><strong>Base Rate:</strong> ${(rates.base_rate * 100).toFixed(1)}%</p>
-                            <h6>Loan Rates:</h6>
-                            <ul>
-                                <li>Standard: ${(rates.rates.loan.standard * 100).toFixed(1)}%</li>
-                                <li>Good Credit: ${(rates.rates.loan.good_credit * 100).toFixed(1)}%</li>
-                                <li>Poor Credit: ${(rates.rates.loan.poor_credit * 100).toFixed(1)}%</li>
-                            </ul>
-                            <h6>CD Rates:</h6>
-                            <ul>
-                                <li>Short Term (3 laps): ${(rates.rates.cd.short_term * 100).toFixed(1)}%</li>
-                                <li>Medium Term (5 laps): ${(rates.rates.cd.medium_term * 100).toFixed(1)}%</li>
-                                <li>Long Term (7 laps): ${(rates.rates.cd.long_term * 100).toFixed(1)}%</li>
-                            </ul>
-                        `;
-                        ratesElement.innerHTML = ratesHtml;
-                    } else {
-                        ratesElement.innerHTML = '<p>No interest rate data available</p>';
+                    const ratesElement = safeGetElement('interest-rates');
+                    if (ratesElement) {
+                        // Check if rates exists before trying to access properties
+                        const rates = data.rates || {};
+                        
+                        if (rates && rates.rates) {
+                            let ratesHtml = `
+                                <p><strong>Economic State:</strong> ${loadFinancialData({ economic_state: rates.economic_state }).economic_state}</p>
+                                <p><strong>Base Rate:</strong> ${(rates.base_rate * 100).toFixed(1)}%</p>
+                                <h6>Loan Rates:</h6>
+                                <ul>
+                                    <li>Standard: ${(rates.rates.loan.standard * 100).toFixed(1)}%</li>
+                                    <li>Good Credit: ${(rates.rates.loan.good_credit * 100).toFixed(1)}%</li>
+                                    <li>Poor Credit: ${(rates.rates.loan.poor_credit * 100).toFixed(1)}%</li>
+                                </ul>
+                                <h6>CD Rates:</h6>
+                                <ul>
+                                    <li>Short Term (3 laps): ${(rates.rates.cd.short_term * 100).toFixed(1)}%</li>
+                                    <li>Medium Term (5 laps): ${(rates.rates.cd.medium_term * 100).toFixed(1)}%</li>
+                                    <li>Long Term (7 laps): ${(rates.rates.cd.long_term * 100).toFixed(1)}%</li>
+                                </ul>
+                            `;
+                            ratesElement.innerHTML = ratesHtml;
+                        } else {
+                            ratesElement.innerHTML = '<p>No interest rate data available</p>';
+                        }
                     }
                 } else {
                     console.error('Failed to fetch finance overview:', data.error);
                     
                     // Safely update DOM elements only if they exist
-                    const statsElement = document.getElementById('finance-stats');
+                    const statsElement = safeGetElement('finance-stats');
                     if (statsElement) {
                         statsElement.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
                     }
                     
-                    const ratesElement = document.getElementById('interest-rates');
+                    const ratesElement = safeGetElement('interest-rates');
                     if (ratesElement) {
                         ratesElement.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
                     }
@@ -1299,12 +1435,12 @@
                 console.error('Error fetching finance overview:', error);
                 
                 // Safely update DOM elements only if they exist
-                const statsElement = document.getElementById('finance-stats');
+                const statsElement = safeGetElement('finance-stats');
                 if (statsElement) {
                     statsElement.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
                 }
                 
-                const ratesElement = document.getElementById('interest-rates');
+                const ratesElement = safeGetElement('interest-rates');
                 if (ratesElement) {
                     ratesElement.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
                 }
@@ -1363,36 +1499,99 @@
             if (confirm('Are you sure you want to trigger a bank audit? This will verify all player accounts and transactions.')) {
                 console.log('Triggering bank audit...');
                 
+                // Show loading indicator
+                const auditBtn = document.querySelector('button[onclick="triggerBankAudit()"]');
+                const originalText = auditBtn.innerHTML;
+                auditBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Auditing...';
+                auditBtn.disabled = true;
+                
                 fetch('/api/admin/finance/audit', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Admin-Key': window.adminKey
-                    }
+                    },
+                    body: JSON.stringify({ fix_issues: false }) // Ensure we send a valid JSON body
                 })
                 .then(response => {
+                    console.log('Audit response status:', response.status);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     return response.json();
                 })
                 .then(data => {
+                    // Reset button
+                    auditBtn.innerHTML = originalText;
+                    auditBtn.disabled = false;
+                    
+                    console.log('Audit response data:', data);
+                    
                     if (data.success) {
-                        alert(`Bank audit completed: ${data.message}`);
-                        console.log('Audit data:', data.audit);
+                        // Build a detailed message with findings if available
+                        let message = data.message || 'No issues found';
+                        
+                        // If there are issues found, show details
+                        if (data.issues_found > 0 && data.reports && data.reports.length > 0) {
+                            message += `\n\nIssues found: ${data.issues_found}`;
+                            if (data.issues_fixed > 0) {
+                                message += `\nIssues fixed: ${data.issues_fixed}`;
+                            }
+                            
+                            // Add report details for the first few issues
+                            const maxReportsToShow = 3;
+                            const shownReports = data.reports.slice(0, maxReportsToShow);
+                            
+                            message += '\n\nDetails:';
+                            shownReports.forEach(report => {
+                                message += `\n- ${report.description || report.type}`;
+                            });
+                            
+                            if (data.reports.length > maxReportsToShow) {
+                                message += `\n- ... and ${data.reports.length - maxReportsToShow} more issues`;
+                            }
+                        }
+                        
+                        alert(`Bank audit completed: ${message}`);
+                        
+                        // Refresh financial data
+                        refreshFinancialOverview();
+                        refreshLoans();
+                        refreshTransactions();
                     } else {
                         console.error('Bank audit failed:', data.error);
-                        alert('Error: ' + data.error);
+                        alert(`Error: ${data.error || 'Unknown error occurred'}`);
                     }
                 })
                 .catch(error => {
+                    // Reset button
+                    auditBtn.innerHTML = originalText;
+                    auditBtn.disabled = false;
+                    
                     console.error('Error during bank audit:', error);
                     alert('Bank audit failed: ' + error.message);
                     
-                    // Fallback for demo purposes
-                    setTimeout(() => {
-                        alert('Bank audit completed successfully. All accounts balanced.');
-                    }, 1000);
+                    // Try to get more detailed error information
+                    fetch('/api/admin/finance/overview', {
+                        method: 'GET',
+                        headers: {
+                            'X-Admin-Key': window.adminKey
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            console.log('Financial overview data retrieved successfully');
+                            refreshFinancialOverview();
+                            refreshLoans();
+                            refreshTransactions();
+                        } else {
+                            console.error('Could not retrieve financial overview:', data.error);
+                        }
+                    })
+                    .catch(fallbackError => {
+                        console.error('Failed to get financial overview:', fallbackError);
+                    });
                 });
             }
         }
@@ -1400,7 +1599,8 @@
         // Finance - Refresh loans table
         function refreshLoans() {
             console.log('Refreshing loans table...');
-            const loansTable = document.getElementById('active-loans-table');
+            const loansTable = safeGetElement('active-loans-table');
+            if (!loansTable) return;
             
             fetch('/api/admin/finance/loans', {
                 method: 'GET',
@@ -1452,43 +1652,46 @@
                 loansTable.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Failed to load loans: ${error.message}</td></tr>`;
                 
                 // Fallback data for demo
-                const loans = [
-                    { id: 1, player_name: 'John', amount: 200, interest: '10%', due_date: 'Round 8', player_id: 5 },
-                    { id: 2, player_name: 'Alice', amount: 350, interest: '12%', due_date: 'Round 10', player_id: 3 }
-                ];
-                
-                if (loans.length === 0) {
-                    loansTable.innerHTML = '<tr><td colspan="6" class="text-center">No active loans found.</td></tr>';
-                    return;
-                }
-                
-                let tableHtml = '';
-                loans.forEach(loan => {
-                    const formattedLoan = loadFinancialData(loan);
-                    tableHtml += `
-                        <tr>
-                            <td>${loan.id}</td>
-                            <td>${loan.player_name}</td>
-                            <td>$${loan.amount}</td>
-                            <td>${formattedLoan.formattedInterestRate || loan.interest}</td>
-                            <td>${loan.due_date}</td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-success" onclick="markLoanPaid(${loan.id})">Mark Paid</button>
-                                <button class="btn btn-sm btn-outline-warning" onclick="extendLoan(${loan.id})">Extend</button>
-                            </td>
-                        </tr>
-                    `;
-                });
-                
-                loansTable.innerHTML = tableHtml;
-                console.log('Using fallback loans data due to error');
+                setTimeout(() => {
+                    const loans = [
+                        { id: 1, player_name: 'John', amount: 200, interest: '10%', due_date: 'Round 8', player_id: 5 },
+                        { id: 2, player_name: 'Alice', amount: 350, interest: '12%', due_date: 'Round 10', player_id: 3 }
+                    ];
+                    
+                    if (loans.length === 0) {
+                        loansTable.innerHTML = '<tr><td colspan="6" class="text-center">No active loans found.</td></tr>';
+                        return;
+                    }
+                    
+                    let tableHtml = '';
+                    loans.forEach(loan => {
+                        const formattedLoan = loadFinancialData(loan);
+                        tableHtml += `
+                            <tr>
+                                <td>${loan.id}</td>
+                                <td>${loan.player_name}</td>
+                                <td>$${loan.amount}</td>
+                                <td>${formattedLoan.formattedInterestRate || loan.interest}</td>
+                                <td>${loan.due_date}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-success" onclick="markLoanPaid(${loan.id})">Mark Paid</button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="extendLoan(${loan.id})">Extend</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    loansTable.innerHTML = tableHtml;
+                    console.log('Using fallback loans data due to error');
+                }, 500);
             });
         }
         
         // Finance - Refresh transactions table
         function refreshTransactions() {
             console.log('Refreshing transactions table...');
-            const transactionsTable = document.getElementById('transactions-table');
+            const transactionsTable = safeGetElement('transactions-table');
+            if (!transactionsTable) return;
             
             fetch('/api/admin/finance/transactions', {
                 method: 'GET',
@@ -1536,33 +1739,35 @@
                 transactionsTable.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Failed to load transactions: ${error.message}</td></tr>`;
                 
                 // Fallback data for demo
-                const transactions = [
-                    { time: '10:15 AM', type: 'Payment', from: 'John', to: 'Bank', amount: 200, reason: 'Property purchase' },
-                    { time: '10:05 AM', type: 'Transfer', from: 'Bank', to: 'Alice', amount: 150, reason: 'Passing GO' },
-                    { time: '09:45 AM', type: 'Fee', from: 'Bob', to: 'Community Fund', amount: 50, reason: 'Luxury Tax' }
-                ];
-                
-                if (transactions.length === 0) {
-                    transactionsTable.innerHTML = '<tr><td colspan="6" class="text-center">No transactions found.</td></tr>';
-                    return;
-                }
-                
-                let tableHtml = '';
-                transactions.forEach(tx => {
-                    tableHtml += `
-                        <tr>
-                            <td>${tx.time}</td>
-                            <td>${formatTransactionType(tx.type)}</td>
-                            <td>${tx.from}</td>
-                            <td>${tx.to}</td>
-                            <td>$${tx.amount}</td>
-                            <td>${tx.reason}</td>
-                        </tr>
-                    `;
-                });
-                
-                transactionsTable.innerHTML = tableHtml;
-                console.log('Using fallback transaction data due to error');
+                setTimeout(() => {
+                    const transactions = [
+                        { time: '10:15 AM', type: 'Payment', from: 'John', to: 'Bank', amount: 200, reason: 'Property purchase' },
+                        { time: '10:05 AM', type: 'Transfer', from: 'Bank', to: 'Alice', amount: 150, reason: 'Passing GO' },
+                        { time: '09:45 AM', type: 'Fee', from: 'Bob', to: 'Community Fund', amount: 50, reason: 'Luxury Tax' }
+                    ];
+                    
+                    if (transactions.length === 0) {
+                        transactionsTable.innerHTML = '<tr><td colspan="6" class="text-center">No transactions found.</td></tr>';
+                        return;
+                    }
+                    
+                    let tableHtml = '';
+                    transactions.forEach(tx => {
+                        tableHtml += `
+                            <tr>
+                                <td>${tx.time}</td>
+                                <td>${formatTransactionType(tx.type)}</td>
+                                <td>${tx.from}</td>
+                                <td>${tx.to}</td>
+                                <td>$${tx.amount}</td>
+                                <td>${tx.reason}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    transactionsTable.innerHTML = tableHtml;
+                    console.log('Using fallback transaction data due to error');
+                }, 500);
             });
         }
         
@@ -2264,5 +2469,8 @@
                 });
         }
     </script>
+    
+    <!-- Finance Admin Script -->
+    <script src="{{ url_for('static', filename='js/finance-admin.js') }}"></script>
 </body>
 </html> 

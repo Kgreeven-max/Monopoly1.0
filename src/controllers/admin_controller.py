@@ -91,7 +91,7 @@ class AdminController:
             players = Player.query.filter_by(in_game=True).all()
             for player in players:
                 player.position = 0
-                player.cash = 1500  # Default starting cash
+                player.money = 1500  # Default starting cash
                 player.in_game = False  # Remove all players
                 player.is_in_jail = False
                 player.jail_turns = 0
@@ -165,7 +165,7 @@ class AdminController:
                 return {"success": False, "error": "Game state not initialized"}
             
             # Record previous balance for logging
-            previous_balance = player.cash
+            previous_balance = player.money
             
             # Perform the cash modification
             if amount > 0:
@@ -199,7 +199,7 @@ class AdminController:
             
             # Log the action
             logger.info(f"Admin modified player {player.username} (ID: {player_id}) cash by {amount}. "
-                        f"Previous balance: {previous_balance}, New balance: {player.cash}. Reason: {reason}")
+                        f"Previous balance: {previous_balance}, New balance: {player.money}. Reason: {reason}")
             
             # Notify clients of the update
             socket_controller = current_app.config.get('socket_controller')
@@ -211,7 +211,7 @@ class AdminController:
                     "username": player.username,
                     "amount": amount,
                     "previous_balance": previous_balance,
-                    "new_balance": player.cash,
+                    "new_balance": player.money,
                     "reason": reason,
                     "timestamp": datetime.datetime.now().isoformat()
                 })
@@ -221,7 +221,7 @@ class AdminController:
                 "player_id": player_id,
                 "username": player.username,
                 "previous_balance": previous_balance,
-                "new_balance": player.cash,
+                "new_balance": player.money,
                 "amount_changed": amount,
                 "reason": reason
             }
@@ -798,239 +798,215 @@ class AdminController:
             logger.error(f"Error removing player {player_id}: {str(e)}", exc_info=True)
             return {"success": False, "error": f"Failed to remove player: {str(e)}"} 
 
-    def audit_economic_system(self):
+    def audit_economic_system(self, fix_issues=False):
         """
-        Performs a comprehensive audit of the economic system including market trends,
-        property values, transaction patterns, and economic state impact.
+        Perform a full audit of the economic system.
         
+        Args:
+            fix_issues (bool): Whether to attempt to fix discovered issues
+            
         Returns:
-            Dict with economic audit report
+            Dict with audit results
         """
         try:
-            # 1. Get game state and economic manager
-            game_state = GameState.get_instance()
-            if not game_state:
-                return {"success": False, "error": "Game state not initialized"}
+            logger.info(f"Starting economic system audit (fix_issues={fix_issues})")
             
-            economic_manager = current_app.config.get('economic_manager')
-            if not economic_manager:
-                return {"success": False, "error": "Economic manager not initialized"}
-            
-            # 2. Get current economic state and metrics
-            economic_state = economic_manager.get_current_economic_state()
-            
-            # 3. Get all properties to analyze value trends
-            properties = Property.query.all()
-            property_stats = {
-                "total_count": len(properties),
-                "total_value": sum(p.current_value for p in properties),
-                "average_value": sum(p.current_value for p in properties) / len(properties) if properties else 0,
-                "owned_count": sum(1 for p in properties if p.owner_id is not None),
-                "mortgaged_count": sum(1 for p in properties if p.is_mortgaged),
-                "developed_count": sum(1 for p in properties if p.houses > 0 or p.hotel),
-                "property_groups": {}
-            }
-            
-            # Group properties by type/color
-            for prop in properties:
-                group = prop.property_group
-                if group not in property_stats["property_groups"]:
-                    property_stats["property_groups"][group] = {
-                        "count": 0,
-                        "total_value": 0,
-                        "average_value": 0,
-                        "development_level": 0,
-                        "owned_count": 0
-                    }
-                
-                group_stats = property_stats["property_groups"][group]
-                group_stats["count"] += 1
-                group_stats["total_value"] += prop.current_value
-                group_stats["development_level"] += prop.houses + (5 if prop.hotel else 0)
-                if prop.owner_id is not None:
-                    group_stats["owned_count"] += 1
-            
-            # Calculate averages for each group
-            for group, stats in property_stats["property_groups"].items():
-                if stats["count"] > 0:
-                    stats["average_value"] = stats["total_value"] / stats["count"]
-                    stats["average_development"] = stats["development_level"] / stats["count"]
-            
-            # 4. Analyze transactions over time
-            transactions = Transaction.query.order_by(Transaction.timestamp.desc()).all()
-            
-            # Group transactions by time periods to analyze trends
-            time_periods = {}
-            
-            # Calculate time windows (last hour, last day, last week)
-            now = datetime.datetime.now()
-            one_hour_ago = now - datetime.timedelta(hours=1)
-            one_day_ago = now - datetime.timedelta(days=1)
-            one_week_ago = now - datetime.timedelta(weeks=1)
-            
-            # Transaction counts and volumes
-            transaction_stats = {
-                "total_count": len(transactions),
-                "total_volume": sum(abs(t.amount) for t in transactions),
-                "last_hour": {
-                    "count": 0,
-                    "volume": 0
-                },
-                "last_day": {
-                    "count": 0,
-                    "volume": 0
-                },
-                "last_week": {
-                    "count": 0,
-                    "volume": 0
-                },
-                "by_type": {}
-            }
-            
-            # Analyze transactions
-            for transaction in transactions:
-                # Count by time period
-                if transaction.timestamp >= one_hour_ago:
-                    transaction_stats["last_hour"]["count"] += 1
-                    transaction_stats["last_hour"]["volume"] += abs(transaction.amount)
-                
-                if transaction.timestamp >= one_day_ago:
-                    transaction_stats["last_day"]["count"] += 1
-                    transaction_stats["last_day"]["volume"] += abs(transaction.amount)
-                
-                if transaction.timestamp >= one_week_ago:
-                    transaction_stats["last_week"]["count"] += 1
-                    transaction_stats["last_week"]["volume"] += abs(transaction.amount)
-                
-                # Count by transaction type
-                tx_type = transaction.transaction_type
-                if tx_type not in transaction_stats["by_type"]:
-                    transaction_stats["by_type"][tx_type] = {
-                        "count": 0,
-                        "volume": 0
-                    }
-                
-                type_stats = transaction_stats["by_type"][tx_type]
-                type_stats["count"] += 1
-                type_stats["volume"] += abs(transaction.amount)
-            
-            # 5. Analyze loans and financial instruments
-            loans = Loan.query.all()
-            loan_stats = {
-                "total_count": len(loans),
-                "active_count": sum(1 for l in loans if not l.is_paid),
-                "total_principal": sum(l.principal_amount for l in loans),
-                "total_outstanding": sum(l.remaining_balance for l in loans if not l.is_paid),
-                "average_interest_rate": sum(l.interest_rate for l in loans) / len(loans) if loans else 0,
-                "by_player": {}
-            }
-            
-            # Analyze loans by player
-            for loan in loans:
-                player_id = loan.player_id
-                if player_id not in loan_stats["by_player"]:
-                    loan_stats["by_player"][player_id] = {
-                        "count": 0,
-                        "active_count": 0,
-                        "total_borrowed": 0,
-                        "total_outstanding": 0
-                    }
-                
-                player_loan_stats = loan_stats["by_player"][player_id]
-                player_loan_stats["count"] += 1
-                player_loan_stats["total_borrowed"] += loan.principal_amount
-                
-                if not loan.is_paid:
-                    player_loan_stats["active_count"] += 1
-                    player_loan_stats["total_outstanding"] += loan.remaining_balance
-            
-            # 6. Calculate economic health indicators
-            players = Player.query.filter_by(in_game=True).all()
-            
-            economic_health = {
-                "cash_in_circulation": sum(p.cash for p in players),
-                "total_property_value": property_stats["total_value"],
-                "total_debt": loan_stats["total_outstanding"],
-                "monopoly_concentration": sum(1 for g, s in property_stats["property_groups"].items() 
-                                           if s["owned_count"] == s["count"]) / len(property_stats["property_groups"]) 
-                                           if property_stats["property_groups"] else 0,
-                "liquidity_index": sum(p.cash for p in players) / (property_stats["total_value"] + 1),  # Add 1 to avoid division by zero
-                "debt_to_asset_ratio": loan_stats["total_outstanding"] / 
-                                      (sum(p.cash for p in players) + property_stats["total_value"] + 1)  # Add 1 to avoid division by zero
-            }
-            
-            # Calculate inequality index (Gini-inspired)
-            if players:
-                player_wealths = [p.calculate_net_worth() for p in players]
-                player_wealths.sort()
-                n = len(player_wealths)
-                sum_wealth = sum(player_wealths)
-                
-                # Calculate income inequality index (simplified Gini)
-                if n > 1 and sum_wealth > 0:
-                    cumulative_wealth = 0
-                    sum_inequality = 0
-                    
-                    for i, wealth in enumerate(player_wealths):
-                        cumulative_wealth += wealth
-                        sum_inequality += (i + 1) * wealth
-                    
-                    inequality_index = (2 * sum_inequality) / (n * sum_wealth) - (n + 1) / n
-                    economic_health["inequality_index"] = inequality_index
-                else:
-                    economic_health["inequality_index"] = 0
-            else:
-                economic_health["inequality_index"] = 0
-            
-            # 7. Compile the final audit report
-            audit_report = {
+            audit_results = {
                 "success": True,
-                "timestamp": datetime.datetime.now().isoformat(),
-                "economic_state": economic_state,
-                "property_stats": property_stats,
-                "transaction_stats": transaction_stats,
-                "loan_stats": loan_stats,
-                "economic_health": economic_health,
-                "recommendations": []
+                "message": "Audit completed successfully",
+                "issues_found": 0,
+                "issues_fixed": 0,
+                "reports": [],
+                "timestamp": datetime.datetime.now().isoformat()
             }
             
-            # 8. Generate recommendations based on economic health
-            if economic_health["cash_in_circulation"] < property_stats["total_value"] * 0.2:
-                audit_report["recommendations"].append({
-                    "type": "liquidity",
+            # Get all players
+            players = Player.query.all()
+            logger.info(f"Auditing {len(players)} players")
+            
+            # Get banker
+            banker = current_app.config.get('banker')
+            if not banker:
+                logger.warning("Banker not found in app config")
+                audit_results["reports"].append({
+                    "type": "system_configuration",
                     "severity": "high",
-                    "message": "Low cash-to-property ratio may cause liquidity problems. Consider increasing cash injection."
+                    "entity": "banker",
+                    "description": "Banker not found in app configuration"
                 })
+                audit_results["issues_found"] += 1
             
-            if economic_health["debt_to_asset_ratio"] > 0.7:
-                audit_report["recommendations"].append({
-                    "type": "debt",
+            # Step 1: Verify all players have valid money values
+            for player in players:
+                try:
+                    if not hasattr(player, 'money') or player.money is None:
+                        issue = {
+                            "type": "missing_money",
+                            "severity": "high",
+                            "entity": f"player-{player.id}",
+                            "description": f"Player {player.username} (ID: {player.id}) has no money attribute or value"
+                        }
+                        
+                        if fix_issues:
+                            player.money = 1500  # Default starting value
+                            db.session.add(player)
+                            audit_results["issues_fixed"] += 1
+                            issue["fixed"] = True
+                            issue["fix_description"] = f"Set player money to default value of 1500"
+                        
+                        audit_results["issues_found"] += 1
+                        audit_results["reports"].append(issue)
+                except Exception as player_error:
+                    logger.error(f"Error checking player {player.id if hasattr(player, 'id') else 'unknown'}: {str(player_error)}")
+                    audit_results["reports"].append({
+                        "type": "player_check_error",
+                        "severity": "medium",
+                        "entity": f"player-{player.id if hasattr(player, 'id') else 'unknown'}",
+                        "description": f"Error checking player: {str(player_error)}"
+                    })
+                    audit_results["issues_found"] += 1
+            
+            # Step 2: Check for negative money without bankruptcy status
+            for player in players:
+                try:
+                    if hasattr(player, 'money') and player.money < 0 and hasattr(player, 'in_game') and player.in_game:
+                        issue = {
+                            "type": "negative_balance",
+                            "severity": "medium",
+                            "entity": f"player-{player.id}",
+                            "description": f"Player {player.username} has negative balance ({player.money}) but is still in game"
+                        }
+                        
+                        if fix_issues:
+                            # Don't automatically bankrupt players, just report it
+                            pass
+                        
+                        audit_results["issues_found"] += 1
+                        audit_results["reports"].append(issue)
+                except Exception as player_error:
+                    logger.error(f"Error checking player bankruptcy status {player.id if hasattr(player, 'id') else 'unknown'}: {str(player_error)}")
+                    audit_results["reports"].append({
+                        "type": "player_bankruptcy_check_error",
+                        "severity": "medium",
+                        "entity": f"player-{player.id if hasattr(player, 'id') else 'unknown'}",
+                        "description": f"Error checking player bankruptcy status: {str(player_error)}"
+                    })
+                    audit_results["issues_found"] += 1
+            
+            # Step 3: Check game state
+            try:
+                game_state = GameState.query.first()
+                if game_state:
+                    if not hasattr(game_state, 'economic_cycle_state') or not game_state.economic_cycle_state:
+                        issue = {
+                            "type": "missing_economic_state",
+                            "severity": "medium",
+                            "entity": "game_state",
+                            "description": "Game state is missing economic_cycle_state"
+                        }
+                        
+                        if fix_issues:
+                            game_state.economic_cycle_state = "normal"
+                            db.session.add(game_state)
+                            audit_results["issues_fixed"] += 1
+                            issue["fixed"] = True
+                            issue["fix_description"] = "Set economic_cycle_state to 'normal'"
+                        
+                        audit_results["issues_found"] += 1
+                        audit_results["reports"].append(issue)
+                    
+                    if not hasattr(game_state, 'inflation_rate'):
+                        issue = {
+                            "type": "missing_inflation_rate",
+                            "severity": "low",
+                            "entity": "game_state",
+                            "description": "Game state is missing inflation_rate"
+                        }
+                        
+                        if fix_issues:
+                            game_state.inflation_rate = 0.0
+                            db.session.add(game_state)
+                            audit_results["issues_fixed"] += 1
+                            issue["fixed"] = True
+                            issue["fix_description"] = "Set inflation_rate to 0.0"
+                        
+                        audit_results["issues_found"] += 1
+                        audit_results["reports"].append(issue)
+                else:
+                    audit_results["issues_found"] += 1
+                    audit_results["reports"].append({
+                        "type": "missing_game_state",
+                        "severity": "critical",
+                        "entity": "game_state",
+                        "description": "No game state record found"
+                    })
+            except Exception as game_state_error:
+                logger.error(f"Error checking game state: {str(game_state_error)}")
+                audit_results["reports"].append({
+                    "type": "game_state_check_error",
                     "severity": "high",
-                    "message": "High debt-to-asset ratio indicates potential financial instability. Consider debt relief or economic stimulus."
+                    "entity": "game_state",
+                    "description": f"Error checking game state: {str(game_state_error)}"
                 })
+                audit_results["issues_found"] += 1
             
-            if economic_health["inequality_index"] > 0.6:
-                audit_report["recommendations"].append({
-                    "type": "inequality",
+            # Step 4: Check community fund
+            try:
+                community_fund = current_app.config.get('community_fund')
+                if not community_fund:
+                    audit_results["issues_found"] += 1
+                    audit_results["reports"].append({
+                        "type": "missing_community_fund",
+                        "severity": "high",
+                        "entity": "community_fund",
+                        "description": "Community fund is not initialized"
+                    })
+            except Exception as community_fund_error:
+                logger.error(f"Error checking community fund: {str(community_fund_error)}")
+                audit_results["reports"].append({
+                    "type": "community_fund_check_error",
                     "severity": "medium",
-                    "message": "High wealth inequality may lead to monopoly endgame. Consider wealth redistribution mechanisms."
+                    "entity": "community_fund",
+                    "description": f"Error checking community fund: {str(community_fund_error)}"
                 })
+                audit_results["issues_found"] += 1
             
-            if economic_health["monopoly_concentration"] > 0.7:
-                audit_report["recommendations"].append({
-                    "type": "monopoly",
-                    "severity": "medium",
-                    "message": "High monopoly concentration indicates mature game stage. Consider introducing anti-monopoly regulation."
-                })
+            # Commit any fixes
+            if fix_issues and audit_results["issues_fixed"] > 0:
+                try:
+                    db.session.commit()
+                    logger.info(f"Fixed {audit_results['issues_fixed']} issues during economic audit")
+                except Exception as commit_error:
+                    logger.error(f"Error committing fixes: {str(commit_error)}")
+                    audit_results["reports"].append({
+                        "type": "commit_error",
+                        "severity": "high",
+                        "entity": "database",
+                        "description": f"Error committing fixes: {str(commit_error)}"
+                    })
+                    audit_results["issues_found"] += 1
+                    # Reset issues_fixed count since the commit failed
+                    audit_results["issues_fixed"] = 0
             
-            # 9. Log the audit completion
-            logger.info(f"Economic system audit completed. Found {len(audit_report['recommendations'])} recommendations.")
+            # Generate summary message
+            if audit_results["issues_found"] == 0:
+                audit_results["message"] = "No issues found in economic system"
+            else:
+                if audit_results["issues_fixed"] > 0:
+                    audit_results["message"] = f"Found {audit_results['issues_found']} issues and fixed {audit_results['issues_fixed']}"
+                else:
+                    audit_results["message"] = f"Found {audit_results['issues_found']} issues (fix_issues=false)"
             
-            return audit_report
+            logger.info(f"Audit completed: {audit_results['message']}")
+            return audit_results
             
         except Exception as e:
-            logger.error(f"Error performing economic system audit: {e}", exc_info=True)
-            return {"success": False, "error": f"Failed to complete economic system audit: {str(e)}"}
+            logger.error(f"Error auditing economic system: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": f"Failed to complete economic audit: {str(e)}",
+                "timestamp": datetime.datetime.now().isoformat()
+            }
 
     def audit_game_state(self):
         """
@@ -2674,3 +2650,87 @@ class AdminController:
         except Exception as e:
             logger.error(f"Error getting all loans: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
+
+    def get_player_financial_data(self, player_id=None):
+        """
+        Get financial data for a specific player or all players.
+        
+        Args:
+            player_id (int, optional): If provided, get data for this player only.
+            
+        Returns:
+            Dict with player financial data
+        """
+        try:
+            if player_id:
+                # Get specific player
+                player = Player.query.get(player_id)
+                if not player:
+                    return {"success": False, "error": "Player not found"}
+                
+                # Get player's loans
+                loans = Loan.query.filter_by(player_id=player_id).all()
+                
+                # Calculate net worth
+                net_worth = player.money
+                for prop in player.properties:
+                    net_worth += prop.price # Use base price for simplicity
+                
+                # Calculate loan totals
+                loans_total = sum(loan.amount for loan in loans if not loan.is_paid)
+                
+                return {
+                    "success": True,
+                    "player": {
+                        "id": player.id,
+                        "name": player.username,
+                        "money": player.money,
+                        "net_worth": net_worth,
+                        "credit_score": player.credit_score,
+                        "properties_count": len(player.properties),
+                        "properties_value": sum(prop.price for prop in player.properties),
+                        "active_loans": len([loan for loan in loans if not loan.is_paid]),
+                        "loans_total": loans_total
+                    }
+                }
+            else:
+                # Get all players
+                players = Player.query.filter_by(in_game=True).all()
+                
+                player_data = []
+                for player in players:
+                    # Get player's loans
+                    loans = Loan.query.filter_by(player_id=player.id).all()
+                    
+                    # Calculate net worth
+                    net_worth = player.money
+                    for prop in player.properties:
+                        net_worth += prop.price # Use base price for simplicity
+                    
+                    # Calculate loan totals
+                    loans_total = sum(loan.amount for loan in loans if not loan.is_paid)
+                    
+                    player_data.append({
+                        "id": player.id,
+                        "name": player.username,
+                        "money": player.money,
+                        "net_worth": net_worth,
+                        "credit_score": player.credit_score,
+                        "properties_count": len(player.properties),
+                        "properties_value": sum(prop.price for prop in player.properties),
+                        "active_loans": len([loan for loan in loans if not loan.is_paid]),
+                        "loans_total": loans_total
+                    })
+                
+                return {
+                    "success": True,
+                    "players": player_data,
+                    "total_players": len(player_data),
+                    "total_money": sum(p["money"] for p in player_data),
+                    "total_net_worth": sum(p["net_worth"] for p in player_data),
+                    "total_loans": sum(p["loans_total"] for p in player_data)
+                }
+                
+        except Exception as e:
+            logger.error(f"Error getting player financial data: {e}", exc_info=True)
+            return {"success": False, "error": f"Failed to retrieve player financial data: {str(e)}"}
