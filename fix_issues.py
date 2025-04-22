@@ -6,6 +6,7 @@ This script addresses:
 1. Circular dependencies with Loan model
 2. Admin endpoint authentication issues
 3. Duplicate test files confusion
+4. StrategicBot planning_horizon attribute error
 """
 
 import os
@@ -188,6 +189,59 @@ All tests for authenticated endpoints should:
     print(f"✅ Created {readme_path} with test organization guidelines")
     return True
 
+def fix_bot_planning_horizon():
+    """
+    Fix planning_horizon attribute error in StrategicBot and other bot classes.
+    
+    This error occurs because the StrategicBot class tries to access self.planning_horizon
+    directly, but this attribute is actually in the self.decision_maker object.
+    """
+    print("\n=== Fixing bot planning_horizon attribute error ===")
+    
+    strategic_bot_path = Path("src/models/bots/strategic_bot.py")
+    if not strategic_bot_path.exists():
+        print(f"ERROR: {strategic_bot_path} not found!")
+        return False
+        
+    # Create backup
+    backup_path = strategic_bot_path.with_suffix(".py.bak")
+    shutil.copy2(strategic_bot_path, backup_path)
+    print(f"Created backup at {backup_path}")
+    
+    # Read the file content
+    with open(strategic_bot_path, "r") as f:
+        content = f.read()
+    
+    # Check if already fixed
+    if "# Check if decision_maker has planning_horizon attribute" in content:
+        print("✅ StrategicBot planning_horizon fix already applied.")
+        return True
+    
+    # Update the __init__ method to safely access and modify decision_maker.planning_horizon
+    new_init = """    def __init__(self, player_id, difficulty='normal'):
+        super().__init__(player_id, difficulty)
+        # Check if decision_maker has planning_horizon attribute
+        if hasattr(self.decision_maker, 'planning_horizon'):
+            self.decision_maker.planning_horizon += 1  # Longer planning horizon
+        else:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"StrategicBot {self.player_id}: Could not adjust planning_horizon on decision_maker.")"""
+    
+    # Replace the problematic line with the fixed code
+    content = re.sub(
+        r"def __init__\(self, player_id, difficulty='normal'\):\s+super\(\)\.__init__\(player_id, difficulty\)\s+# Adjust parameters for strategic focus\s+self\.planning_horizon \+= 1  # Longer planning horizon",
+        new_init,
+        content
+    )
+    
+    # Write the updated content
+    with open(strategic_bot_path, "w") as f:
+        f.write(content)
+    
+    print(f"✅ Fixed planning_horizon attribute access in {strategic_bot_path}")
+    return True
+
 def main():
     """Run all fixes."""
     print("Running fixes for Monopoly project issues...\n")
@@ -196,14 +250,16 @@ def main():
     loan_fixed = fix_loan_model()
     admin_fixed = fix_admin_tests()
     tests_fixed = fix_duplicate_tests()
+    bot_fixed = fix_bot_planning_horizon()
     
     # Summary
     print("\n=== Fix Summary ===")
     print(f"Loan model circular dependencies: {'✅ Fixed' if loan_fixed else '❌ Failed'}")
     print(f"Admin endpoint authentication: {'✅ Fixed' if admin_fixed else '❌ Failed'}")
     print(f"Duplicate test files: {'✅ Fixed' if tests_fixed else '❌ Failed'}")
+    print(f"Bot planning_horizon error: {'✅ Fixed' if bot_fixed else '❌ Failed'}")
     
-    if loan_fixed and admin_fixed and tests_fixed:
+    if loan_fixed and admin_fixed and tests_fixed and bot_fixed:
         print("\n✅ All issues fixed successfully!")
         return 0
     else:

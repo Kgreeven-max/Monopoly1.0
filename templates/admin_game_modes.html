@@ -1967,49 +1967,85 @@ const GameModesAdmin = (function() {
     
     // Select mode
     function selectMode() {
-        if (!selectedMode || !gameId) {
-            showAlert('error', 'No mode selected or game ID not available');
+        const selectedMode = document.querySelector('.mode-list .list-group-item.active');
+        if (!selectedMode) {
+            showAlert('error', 'Please select a game mode first');
             return;
         }
         
-        showLoading(true);
+        const modeId = selectedMode.dataset.modeId;
+        if (!modeId) {
+            showAlert('error', 'Invalid mode selected');
+            return;
+        }
         
-        // Make API request to select mode
-        fetch(`/api/game-modes/select/${gameId}`, {
-            method: 'POST',
+        // Get the active game ID
+        fetch('/api/admin/games/active', {
             headers: {
-                'Content-Type': 'application/json',
                 'X-Admin-Key': adminKey
-            },
-            body: JSON.stringify({
-                mode_id: selectedMode
-            })
+            }
         })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showAlert('success', `Game mode set to ${formatModeName(selectedMode)}`);
-                    
-                    // Update displayed current mode
-                    document.getElementById('current-mode').textContent = formatModeName(selectedMode);
-                    document.getElementById('game-status').textContent = 'Active';
-                    
-                    // Update current settings
-                    currentSettings = data.settings;
-                    
-                    // Enable settings update
-                    document.getElementById('update-settings-btn').disabled = false;
-                    document.getElementById('reset-settings-btn').disabled = false;
-                } else {
-                    showAlert('error', 'Error selecting game mode: ' + (data.error || 'Unknown error'));
-                }
-            })
-            .catch(error => {
-                showAlert('error', 'Error selecting game mode: ' + error.message);
-            })
-            .finally(() => {
-                showLoading(false);
-            });
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.games && data.games.length > 0) {
+                const gameId = data.games[0].id;
+                
+                // Set the game mode
+                return fetch(`/api/game-modes/select/${gameId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': adminKey
+                    },
+                    body: JSON.stringify({
+                        mode_id: modeId
+                    })
+                });
+            } else {
+                showAlert('error', 'No active games found. Please create a game first.');
+                throw new Error('No games found');
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('success', `Game mode set to ${getModeName(modeId)}`);
+                
+                // Update the displayed current mode
+                document.getElementById('current-mode').textContent = getModeName(modeId);
+                
+                // Load settings for the selected mode
+                loadModeSettings(modeId);
+            } else {
+                showAlert('error', `Failed to set game mode: ${data.error || 'Unknown error'}`);
+            }
+        })
+        .catch(error => {
+            if (error.message !== 'No games found') {
+                showAlert('error', `Error setting game mode: ${error.message}`);
+            }
+        });
+    }
+    
+    // Helper function to get mode name from ID
+    function getModeName(modeId) {
+        // Find the mode in the standard modes
+        const standardModes = document.querySelectorAll('#standard-modes-container .list-group-item');
+        for (const mode of standardModes) {
+            if (mode.dataset.modeId === modeId) {
+                return mode.querySelector('.mode-name').textContent;
+            }
+        }
+        
+        // Find the mode in the specialty modes
+        const specialtyModes = document.querySelectorAll('#specialty-modes-container .list-group-item');
+        for (const mode of specialtyModes) {
+            if (mode.dataset.modeId === modeId) {
+                return mode.querySelector('.mode-name').textContent;
+            }
+        }
+        
+        return 'Unknown Mode';
     }
     
     // Update settings

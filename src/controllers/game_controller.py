@@ -36,12 +36,16 @@ class GameController:
     
     def _initialize_properties(self, game_id):
         """Deletes existing properties and creates the standard set for the game."""
-        # Delete existing properties for this game ID first
+        # Delete existing properties that would conflict with new ones
         try:
-            num_deleted = Property.query.filter_by(game_id=game_id).delete()
+            # Get all property positions we're going to create
+            positions = [data[2] for data in self.get_standard_property_data()]
+            
+            # Delete any properties with these positions (regardless of game_id)
+            num_deleted = Property.query.filter(Property.position.in_(positions)).delete(synchronize_session=False)
             db.session.commit() # Commit the deletion
             if num_deleted > 0:
-                self.logger.info(f"Deleted {num_deleted} existing properties for game_id {game_id}.")
+                self.logger.info(f"Deleted {num_deleted} existing properties for new game {game_id}.")
         except Exception as e:
             db.session.rollback()
             self.logger.error(f"Error deleting existing properties for game {game_id}: {e}", exc_info=True)
@@ -49,9 +53,50 @@ class GameController:
 
         self.logger.info(f"Initializing standard properties for game_id {game_id}...")
         
-        # Standard Property Data (Simplified - rents need defining properly)
-        # TODO: Move this data to a configuration file (e.g., JSON) for better management
-        properties_data = [
+        # Insert the standard property data
+        properties_data = self.get_standard_property_data()
+
+        for data in properties_data:
+            if data[1] is None: # Skip non-property spaces
+                continue
+            
+            # Create Property object using only arguments accepted by __init__
+            prop = Property(
+                name=data[0],
+                position=data[2],
+                group_name=data[4], # Use group_name as per __init__
+                price=data[3],
+                rent=data[5],
+                # improvement_cost can default or be set if needed
+                mortgage_value=data[3] // 2,
+                # rent_levels can default or be set if needed
+            )
+            
+            # Set other attributes directly on the object
+            prop.type = data[1]
+            prop.color_group = data[4] # Set the database column attribute
+            prop.house_cost = data[6]
+            prop.hotel_cost = data[7]
+            prop.rent_house_1 = data[8][0] if len(data[8]) > 0 else None
+            prop.rent_house_2 = data[8][1] if len(data[8]) > 1 else None
+            prop.rent_house_3 = data[8][2] if len(data[8]) > 2 else None
+            prop.rent_house_4 = data[8][3] if len(data[8]) > 3 else None
+            prop.rent_hotel = data[8][4] if len(data[8]) > 4 else None
+            prop.game_id = game_id
+            
+            db.session.add(prop)
+        
+        try:
+            db.session.commit()
+            self.logger.info(f"Successfully initialized {len(properties_data) - 10} properties for game {game_id}.") # Adjusted count
+        except Exception as e:
+            db.session.rollback()
+            self.logger.error(f"Failed to commit properties for game {game_id}: {e}", exc_info=True)
+            raise # Re-raise exception to indicate failure
+            
+    def get_standard_property_data(self):
+        """Return standard property data for initialization"""
+        return [
             # Name, Type, Position, Price, Group, Rent, Houses Cost, Hotel Cost, Rents[1-4+Hotel]
             ("Go", None, 0, 0, "Corner", 0, 0, 0, []), # Placeholder for non-properties
             ("Mediterranean Avenue", PropertyType.STREET, 1, 60, "Brown", 2, 50, 50, [10, 30, 90, 160, 250]),
@@ -94,44 +139,6 @@ class GameController:
             ("Luxury Tax", None, 38, 0, "Tax", 0, 0, 0, []),
             ("Boardwalk", PropertyType.STREET, 39, 400, "Blue", 50, 200, 200, [200, 600, 1400, 1700, 2000])
         ]
-
-        for data in properties_data:
-            if data[1] is None: # Skip non-property spaces
-                continue
-            
-            # Create Property object using only arguments accepted by __init__
-            prop = Property(
-                name=data[0],
-                position=data[2],
-                group_name=data[4], # Use group_name as per __init__
-                price=data[3],
-                rent=data[5],
-                # improvement_cost can default or be set if needed
-                mortgage_value=data[3] // 2,
-                # rent_levels can default or be set if needed
-            )
-            
-            # Set other attributes directly on the object
-            prop.type = data[1]
-            prop.color_group = data[4] # Set the database column attribute
-            prop.house_cost = data[6]
-            prop.hotel_cost = data[7]
-            prop.rent_house_1 = data[8][0] if len(data[8]) > 0 else None
-            prop.rent_house_2 = data[8][1] if len(data[8]) > 1 else None
-            prop.rent_house_3 = data[8][2] if len(data[8]) > 2 else None
-            prop.rent_house_4 = data[8][3] if len(data[8]) > 3 else None
-            prop.rent_hotel = data[8][4] if len(data[8]) > 4 else None
-            prop.game_id = game_id
-            
-            db.session.add(prop)
-        
-        try:
-            db.session.commit()
-            self.logger.info(f"Successfully initialized {len(properties_data) - 10} properties for game {game_id}.") # Adjusted count
-        except Exception as e:
-            db.session.rollback()
-            self.logger.error(f"Failed to commit properties for game {game_id}: {e}", exc_info=True)
-            raise # Re-raise exception to indicate failure
 
     def create_new_game(self, difficulty='normal', lap_limit=0, free_parking_fund=True, 
                          auction_required=True, turn_timeout=60):

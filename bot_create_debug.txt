@@ -1,0 +1,4 @@
+Attempted to create bot: TestStrategicBot_2699
+Status Code: 200
+Response: {"bot_id":9,"difficulty":"normal","name":"TestStrategicBot_2699","success":true,"type":"strategic"}
+

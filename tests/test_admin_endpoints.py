@@ -15,6 +15,7 @@ class TestAdminEndpoints:
         flask_app.config['TESTING'] = True
         flask_app.config['ADMIN_KEY'] = 'test_admin_key'  # Set a consistent admin key for testing
         flask_app.config['ADMIN_KEY'] = 'test_admin_key'  # Set a consistent admin key for testing
+        flask_app.config['ADMIN_KEY'] = 'test_admin_key'  # Set a consistent admin key for testing
         
         # Return the app
         return flask_app
@@ -23,6 +24,11 @@ class TestAdminEndpoints:
     def client(self, app):
         """Get a test client for the app"""
         return app.test_client()
+    
+    @pytest.fixture
+    def admin_headers(self, app):
+        \"\"\"Get headers with admin authentication\"\"\"
+        return {'X-Admin-Key': app.config['ADMIN_KEY']}
     
     @pytest.fixture
     def admin_headers(self, app):

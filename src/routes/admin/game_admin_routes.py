@@ -12,6 +12,120 @@ game_admin_bp = Blueprint('game_admin', __name__, url_prefix='')
 # Assumes AdminController instance is accessible
 admin_controller = AdminController()
 
+@game_admin_bp.route('/games/create', methods=['POST'])
+@admin_required
+def create_game():
+    """
+    Create a new game with specified settings.
+    
+    This API creates a new game with the provided name, mode, and player settings.
+    """
+    try:
+        data = request.json
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "No data provided"
+            }), 400
+            
+        # Get the game controller from app config
+        from flask import current_app
+        game_controller = current_app.config.get('game_controller')
+        if not game_controller:
+            logger.error("Game controller not found in app config")
+            return jsonify({
+                "success": False,
+                "error": "Game controller not initialized"
+            }), 500
+            
+        # Create a new game with settings from the request
+        game_mode = data.get('mode', 'classic')
+        difficulty = 'normal'  # Default
+        lap_limit = 0  # No limit by default
+        free_parking_fund = True  # Enabled by default
+        auction_required = True  # Enabled by default
+        turn_timeout = 60  # Default 60 seconds
+        
+        # Override defaults with values from request if provided
+        if 'difficulty' in data:
+            difficulty = data.get('difficulty')
+        if 'lap_limit' in data:
+            lap_limit = data.get('lap_limit')
+        if 'free_parking_fund' in data:
+            free_parking_fund = data.get('free_parking_fund')
+        if 'auction_required' in data:
+            auction_required = data.get('auction_required')
+        if 'turn_timeout' in data:
+            turn_timeout = data.get('turn_timeout')
+            
+        result = game_controller.create_new_game(
+            difficulty=difficulty,
+            lap_limit=lap_limit,
+            free_parking_fund=free_parking_fund,
+            auction_required=auction_required,
+            turn_timeout=turn_timeout
+        )
+        
+        if not result.get('success'):
+            return jsonify(result), 500
+            
+        # Get the created game ID
+        game_id = result.get('game_id')
+        
+        # Add bots if requested
+        bot_count = data.get('bot_count', 0)
+        if bot_count > 0:
+            bot_controller = current_app.config.get('bot_controller')
+            if bot_controller:
+                # Use different bot types for variety
+                bot_types = ['conservative', 'aggressive', 'strategic', 'opportunistic']
+                
+                for i in range(bot_count):
+                    bot_name = f"Bot_{i+1}"
+                    # Select a bot type from the list with wraparound
+                    bot_type = bot_types[i % len(bot_types)]
+                    bot_controller.create_bot(bot_name, bot_type=bot_type)
+                    logger.info(f"Created bot {bot_name} with type {bot_type}")
+                    
+        # Initialize the game mode if one was specified
+        if game_mode != 'classic':
+            game_mode_controller = current_app.config.get('game_mode_controller')
+            if game_mode_controller:
+                mode_result = game_mode_controller.initialize_game_mode(game_id, game_mode)
+                logger.info(f"Initialized game mode {game_mode} for game {game_id}")
+                if not mode_result.get('success'):
+                    logger.warning(f"Failed to initialize game mode: {mode_result.get('error')}")
+                
+        # Get current game state to ensure data is correct
+        from src.models.game_state import GameState
+        game_state = GameState.query.filter_by(game_id=game_id).first()
+        if game_state:
+            # Make sure the mode is set
+            game_state.mode = game_mode
+            # Add the game state to the session
+            from src.models import db
+            db.session.add(game_state)
+            db.session.commit()
+                
+        # Return success with game details
+        return jsonify({
+            "success": True,
+            "game_id": game_id,
+            "message": "Game created successfully",
+            "name": data.get('name', 'New Game'),
+            "mode": game_mode,
+            "max_players": data.get('max_players', 8),
+            "bot_count": bot_count,
+            "public": data.get('public', False)
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"Error creating game: {e}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": f"Failed to create game: {str(e)}"
+        }), 500
+
 @game_admin_bp.route('/games/active', methods=['GET'])
 @admin_required
 def get_active_games():
@@ -54,7 +168,7 @@ def get_active_games():
             "max_players": 8,  # Placeholder - would be from game settings
             "current_lap": game_state.current_lap,
             "current_turn_player": None,  # Would need to find the current player
-            "status": "active" if game_state.game_active else "inactive",
+            "status": "active" if game_state.status == 'active' else "inactive",
             "duration_minutes": 0,  # Placeholder - would calculate from start time
             "created_at": datetime.datetime.now().isoformat(),  # Placeholder
             "settings": {
@@ -154,7 +268,7 @@ def get_game_details(game_id):
             "id": game_state.game_id,
             "name": "Pi-nopoly Game",  # Placeholder
             "mode": "standard",  # Placeholder
-            "status": "active" if game_state.game_active else "inactive",
+            "status": "active" if game_state.status == 'active' else "inactive",
             "created_at": datetime.datetime.now().isoformat(),  # Placeholder
             "current_lap": game_state.current_lap,
             "current_turn_player": None,  # Will be set below if available
@@ -220,7 +334,7 @@ def end_game(game_id):
             }), 404
         
         # Mark game as inactive
-        game_state.game_active = False
+        game_state.status = 'ended'
         
         # Mark all players as not in game
         players = Player.query.filter_by(in_game=True).all()
