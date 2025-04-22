@@ -2029,23 +2029,29 @@ const GameModesAdmin = (function() {
     
     // Helper function to get mode name from ID
     function getModeName(modeId) {
-        // Find the mode in the standard modes
-        const standardModes = document.querySelectorAll('#standard-modes-container .list-group-item');
-        for (const mode of standardModes) {
-            if (mode.dataset.modeId === modeId) {
-                return mode.querySelector('.mode-name').textContent;
+        try {
+            // Find the mode in the standard modes
+            const standardModes = document.querySelectorAll('#standard-modes-container .list-group-item');
+            for (const mode of standardModes) {
+                if (mode.dataset.modeId === modeId) {
+                    const nameElement = mode.querySelector('.mode-name');
+                    return nameElement ? nameElement.textContent : modeId;
+                }
             }
+            
+            // Find the mode in the specialty modes
+            const specialtyModes = document.querySelectorAll('#specialty-modes-container .list-group-item');
+            for (const mode of specialtyModes) {
+                if (mode.dataset.modeId === modeId) {
+                    const nameElement = mode.querySelector('.mode-name');
+                    return nameElement ? nameElement.textContent : modeId;
+                }
+            }
+        } catch (err) {
+            console.error("Error getting mode name:", err);
         }
         
-        // Find the mode in the specialty modes
-        const specialtyModes = document.querySelectorAll('#specialty-modes-container .list-group-item');
-        for (const mode of specialtyModes) {
-            if (mode.dataset.modeId === modeId) {
-                return mode.querySelector('.mode-name').textContent;
-            }
-        }
-        
-        return 'Unknown Mode';
+        return modeId; // Fallback to ID if name not found
     }
     
     // Update settings
@@ -2835,5 +2841,136 @@ function showAlert(message, type) {
             alertContainer.removeChild(alert);
         }, 150);
     }, 3000);
+}
+
+// Add a helper function to safely update text content
+function safelyUpdateTextContent(elementId, text) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.textContent = text;
+    } else {
+        console.warn(`Element with id '${elementId}' not found`);
+    }
+}
+
+// Find and update the select game mode function
+function selectGameMode(modeId) {
+    if (!adminKey) {
+        showAlert('error', 'Admin key not available');
+        return;
+    }
+    
+    // Get the active game ID
+    fetch('/api/admin/games/active', {
+        headers: {
+            'X-Admin-Key': adminKey
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.games && data.games.length > 0) {
+            const gameId = data.games[0].id;
+            
+            // Set the game mode
+            return fetch(`/api/game-modes/select/${modeId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    game_id: gameId,
+                    admin_pin: adminKey
+                })
+            });
+        } else {
+            showAlert('error', 'No active games found. Please create a game first.');
+            throw new Error('No games found');
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modeName = getModeName(modeId) || modeId;
+            showAlert('success', `Game mode set to ${modeName}`);
+            
+            // Update the displayed current mode safely
+            safelyUpdateTextContent('current-mode', modeName);
+            
+            // Load settings for the selected mode
+            loadModeSettings(modeId);
+        } else {
+            showAlert('error', `Failed to set game mode: ${data.error || 'Unknown error'}`);
+        }
+    })
+    .catch(error => {
+        if (error.message !== 'No games found') {
+            showAlert('error', `Error setting game mode: ${error.message}`);
+        }
+    });
+}
+
+function checkActiveGame() {
+    // Fetch the current game state
+    fetch('/api/admin/games/active', {
+        headers: {
+            'X-Admin-Key': adminKey
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.games && data.games.length > 0) {
+                const game = data.games[0];
+                
+                // Show game status
+                document.getElementById('game-status').textContent = game.status;
+                document.getElementById('game-id').textContent = game.id;
+                document.getElementById('player-count').textContent = game.player_count;
+                
+                // Format mode name for display
+                if (game.mode) {
+                    safelyUpdateTextContent('current-mode', formatModeName(game.mode));
+                } else {
+                    safelyUpdateTextContent('current-mode', 'No mode set');
+                }
+                
+                // Set global game ID
+                gameId = game.id;
+                
+                // Enable game mode selection features
+                enableModeSelectionFeatures();
+            } else {
+                // No active game found
+                document.getElementById('game-status').textContent = 'No active game';
+                document.getElementById('game-id').textContent = 'N/A';
+                document.getElementById('player-count').textContent = '0';
+                safelyUpdateTextContent('current-mode', 'No active game');
+                gameId = null;
+                
+                // Disable game mode selection features
+                disableModeSelectionFeatures();
+                
+                showAlert('warning', 'No active game found. Please create a game first.');
+            }
+        })
+        .catch(error => {
+            document.getElementById('game-status').textContent = 'Error';
+            document.getElementById('game-id').textContent = 'Error';
+            document.getElementById('player-count').textContent = 'Error';
+            safelyUpdateTextContent('current-mode', 'Error');
+            console.error('Error checking active game:', error);
+        });
+}
+
+// Add formatModeName function if it doesn't exist
+function formatModeName(modeId) {
+    if (!modeId) return 'Unknown';
+    
+    // Try to convert snake_case or kebab-case to Title Case
+    const formatted = modeId
+        .replace(/_/g, ' ')
+        .replace(/-/g, ' ')
+        .replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+    
+    return formatted;
 }
 </script> 
