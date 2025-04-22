@@ -200,6 +200,18 @@
                             </div>
                             <div class="card-body">
                                 <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <div class="form-group">
+                                            <label for="advanced-settings-game-selector">Select Game</label>
+                                            <select class="form-select" id="advanced-settings-game-selector">
+                                                <option value="">-- Select a game --</option>
+                                                <!-- Game options will be added dynamically -->
+                                            </select>
+                                            <small class="form-text text-muted">Select the game you want to modify</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
                                     <div class="col-md-6">
                                         <div class="card mb-3">
                                             <div class="card-header">Property Settings</div>
@@ -657,6 +669,11 @@ const GameModesAdmin = (function() {
         document.getElementById('save-advanced-settings-btn').addEventListener('click', saveAdvancedSettings);
         document.getElementById('reset-advanced-settings-btn').addEventListener('click', resetAdvancedSettings);
         
+        // Game selector for advanced settings
+        document.getElementById('advanced-settings-game-selector').addEventListener('change', function() {
+            selectedGameId = this.value;
+        });
+        
         // Active games buttons
         document.getElementById('refresh-games-btn').addEventListener('click', loadActiveGames);
         document.getElementById('create-game-btn').addEventListener('click', showCreateGameModal);
@@ -703,6 +720,23 @@ const GameModesAdmin = (function() {
                     
                     // Update total count
                     document.getElementById('total-games-count').textContent = activeGames.length;
+                    
+                    // Populate game selector dropdown for advanced settings
+                    const gameSelector = document.getElementById('advanced-settings-game-selector');
+                    if (gameSelector) {
+                        // Clear existing options except the first one
+                        while (gameSelector.options.length > 1) {
+                            gameSelector.remove(1);
+                        }
+                        
+                        // Add options for each active game
+                        activeGames.forEach(game => {
+                            const option = document.createElement('option');
+                            option.value = game.id;
+                            option.textContent = `Game #${game.id} (${formatModeName(game.mode)})`;
+                            gameSelector.appendChild(option);
+                        });
+                    }
                 } else {
                     showAlert('error', 'Error loading active games: ' + (data.error || 'Unknown error'));
                 }
@@ -2144,28 +2178,45 @@ const GameModesAdmin = (function() {
     
     // Save advanced settings
     function saveAdvancedSettings() {
-        if (!gameId) {
-            showAlert('error', 'No active game');
+        // Use the selected game ID from dropdown instead of global gameId
+        const selectedGameForSettings = document.getElementById('advanced-settings-game-selector').value;
+        
+        if (!selectedGameForSettings) {
+            showAlert('error', 'Please select a game from the dropdown first');
             return;
         }
         
         // Get advanced settings
+        const propertyValueFactor = parseFloat(document.getElementById('property-value-factor').value) || 1.0;
+        const propertyRentFactor = parseFloat(document.getElementById('property-rent-factor').value) || 1.0;
+        const enablePropertyInjuries = document.getElementById('enable-property-injuries').checked;
+        const inflationRate = parseFloat(document.getElementById('inflation-rate').value) || 0.0;
+        const economicCycleInterval = parseInt(document.getElementById('economic-cycle-interval').value) || 5;
+        const enableMarketCrashes = document.getElementById('enable-market-crashes').checked;
+        const turnTimerSeconds = parseInt(document.getElementById('turn-timer-seconds').value) || 60;
+        const maxTurns = parseInt(document.getElementById('max-turns').value) || 0;
+        const maxTimeMinutes = parseInt(document.getElementById('max-time-minutes').value) || 0;
+        
+        // Create settings object with validated values
         const advancedSettings = {
-            property_value_factor: parseFloat(document.getElementById('property-value-factor').value),
-            property_rent_factor: parseFloat(document.getElementById('property-rent-factor').value),
-            enable_property_injuries: document.getElementById('enable-property-injuries').checked,
-            inflation_rate: parseFloat(document.getElementById('inflation-rate').value),
-            economic_cycle_interval: parseInt(document.getElementById('economic-cycle-interval').value),
-            enable_market_crashes: document.getElementById('enable-market-crashes').checked,
-            turn_timer_seconds: parseInt(document.getElementById('turn-timer-seconds').value),
-            max_turns: parseInt(document.getElementById('max-turns').value),
-            max_time_minutes: parseInt(document.getElementById('max-time-minutes').value)
+            property_value_factor: propertyValueFactor,
+            property_rent_factor: propertyRentFactor,
+            enable_property_injuries: enablePropertyInjuries,
+            inflation_rate: inflationRate,
+            economic_cycle_interval: economicCycleInterval,
+            enable_market_crashes: enableMarketCrashes,
+            turn_timer_seconds: turnTimerSeconds,
+            max_turns: maxTurns,
+            max_time_minutes: maxTimeMinutes
         };
+        
+        // Log settings for debugging
+        console.log('Saving advanced settings:', advancedSettings);
         
         showLoading(true);
         
         // Make API request to update advanced settings
-        fetch(`/api/game-modes/update-advanced-settings/${gameId}`, {
+        fetch(`/api/game-modes/update-advanced-settings/${selectedGameForSettings}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
