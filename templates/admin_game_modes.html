@@ -218,7 +218,10 @@
                                             <div class="card-body">
                                                 <div class="form-group mb-3">
                                                     <label for="property-value-factor">Property Value Factor</label>
-                                                    <input type="range" class="form-range" id="property-value-factor" min="0.5" max="2.0" step="0.1" value="1.0">
+                                                    <div class="d-flex align-items-center mb-1">
+                                                        <input type="range" class="form-range me-2" id="property-value-factor" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('property-value-factor-display').textContent = this.value">
+                                                        <span id="property-value-factor-display" class="badge bg-primary">1.0</span>
+                                                    </div>
                                                     <div class="d-flex justify-content-between">
                                                         <small>Lower (50%)</small>
                                                         <small>Default (100%)</small>
@@ -227,7 +230,10 @@
                                                 </div>
                                                 <div class="form-group mb-3">
                                                     <label for="property-rent-factor">Rent Factor</label>
-                                                    <input type="range" class="form-range" id="property-rent-factor" min="0.5" max="2.0" step="0.1" value="1.0">
+                                                    <div class="d-flex align-items-center mb-1">
+                                                        <input type="range" class="form-range me-2" id="property-rent-factor" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('property-rent-factor-display').textContent = this.value">
+                                                        <span id="property-rent-factor-display" class="badge bg-primary">1.0</span>
+                                                    </div>
                                                     <div class="d-flex justify-content-between">
                                                         <small>Lower</small>
                                                         <small>Default</small>
@@ -250,7 +256,10 @@
                                             <div class="card-body">
                                                 <div class="form-group mb-3">
                                                     <label for="inflation-rate">Inflation Rate</label>
-                                                    <input type="range" class="form-range" id="inflation-rate" min="0" max="0.2" step="0.01" value="0.05">
+                                                    <div class="d-flex align-items-center mb-1">
+                                                        <input type="range" class="form-range me-2" id="inflation-rate" min="0" max="0.2" step="0.01" value="0.05" oninput="document.getElementById('inflation-rate-display').textContent = (this.value * 100).toFixed(0) + '%'">
+                                                        <span id="inflation-rate-display" class="badge bg-primary">5%</span>
+                                                    </div>
                                                     <div class="d-flex justify-content-between">
                                                         <small>None (0%)</small>
                                                         <small>Moderate (10%)</small>
@@ -2254,6 +2263,11 @@ const GameModesAdmin = (function() {
         document.getElementById('turn-timer-seconds').value = 60;
         document.getElementById('max-turns').value = 0;
         document.getElementById('max-time-minutes').value = 0;
+        
+        // Reset display values
+        document.getElementById('property-value-factor-display').textContent = '1.0';
+        document.getElementById('property-rent-factor-display').textContent = '1.0';
+        document.getElementById('inflation-rate-display').textContent = '5%';
         
         showAlert('info', 'Advanced settings reset to defaults. Click "Save Advanced Settings" to apply.');
     }
