@@ -304,43 +304,48 @@ class GameState(db.Model):
         # This prevents issues with the caller's transaction management
         
     def refresh_from_db(self, game_id=None):
-        """
-        Refresh this GameState instance with current data from the database.
+        """Refresh the instance from database to ensure it has the latest data
         
         Args:
-            game_id: Optional game_id to lookup a specific game instead of using this instance's ID
-        
+            game_id: Optionally specify a game_id to get a specific game instead of the current one
+            
         Returns:
             True if refresh was successful, False otherwise
         """
         try:
             logger = logging.getLogger(__name__)
+            logger.info(f"Refreshing game state from database, game_id={game_id}")
             
             if game_id:
-                # Look up a specific game by game_id
-                db_instance = self.query.filter_by(game_id=game_id).first()
-                logger.info(f"Looking up GameState with game_id: {game_id}")
+                # Get a specific game by its game_id
+                db_instance = GameState.query.filter_by(game_id=game_id).first()
+                if not db_instance:
+                    logger.error(f"Game not found with game_id={game_id}")
+                    return False
             else:
-                # Use current id to refresh from database
-                db_instance = self.query.get(self.id)
-                logger.info(f"Refreshing GameState with ID: {self.id}")
-                
-            if not db_instance:
-                logger.warning(f"Could not find GameState to refresh from database")
-                return False
-                
-            # Copy all attributes from the database instance to this instance
+                # Get the current instance by its primary key
+                db_instance = GameState.query.get(self.id)
+                if not db_instance:
+                    logger.error(f"Current game state not found in database with id={self.id}")
+                    return False
+            
+            # Copy all attributes from database instance to this instance
+            logger.info(f"Found game state in database, copying attributes. Mode: {db_instance.mode}")
+            
+            # Get all attributes from the database instance
             for column in self.__table__.columns:
                 column_name = column.name
                 if hasattr(db_instance, column_name):
-                    setattr(self, column_name, getattr(db_instance, column_name))
+                    current_value = getattr(self, column_name)
+                    new_value = getattr(db_instance, column_name)
+                    if current_value != new_value:
+                        logger.debug(f"Updating {column_name}: {current_value} -> {new_value}")
+                    setattr(self, column_name, new_value)
             
-            logger.info(f"Successfully refreshed GameState to game_id: {self.game_id}")
+            logger.info(f"Game state refreshed successfully. Mode is now: {self.mode}")
             return True
-            
         except Exception as e:
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error refreshing GameState: {e}", exc_info=True)
+            logger.error(f"Error refreshing game state: {str(e)}", exc_info=True)
             return False
 
 # End of GameState class 

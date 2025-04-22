@@ -4,6 +4,7 @@ from functools import wraps
 from src.controllers.game_mode_controller import GameModeController
 from src.models import db
 from src.models.game_mode import GameMode
+from src.models.game_state import GameState
 
 # Create blueprint
 game_mode_bp = Blueprint('game_mode', __name__)
@@ -16,7 +17,7 @@ game_mode_controller = GameModeController()
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        admin_key = request.headers.get('X-Admin-Key') or request.args.get('key')
+        admin_key = request.headers.get('X-Admin-Key') or request.args.get('key') or request.json.get('admin_pin')
         if not admin_key or admin_key != current_app.config['ADMIN_KEY']:
             return jsonify({"error": "Unauthorized", "message": "Admin key required"}), 401
         return f(*args, **kwargs)
@@ -52,24 +53,51 @@ def get_available_modes():
             "modes": {"standard": [], "specialty": []}
         }), 500
 
-@game_mode_bp.route('/select/<game_id>', methods=['POST'])
-@admin_required
-def select_game_mode(game_id):
+# Fix the URL structure for the select endpoint
+@game_mode_bp.route('/select/<string:mode_id>', methods=['POST'])
+def select_game_mode(mode_id):
     """Select and initialize a game mode for a game"""
-    mode_id = request.json.get('mode_id')
-    
-    if not mode_id:
+    try:
+        # Get game_id from request body
+        data = request.json
+        game_id = data.get('game_id')
+        admin_pin = data.get('admin_pin')
+        
+        # Check admin authorization
+        if not admin_pin or admin_pin != current_app.config['ADMIN_KEY']:
+            return jsonify({
+                "success": False,
+                "error": "Unauthorized. Admin PIN required."
+            }), 401
+        
+        if not game_id:
+            return jsonify({
+                "success": False,
+                "error": "Missing required parameter: game_id"
+            }), 400
+        
+        # Verify the game exists
+        game = GameState.query.filter_by(game_id=game_id).first()
+        if not game:
+            logger.error(f"Game not found with ID: {game_id}")
+            return jsonify({
+                "success": False,
+                "error": f"Game not found with ID: {game_id}"
+            }), 404
+        
+        logger.info(f"Initializing game mode {mode_id} for game {game_id}")
+        result = game_mode_controller.initialize_game_mode(game_id, mode_id)
+        
+        if result.get("success", False):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        logger.error(f"Error selecting game mode: {e}", exc_info=True)
         return jsonify({
             "success": False,
-            "error": "Missing required parameter: mode_id"
-        }), 400
-    
-    result = game_mode_controller.initialize_game_mode(game_id, mode_id)
-    
-    if result.get("success", False):
-        return jsonify(result), 200
-    else:
-        return jsonify(result), 400
+            "error": f"Failed to set game mode: {str(e)}"
+        }), 500
 
 @game_mode_bp.route('/check-win/<game_id>', methods=['GET'])
 def check_win_condition(game_id):

@@ -1991,14 +1991,14 @@ const GameModesAdmin = (function() {
                 const gameId = data.games[0].id;
                 
                 // Set the game mode
-                return fetch(`/api/game-modes/select/${gameId}`, {
+                return fetch(`/api/game-modes/select/${modeId}`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-Key': adminKey
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        mode_id: modeId
+                        game_id: gameId,
+                        admin_pin: adminKey
                     })
                 });
             } else {

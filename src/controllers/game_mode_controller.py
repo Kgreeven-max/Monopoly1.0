@@ -81,34 +81,96 @@ class GameModeController:
     
     def initialize_game_mode(self, game_id, mode_id):
         """Initialize a game with the selected game mode settings"""
-        game_state: GameState = GameState.query.get(game_id)
-        if not game_state:
-            return {"success": False, "error": "Game not found"}
+        try:
+            # Log the game ID and mode ID we're working with
+            self.logger.info(f"Initializing game mode: game_id={game_id}, mode_id={mode_id}")
             
-        # Create game mode using factory method
-        game_mode = GameMode.create_for_game(game_id, mode_id)
-        
-        # Save to database
-        db.session.add(game_mode)
-        db.session.commit()
-        
-        # Initialize game systems based on mode settings
-        initialization_result = self._initialize_game_systems(game_id, game_mode)
-        
-        # Broadcast game mode selection
-        if self.socketio:
-            self.socketio.emit('game_mode_selected', {
-                'game_id': game_id,
-                'mode': mode_id,
-                'settings': game_mode.to_dict()
-            })
-        
-        return {
-            "success": True,
-            "mode": mode_id,
-            "settings": game_mode.to_dict(),
-            "initialization": initialization_result
-        }
+            # First try to find by game_id attribute
+            game_state = GameState.query.filter_by(game_id=game_id).first()
+            
+            # If not found and game_id is numeric, try by primary key
+            if not game_state and game_id.isdigit():
+                self.logger.info(f"Game not found by game_id, trying primary key lookup")
+                game_state = GameState.query.get(int(game_id))
+                
+            # Still not found, check if we need to get the singleton instance
+            if not game_state:
+                self.logger.warning(f"Game with ID {game_id} not found in database")
+                
+                # Try singleton as last resort
+                singleton = GameState.get_instance()
+                if singleton and singleton.game_id == game_id:
+                    game_state = singleton
+                    self.logger.info(f"Using singleton instance with game_id={game_state.game_id}")
+                else:
+                    self.logger.error(f"Game not found in database and singleton doesn't match: {singleton.game_id if singleton else 'None'}")
+                    return {"success": False, "error": f"Game not found with ID: {game_id}"}
+            
+            # Log that we found the game
+            self.logger.info(f"Found game with ID: {game_id}")
+            
+            # Check if game mode already exists
+            existing_mode = GameMode.query.filter_by(game_id=game_id).first()
+            if existing_mode:
+                self.logger.info(f"Updating existing game mode from {existing_mode.mode_type} to {mode_id}")
+                # Update existing mode
+                existing_mode.mode_type = mode_id
+                db.session.commit()
+                
+                # Update game state
+                game_state.mode = mode_id
+                db.session.commit()
+                
+                # Initialize game systems
+                initialization_result = self._initialize_game_systems(game_id, existing_mode)
+                
+                # Broadcast game mode update
+                if self.socketio:
+                    self.socketio.emit('game_mode_updated', {
+                        'game_id': game_id,
+                        'mode': mode_id,
+                        'settings': existing_mode.to_dict()
+                    })
+                
+                return {
+                    "success": True,
+                    "mode": mode_id,
+                    "settings": existing_mode.to_dict(),
+                    "initialization": initialization_result,
+                    "message": "Updated existing game mode"
+                }
+            
+            # Create new game mode using factory method
+            game_mode = GameMode.create_for_game(game_id, mode_id)
+            
+            # Save to database
+            db.session.add(game_mode)
+            db.session.commit()
+            
+            # Update game state directly
+            game_state.mode = mode_id
+            db.session.commit()
+            
+            # Initialize game systems based on mode settings
+            initialization_result = self._initialize_game_systems(game_id, game_mode)
+            
+            # Broadcast game mode selection
+            if self.socketio:
+                self.socketio.emit('game_mode_selected', {
+                    'game_id': game_id,
+                    'mode': mode_id,
+                    'settings': game_mode.to_dict()
+                })
+            
+            return {
+                "success": True,
+                "mode": mode_id,
+                "settings": game_mode.to_dict(),
+                "initialization": initialization_result
+            }
+        except Exception as e:
+            self.logger.error(f"Error initializing game mode: {str(e)}", exc_info=True)
+            return {"success": False, "error": f"Error initializing game mode: {str(e)}"}
     
     def update_game_mode_settings(self, game_id, settings):
         """Update specific game mode settings"""
