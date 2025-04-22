@@ -163,7 +163,7 @@ class GameController:
             active_bots.clear()
             self.logger.info(f"Cleared {len(bots)} bots during game reset")
             
-            db.session.add(game_state)
+            # No need to add game_state to the session since it's already in the database
             db.session.commit()
             
             self.logger.info(f"New game created with difficulty {difficulty}")
