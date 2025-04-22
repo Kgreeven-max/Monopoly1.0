@@ -305,18 +305,19 @@ def get_game_details(game_id):
                 "id": player.id,
                 "name": player.username,
                 "type": "bot" if player.is_bot else "human",
-                "cash": player.cash,
+                "cash": player.money,
                 "position": player.position,
-                "is_in_jail": player.is_in_jail,
+                "is_in_jail": player.in_jail,
                 "jail_turns": player.jail_turns,
-                "property_count": len(player.properties) if hasattr(player, 'properties') else 0
+                "property_count": len(player.properties) if player.properties is not None else 0,
+                "in_game": player.in_game
             })
         
         # Build detailed game response
         game_details = {
             "id": game_state.game_id,
             "name": "Pi-nopoly Game",  # Placeholder
-            "mode": "standard",  # Placeholder
+            "mode": game_state.mode or "classic",
             "status": "active" if game_state.status == 'active' else "inactive",
             "created_at": datetime.datetime.now().isoformat(),  # Placeholder
             "current_lap": game_state.current_lap,
@@ -479,8 +480,8 @@ def get_game_analytics():
                 "games_in_progress": 1 if game_state.game_active else 0
             },
             "economic_stats": {
-                "total_money_in_circulation": sum(p.cash for p in players),
-                "average_player_cash": sum(p.cash for p in active_players) / len(active_players) if active_players else 0,
+                "total_money_in_circulation": sum(p.money for p in players),
+                "average_player_cash": sum(p.money for p in active_players) / len(active_players) if active_players else 0,
                 "property_ownership_rate": 0  # Placeholder - would calculate based on properties
             },
             "charts": {
@@ -488,11 +489,11 @@ def get_game_analytics():
                 "cash_distribution": {
                     "labels": ["0-500", "501-1000", "1001-1500", "1501-2000", "2001+"],
                     "data": [
-                        len([p for p in active_players if p.cash <= 500]),
-                        len([p for p in active_players if p.cash > 500 and p.cash <= 1000]),
-                        len([p for p in active_players if p.cash > 1000 and p.cash <= 1500]),
-                        len([p for p in active_players if p.cash > 1500 and p.cash <= 2000]),
-                        len([p for p in active_players if p.cash > 2000])
+                        len([p for p in active_players if p.money <= 500]),
+                        len([p for p in active_players if p.money > 500 and p.money <= 1000]),
+                        len([p for p in active_players if p.money > 1000 and p.money <= 1500]),
+                        len([p for p in active_players if p.money > 1500 and p.money <= 2000]),
+                        len([p for p in active_players if p.money > 2000])
                     ]
                 }
             }

@@ -737,7 +737,7 @@ const GameModesAdmin = (function() {
                 : `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m`;
             
             // Create status badge
-            const statusClass = `badge-${game.status.toLowerCase()}`;
+            const statusClass = `badge-${game.status ? game.status.toLowerCase() : 'secondary'}`;
             
             row.innerHTML = `
                 <td>${game.id}</td>
@@ -812,7 +812,7 @@ const GameModesAdmin = (function() {
             <div class="row">
                 <div class="col-md-6">
                     <h3>Game #${game.id}: ${game.name || 'Unnamed Game'}</h3>
-                    <p><strong>Status:</strong> <span class="badge badge-${game.status.toLowerCase()}">${capitalizeFirstLetter(game.status)}</span></p>
+                    <p><strong>Status:</strong> <span class="badge badge-${game.status ? game.status.toLowerCase() : 'secondary'}">${capitalizeFirstLetter(game.status || 'unknown')}</span></p>
                     <p><strong>Game Mode:</strong> ${formatModeName(game.mode)}</p>
                     <p><strong>Created:</strong> ${new Date(game.created_at).toLocaleString()}</p>
                     <p><strong>Duration:</strong> ${formatDuration(game.duration_minutes)}</p>
@@ -863,7 +863,7 @@ const GameModesAdmin = (function() {
                         <td>$${player.cash}</td>
                         <td>${player.property_count}</td>
                         <td>${player.position}</td>
-                        <td><span class="badge badge-${player.status.toLowerCase()}">${capitalizeFirstLetter(player.status)}</span></td>
+                        <td><span class="badge badge-${player.is_in_jail ? 'warning' : 'success'}">${player.is_in_jail ? 'In Jail' : 'Active'}</span></td>
                     </tr>
                 `;
             });
