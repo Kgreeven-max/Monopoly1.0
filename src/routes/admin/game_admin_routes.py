@@ -58,6 +58,8 @@ def create_game():
         if 'turn_timeout' in data:
             turn_timeout = data.get('turn_timeout')
             
+        logger.info(f"Creating new game with mode: {game_mode}, difficulty: {difficulty}")
+        
         result = game_controller.create_new_game(
             difficulty=difficulty,
             lap_limit=lap_limit,
@@ -67,10 +69,12 @@ def create_game():
         )
         
         if not result.get('success'):
+            logger.error(f"Game creation failed: {result.get('error')}")
             return jsonify(result), 500
             
         # Get the created game ID
         game_id = result.get('game_id')
+        logger.info(f"Game created successfully with ID: {game_id}")
         
         # Add bots if requested
         bot_count = data.get('bot_count', 0)
@@ -97,15 +101,38 @@ def create_game():
                     logger.warning(f"Failed to initialize game mode: {mode_result.get('error')}")
                 
         # Get current game state to ensure data is correct
+        # CRITICAL: Need to update game mode in the database
         from src.models.game_state import GameState
+        from src.models import db
+        
+        # First update the database record - verify it exists
         game_state = GameState.query.filter_by(game_id=game_id).first()
         if game_state:
             # Make sure the mode is set
             game_state.mode = game_mode
             # Add the game state to the session
-            from src.models import db
             db.session.add(game_state)
             db.session.commit()
+            logger.info(f"Successfully updated game mode to {game_mode} for game {game_id}")
+        else:
+            logger.error(f"Could not find game with ID {game_id} after creation")
+                
+        # Now update the singleton instance to match the database
+        singleton_instance = GameState.get_instance()
+        if singleton_instance.game_id != game_id:
+            # Get the current game state directly from the database
+            logger.info(f"Refreshing singleton instance to new game ID: {game_id}")
+            db_game_state = GameState.query.filter_by(game_id=game_id).first()
+            
+            if db_game_state:
+                # Copy all attributes from the database instance to the singleton
+                for column in singleton_instance.__table__.columns:
+                    column_name = column.name
+                    if hasattr(db_game_state, column_name):
+                        setattr(singleton_instance, column_name, getattr(db_game_state, column_name))
+                logger.info(f"Successfully refreshed singleton instance to game {game_id}")
+            else:
+                logger.error(f"Could not refresh singleton - game {game_id} not found in database")
                 
         # Return success with game details
         return jsonify({
@@ -135,79 +162,91 @@ def get_active_games():
     This API returns basic information about active games including players, game mode, and status.
     """
     try:
-        # Get game state
-        game_state = GameState.get_instance()
+        # Query all game states directly from database to avoid singleton issues
+        # For now, we'll just return the most recent one, but this could be expanded in the future
+        game_states = GameState.query.order_by(GameState.id.desc()).limit(10).all()
         
-        if not game_state:
-            logger.warning("No active game state found in get_active_games")
+        if not game_states:
+            logger.warning("No active game states found in get_active_games")
             return jsonify({
                 "success": False,
-                "error": "No active game state found"
+                "error": "No active game states found"
             }), 404
         
-        # Ensure game_id is present and valid
-        if not game_state.game_id:
-            logger.warning("Game state exists but has no game_id")
-            return jsonify({
-                "success": False,
-                "error": "Game state missing game_id"
-            }), 500
+        # Get the singleton instance and refresh it with the most recent game if needed
+        singleton_instance = GameState.get_instance()
+        most_recent_game = game_states[0]
         
-        # Get active players
-        active_players = Player.query.filter_by(in_game=True).all()
-        player_count = len(active_players)
+        # If the singleton doesn't match the most recent game, refresh it
+        if singleton_instance.game_id != most_recent_game.game_id:
+            logger.warning(f"Singleton game_id ({singleton_instance.game_id}) doesn't match most recent game_id ({most_recent_game.game_id})")
+            singleton_instance.refresh_from_db(most_recent_game.game_id)
+            logger.info(f"Refreshed singleton to match most recent game: {most_recent_game.game_id}")
         
-        logger.debug(f"Found {player_count} active players for game {game_state.game_id}")
+        game_data_list = []
         
-        # For now we only have one game in this system, 
-        # but structure the response to support multiple games in the future
-        game_data = {
-            "id": game_state.game_id,
-            "mode": "standard",  # Placeholder - would be from game settings
-            "player_count": player_count,
-            "max_players": 8,  # Placeholder - would be from game settings
-            "current_lap": game_state.current_lap,
-            "current_turn_player": None,  # Would need to find the current player
-            "status": "active" if game_state.status == 'active' else "inactive",
-            "duration_minutes": 0,  # Placeholder - would calculate from start time
-            "created_at": datetime.datetime.now().isoformat(),  # Placeholder
-            "settings": {
-                "starting_cash": 1500,  # Standard values
-                "go_salary": 200,
-                "free_parking_collects_fees": True,
-                "auction_enabled": True,
-                "max_turns": None,
-                "max_time_minutes": None
-            }
-        }
-        
-        # Find the current player if possible
-        if game_state.current_player_id:
-            try:
-                current_player = Player.query.get(game_state.current_player_id)
-                if current_player:
-                    game_data["current_turn_player"] = current_player.username
-            except Exception as player_error:
-                logger.warning(f"Error getting current player: {player_error}")
-                # Continue without current player info
-        
-        # Calculate game duration if start_time is available
-        if hasattr(game_state, 'start_time') and game_state.start_time:
-            start_time = game_state.start_time
-            if isinstance(start_time, str):
-                try:
-                    start_time = datetime.datetime.fromisoformat(start_time)
-                except (ValueError, TypeError) as e:
-                    logger.warning(f"Error parsing start_time: {e}")
-                    start_time = None
+        # Generate response data for each game
+        for game_state in game_states:
+            # Only include active or recently active games
+            if game_state.status not in ['active', 'setup', 'paused']:
+                continue
+                
+            # Get active players for this game
+            # In a multi-game system, you would filter by game_id as well
+            active_players = Player.query.filter_by(in_game=True).all()
+            player_count = len(active_players)
             
-            if start_time:
-                duration = datetime.datetime.now() - start_time
-                game_data["duration_minutes"] = int(duration.total_seconds() / 60)
+            logger.debug(f"Found {player_count} active players for game {game_state.game_id}")
+            
+            game_data = {
+                "id": game_state.game_id,
+                "mode": game_state.mode or "standard",
+                "player_count": player_count,
+                "max_players": 8,  # Placeholder - would be from game settings
+                "current_lap": game_state.current_lap,
+                "current_turn_player": None,  # Would need to find the current player
+                "status": game_state.status,
+                "duration_minutes": 0,  # Placeholder - would calculate from start time
+                "created_at": datetime.datetime.now().isoformat(),  # Placeholder
+                "settings": {
+                    "starting_cash": 1500,  # Standard values
+                    "go_salary": 200,
+                    "free_parking_collects_fees": hasattr(game_state, 'free_parking_fund') and game_state.free_parking_fund,
+                    "auction_enabled": hasattr(game_state, 'auction_required') and game_state.auction_required,
+                    "max_turns": None,
+                    "max_time_minutes": None
+                }
+            }
+            
+            # Find the current player if possible
+            if game_state.current_player_id:
+                try:
+                    current_player = Player.query.get(game_state.current_player_id)
+                    if current_player:
+                        game_data["current_turn_player"] = current_player.username
+                except Exception as player_error:
+                    logger.warning(f"Error getting current player: {player_error}")
+                    # Continue without current player info
+            
+            # Calculate game duration if start_time is available
+            if hasattr(game_state, 'start_time') and game_state.start_time:
+                start_time = game_state.start_time
+                if isinstance(start_time, str):
+                    try:
+                        start_time = datetime.datetime.fromisoformat(start_time)
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Error parsing start_time: {e}")
+                        start_time = None
+                
+                if start_time:
+                    duration = datetime.datetime.now() - start_time
+                    game_data["duration_minutes"] = int(duration.total_seconds() / 60)
+            
+            game_data_list.append(game_data)
         
         response_data = {
             "success": True,
-            "games": [game_data]
+            "games": game_data_list
         }
         
         # Try to create the response once to catch any serialization errors
@@ -237,14 +276,24 @@ def get_game_details(game_id):
     This API returns detailed information including players, properties, and game settings.
     """
     try:
-        # Get game state
-        game_state = GameState.get_instance()
+        # Get game state using direct database query first to avoid singleton issues
+        game_state_db = GameState.query.filter_by(game_id=game_id).first()
         
-        if not game_state or game_state.game_id != game_id:
+        if not game_state_db:
+            logger.warning(f"Game with ID {game_id} not found in database")
             return jsonify({
                 "success": False,
-                "error": "Game not found"
+                "error": "Game not found in database"
             }), 404
+            
+        # Get the singleton instance and refresh it if needed
+        game_state = GameState.get_instance()
+        
+        # If the singleton's game_id doesn't match, refresh it from the database
+        if game_state.game_id != game_id:
+            logger.warning(f"Singleton game_id ({game_state.game_id}) doesn't match requested game_id ({game_id})")
+            game_state.refresh_from_db(game_id)
+            logger.info(f"Refreshed singleton to match game_id: {game_id}")
         
         # Get players in this game
         players = Player.query.filter_by(in_game=True).all()
@@ -324,14 +373,24 @@ def end_game(game_id):
     This API forcefully ends a game, marking it as inactive and players as not in game.
     """
     try:
-        # Get game state
-        game_state = GameState.get_instance()
+        # Query the specific game from database first
+        game_state_db = GameState.query.filter_by(game_id=game_id).first()
         
-        if not game_state or game_state.game_id != game_id:
+        if not game_state_db:
+            logger.warning(f"Game with ID {game_id} not found in database")
             return jsonify({
                 "success": False,
-                "error": "Game not found"
+                "error": "Game not found in database"
             }), 404
+        
+        # Get the singleton instance and refresh it if needed
+        game_state = GameState.get_instance()
+        
+        # If the singleton's game_id doesn't match, refresh it from the database
+        if game_state.game_id != game_id:
+            logger.warning(f"Singleton game_id ({game_state.game_id}) doesn't match requested game_id ({game_id})")
+            game_state.refresh_from_db(game_id)
+            logger.info(f"Refreshed singleton to match game_id: {game_id}")
         
         # Mark game as inactive
         game_state.status = 'ended'

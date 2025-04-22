@@ -302,5 +302,45 @@ class GameState(db.Model):
         
         # Don't commit here - let the caller handle the commit
         # This prevents issues with the caller's transaction management
+        
+    def refresh_from_db(self, game_id=None):
+        """
+        Refresh this GameState instance with current data from the database.
+        
+        Args:
+            game_id: Optional game_id to lookup a specific game instead of using this instance's ID
+        
+        Returns:
+            True if refresh was successful, False otherwise
+        """
+        try:
+            logger = logging.getLogger(__name__)
+            
+            if game_id:
+                # Look up a specific game by game_id
+                db_instance = self.query.filter_by(game_id=game_id).first()
+                logger.info(f"Looking up GameState with game_id: {game_id}")
+            else:
+                # Use current id to refresh from database
+                db_instance = self.query.get(self.id)
+                logger.info(f"Refreshing GameState with ID: {self.id}")
+                
+            if not db_instance:
+                logger.warning(f"Could not find GameState to refresh from database")
+                return False
+                
+            # Copy all attributes from the database instance to this instance
+            for column in self.__table__.columns:
+                column_name = column.name
+                if hasattr(db_instance, column_name):
+                    setattr(self, column_name, getattr(db_instance, column_name))
+            
+            logger.info(f"Successfully refreshed GameState to game_id: {self.game_id}")
+            return True
+            
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error refreshing GameState: {e}", exc_info=True)
+            return False
 
 # End of GameState class 

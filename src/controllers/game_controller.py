@@ -3,6 +3,7 @@ from datetime import datetime
 from flask import request, current_app # Added current_app for easier access
 import json
 import random
+import uuid
 
 from src.models import db
 from src.models.player import Player
@@ -144,20 +145,29 @@ class GameController:
                          auction_required=True, turn_timeout=60):
         """Create a new game with specified settings"""
         try:
-            game_state = self.app_config.get('game_state_instance') or GameState.query.first()
+            # Get the existing game state
+            game_state = GameState.query.first()
             if not game_state:
-                 self.logger.error("Failed to get or create GameState instance.")
-                 return {'success': False, 'error': 'Game state initialization failed.'}
-                 
-            game_state.reset()
+                # If no game state exists, create a new one
+                import uuid
+                game_state = GameState(game_id=str(uuid.uuid4()))
+                self.logger.info(f"Created new GameState instance with game_id: {game_state.game_id}")
+                db.session.add(game_state)
+                db.session.commit()
+            else:
+                # If game state exists, reset it to get a new game_id
+                self.logger.info(f"Resetting existing GameState with ID: {game_state.id}")
+                game_state.reset()
+                
+            # Store the new game_id for reference
+            new_game_id = game_state.game_id
             
+            # Set the game properties
             game_state.difficulty = difficulty
-            game_state.lap_limit = lap_limit
+            game_state.total_laps = lap_limit  # Update field name if different
             game_state.free_parking_fund = free_parking_fund
             game_state.auction_required = auction_required
-            game_state.turn_timeout = turn_timeout
-            game_state.started_at = None
-            game_state.ended_at = None
+            game_state.turn_timer = turn_timeout
             game_state.status = 'setup'
             
             # Reset all bots by setting them to not in game
@@ -170,17 +180,46 @@ class GameController:
             active_bots.clear()
             self.logger.info(f"Cleared {len(bots)} bots during game reset")
             
-            # No need to add game_state to the session since it's already in the database
+            # Make sure the game state is in the session (though it should be already)
+            db.session.add(game_state)
+            
+            # CRITICAL: Commit the changes to the database
+            self.logger.info(f"Committing game with ID {new_game_id} to database")
             db.session.commit()
             
-            self.logger.info(f"New game created with difficulty {difficulty}")
+            # Verify the update was successful using direct SQL
+            import sqlalchemy
+            from sqlalchemy import text
+            try:
+                # Create a new connection to ensure we're not using any cached data
+                connection = db.engine.connect()
+                verification_query = text(f"SELECT id, game_id FROM game_state WHERE id = :id")
+                verification_result = connection.execute(verification_query, {"id": game_state.id}).fetchone()
+                connection.close()
+                
+                if not verification_result:
+                    self.logger.error(f"Failed to find game with ID {game_state.id} in database after commit")
+                    return {'success': False, 'error': 'Game state verification failed after commit'}
+                
+                verified_id, verified_game_id = verification_result
+                if verified_game_id != new_game_id:
+                    self.logger.error(f"Game ID mismatch: expected {new_game_id}, found {verified_game_id}")
+                    return {'success': False, 'error': 'Game ID verification failed'}
+                    
+                self.logger.info(f"Successfully verified game_id {new_game_id} in database with ID {verified_id}")
+            except Exception as ve:
+                self.logger.error(f"Error during verification: {str(ve)}")
+                # Continue anyway - don't fail the game creation just because verification had issues
+                self.logger.info(f"Continuing with game creation despite verification error")
             
-            # Initialize properties for this new game
-            self._initialize_properties(game_state.game_id)
+            # Now initialize properties for this new game
+            self._initialize_properties(new_game_id)
+            
+            self.logger.info(f"New game created with difficulty {difficulty} and game_id {new_game_id}")
             
             return {
                 'success': True,
-                'game_id': game_state.game_id,
+                'game_id': new_game_id,
                 'message': 'New game created'
             }
             
