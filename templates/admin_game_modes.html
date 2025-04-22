@@ -791,13 +791,16 @@ const GameModesAdmin = (function() {
                 <td>${durationFormatted}</td>
                 <td>
                     <div class="btn-group">
-                        <button class="btn btn-sm btn-primary action-btn view-game-btn">
+                        <button class="btn btn-sm btn-primary action-btn view-game-btn" title="View Details">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-warning action-btn ${game.status === 'active' ? 'pause-game-btn' : 'resume-game-btn'}">
+                        <button class="btn btn-sm btn-info action-btn view-board-btn" title="View Board">
+                            <i class="fas fa-chess-board"></i>
+                        </button>
+                        <button class="btn btn-sm btn-warning action-btn ${game.status === 'active' ? 'pause-game-btn' : 'resume-game-btn'}" title="${game.status === 'active' ? 'Pause Game' : 'Resume Game'}">
                             <i class="fas fa-${game.status === 'active' ? 'pause' : 'play'}"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger action-btn end-game-btn">
+                        <button class="btn btn-sm btn-danger action-btn end-game-btn" title="End Game">
                             <i class="fas fa-stop"></i>
                         </button>
                     </div>
@@ -806,6 +809,7 @@ const GameModesAdmin = (function() {
             
             // Add event listeners for action buttons
             row.querySelector('.view-game-btn').addEventListener('click', () => viewGameDetails(game.id));
+            row.querySelector('.view-board-btn').addEventListener('click', () => viewGameBoard(game.id));
             row.querySelector(`.${game.status === 'active' ? 'pause-game-btn' : 'resume-game-btn'}`).addEventListener('click', () => toggleGamePause(game.id));
             row.querySelector('.end-game-btn').addEventListener('click', () => endGame(game.id));
             
@@ -925,12 +929,12 @@ const GameModesAdmin = (function() {
                 <div class="col-12">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <button class="btn btn-primary" onclick="viewGameBoard(${game.id})">
+                            <button class="btn btn-primary" id="view-game-board-btn">
                                 <i class="fas fa-chess-board"></i> View Game Board
                             </button>
                         </div>
                         <div>
-                            <button class="btn btn-secondary" onclick="exportGameData(${game.id})">
+                            <button class="btn btn-secondary" id="export-game-data-btn">
                                 <i class="fas fa-download"></i> Export Game Data
                             </button>
                         </div>
@@ -940,6 +944,21 @@ const GameModesAdmin = (function() {
         `;
         
         container.innerHTML = html;
+        
+        // Add event listeners to buttons
+        const viewBoardBtn = document.getElementById('view-game-board-btn');
+        if (viewBoardBtn) {
+            viewBoardBtn.addEventListener('click', function() {
+                viewGameBoard(game.id);
+            });
+        }
+        
+        const exportDataBtn = document.getElementById('export-game-data-btn');
+        if (exportDataBtn) {
+            exportDataBtn.addEventListener('click', function() {
+                exportGameData(game.id);
+            });
+        }
         
         // Adjust buttons based on game status
         const pauseBtn = document.getElementById('pause-game-btn');
@@ -1571,12 +1590,20 @@ const GameModesAdmin = (function() {
     
     // View game board
     function viewGameBoard(gameId) {
-        window.open(`/board?game_id=${gameId}&admin=true`, '_blank');
+        // Properly encode the game ID to handle special characters
+        const encodedGameId = encodeURIComponent(gameId);
+        console.log("Opening game board with ID:", gameId);
+        
+        // Open the Vite development server URL instead of /board
+        window.open(`http://localhost:3000/board?game_id=${encodedGameId}&admin=true`, '_blank');
     }
     
     // Export game data
     function exportGameData(gameId) {
-        window.open(`/api/admin/games/${gameId}/export?key=${adminKey}`, '_blank');
+        // Properly encode the game ID and admin key
+        const encodedGameId = encodeURIComponent(gameId);
+        const encodedAdminKey = encodeURIComponent(adminKey);
+        window.open(`/api/admin/games/${encodedGameId}/export?key=${encodedAdminKey}`, '_blank');
     }
     
     // Load available game modes
