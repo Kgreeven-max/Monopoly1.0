@@ -151,4 +151,81 @@ def list_active_game_modes():
     return jsonify({
         "success": True,
         "modes": [mode.to_dict() for mode in modes]
-    }) 
+    })
+
+@game_mode_bp.route('/update-advanced-settings/<string:game_id>', methods=['POST'])
+@admin_required
+def update_advanced_settings(game_id):
+    """Update advanced game settings"""
+    try:
+        # Get settings from request body
+        data = request.json
+        settings = data.get('settings', {})
+        
+        if not settings:
+            return jsonify({
+                "success": False,
+                "error": "Missing required parameter: settings"
+            }), 400
+        
+        # Verify the game exists
+        game = GameState.query.filter_by(game_id=game_id).first()
+        if not game:
+            logger.error(f"Game not found with ID: {game_id}")
+            return jsonify({
+                "success": False,
+                "error": f"Game not found with ID: {game_id}"
+            }), 404
+        
+        logger.info(f"Updating advanced settings for game {game_id}: {settings}")
+        
+        # Save settings to game state
+        # Handle property value factor
+        if 'property_value_factor' in settings:
+            game.property_value_factor = float(settings['property_value_factor'])
+            
+        # Handle property rent factor  
+        if 'property_rent_factor' in settings:
+            game.property_rent_factor = float(settings['property_rent_factor'])
+            
+        # Handle property injuries
+        if 'enable_property_injuries' in settings:
+            game.enable_property_injuries = bool(settings['enable_property_injuries'])
+            
+        # Handle inflation rate
+        if 'inflation_rate' in settings:
+            game.inflation_rate = float(settings['inflation_rate'])
+            
+        # Handle economic cycle interval
+        if 'economic_cycle_interval' in settings:
+            game.economic_cycle_interval = int(settings['economic_cycle_interval'])
+            
+        # Handle market crashes
+        if 'enable_market_crashes' in settings:
+            game.enable_market_crashes = bool(settings['enable_market_crashes'])
+            
+        # Handle turn timer seconds
+        if 'turn_timer_seconds' in settings:
+            game.turn_timer_seconds = int(settings['turn_timer_seconds'])
+            
+        # Handle max turns
+        if 'max_turns' in settings:
+            game.max_turns = int(settings['max_turns'])
+            
+        # Handle max time minutes
+        if 'max_time_minutes' in settings:
+            game.max_time_minutes = int(settings['max_time_minutes'])
+        
+        # Save changes to database
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Advanced settings updated successfully"
+        }), 200
+    except Exception as e:
+        logger.error(f"Error updating advanced settings: {e}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": f"Failed to update advanced settings: {str(e)}"
+        }), 500 

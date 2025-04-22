@@ -477,7 +477,7 @@ def get_game_analytics():
                 "average_turns_per_game": game_state.current_lap,  # Placeholder - would average over multiple games
                 "average_game_duration_minutes": 0,  # Placeholder
                 "games_completed": 0,  # Placeholder
-                "games_in_progress": 1 if game_state.game_active else 0
+                "games_in_progress": 1 if game_state.status == 'active' else 0
             },
             "economic_stats": {
                 "total_money_in_circulation": sum(p.money for p in players),
