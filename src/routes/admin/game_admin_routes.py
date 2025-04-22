@@ -632,4 +632,158 @@ def system_health_trends():
             return jsonify(result), 500
     except Exception as e:
         logger.error(f"Error in system_health_trends: {e}", exc_info=True)
-        return jsonify({"success": False, "error": str(e)}), 500 
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@game_admin_bp.route('/game/pause', methods=['POST'])
+@admin_required
+def pause_game():
+    """
+    Pause an active game.
+    
+    This API pauses an active game, putting it in a 'paused' state.
+    Players won't be able to take actions while the game is paused.
+    """
+    try:
+        data = request.json or {}
+        
+        # Get the game controller
+        from flask import current_app
+        game_controller = current_app.config.get('game_controller')
+        if not game_controller:
+            logger.error("Game controller not found in app config")
+            return jsonify({
+                "success": False,
+                "error": "Game controller not initialized"
+            }), 500
+            
+        # Get current game state
+        game_state = GameState.query.first()
+        if not game_state:
+            logger.error("No game state found")
+            return jsonify({
+                "success": False,
+                "error": "Game state not found"
+            }), 404
+            
+        # Check if the game is already paused
+        if game_state.status == 'paused':
+            return jsonify({
+                "success": True,
+                "message": "Game is already paused",
+                "status": "paused",
+                "action": "none"
+            })
+            
+        # Check if the game is active
+        if game_state.status != 'active':
+            return jsonify({
+                "success": False,
+                "error": f"Cannot pause game in '{game_state.status}' state"
+            }), 400
+            
+        # Update the game state
+        game_state.status = 'paused'
+        game_state.last_updated = datetime.datetime.now()
+        
+        # Commit the change
+        from src.models import db
+        db.session.commit()
+        
+        # Notify players via WebSocket if available
+        socketio = current_app.config.get('socketio')
+        if socketio:
+            socketio.emit('game_paused', {
+                'timestamp': datetime.datetime.now().isoformat(),
+                'by_admin': True
+            })
+            
+        return jsonify({
+            "success": True,
+            "message": "Game paused successfully",
+            "status": "paused",
+            "action": "paused"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error pausing game: {str(e)}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": f"Failed to pause game: {str(e)}"
+        }), 500
+
+@game_admin_bp.route('/game/resume', methods=['POST'])
+@admin_required
+def resume_game():
+    """
+    Resume a paused game.
+    
+    This API resumes a paused game, putting it back in an 'active' state.
+    Players will be able to continue taking actions.
+    """
+    try:
+        data = request.json or {}
+        
+        # Get the game controller
+        from flask import current_app
+        game_controller = current_app.config.get('game_controller')
+        if not game_controller:
+            logger.error("Game controller not found in app config")
+            return jsonify({
+                "success": False,
+                "error": "Game controller not initialized"
+            }), 500
+            
+        # Get current game state
+        game_state = GameState.query.first()
+        if not game_state:
+            logger.error("No game state found")
+            return jsonify({
+                "success": False,
+                "error": "Game state not found"
+            }), 404
+            
+        # Check if the game is already active
+        if game_state.status == 'active':
+            return jsonify({
+                "success": True,
+                "message": "Game is already active",
+                "status": "active",
+                "action": "none"
+            })
+            
+        # Check if the game is paused
+        if game_state.status != 'paused':
+            return jsonify({
+                "success": False,
+                "error": f"Cannot resume game in '{game_state.status}' state"
+            }), 400
+            
+        # Update the game state
+        game_state.status = 'active'
+        game_state.last_updated = datetime.datetime.now()
+        
+        # Commit the change
+        from src.models import db
+        db.session.commit()
+        
+        # Notify players via WebSocket if available
+        socketio = current_app.config.get('socketio')
+        if socketio:
+            socketio.emit('game_resumed', {
+                'timestamp': datetime.datetime.now().isoformat(),
+                'by_admin': True
+            })
+            
+        return jsonify({
+            "success": True,
+            "message": "Game resumed successfully",
+            "status": "active",
+            "action": "resumed"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error resuming game: {str(e)}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": f"Failed to resume game: {str(e)}"
+        }), 500 

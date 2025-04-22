@@ -1,0 +1,68 @@
+function pauseGame() {
+    console.log('Attempting to pause game...');
+    
+    // Get current game state from GameState
+    fetch('/api/game/state', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(errData => {
+                throw new Error(errData.error || `HTTP error! Status: ${response.status}`);
+            }).catch(() => {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(stateData => {
+        if (!stateData.success) {
+            throw new Error('Failed to get game state');
+        }
+        
+        // Determine if we need to pause or resume based on current status
+        const currentStatus = stateData.game_state?.status || 'unknown';
+        const action = currentStatus === 'active' ? 'pause' : 'resume';
+        
+        // Call the appropriate API endpoint with the fixed path
+        return fetch(`/api/admin/game/${action}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Key': window.adminKey
+            },
+            body: JSON.stringify({
+                admin_pin: window.adminKey
+            })
+        });
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(errData => {
+                throw new Error(errData.error || `HTTP error! Status: ${response.status}`);
+            }).catch(() => {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            const action = data.action || (data.status === 'paused' ? 'paused' : 'resumed');
+            alert(`Game ${action} successfully`);
+            console.log('Game pause/resume response:', data);
+            // Refresh the page to update UI
+            window.location.reload();
+        } else {
+            alert(`Failed to update game status: ${data.error || 'Unknown error'}`);
+            console.error('Game pause/resume failed:', data);
+        }
+    })
+    .catch(error => {
+        console.error('Error updating game status:', error);
+        alert(`Error updating game status: ${error.message}`);
+    });
+} 
