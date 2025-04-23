@@ -2175,11 +2175,9 @@ class SpecialSpaceController:
                 logging.error(f"Player {player_id} not found")
                 return {"success": False, "error": "Player not found"}
             
-            # Get player state from game
-            player_state = next((p for p in game_state.players if p.get("id") == player_id), None)
-            if not player_state:
-                logging.error(f"Player state for {player_id} not found in game {game_id}")
-                return {"success": False, "error": "Player state not found"}
+            # Get player state - using the player directly instead of looking for it in game_state.players
+            # The issue was that game_state doesn't have a 'players' attribute
+            player_state = {"id": player.id, "position": player.position, "money": player.money}
             
             # Initialize chance cards if needed
             if not hasattr(game_state, 'chance_cards') or not game_state.chance_cards:
@@ -2594,11 +2592,9 @@ class SpecialSpaceController:
                 logging.error(f"Player {player_id} not found")
                 return {"success": False, "error": "Player not found"}
             
-            # Get the player state
-            player_state = next((p for p in game_state.players if p.get("id") == player_id), None)
-            if not player_state:
-                logging.error(f"Player state for {player_id} not found in game {game_id}")
-                return {"success": False, "error": "Player state not found"}
+            # Get the player state - using the player directly instead of looking for it in game_state.players
+            # The issue was that game_state doesn't have a 'players' attribute
+            player_state = {"id": player.id, "position": player.position, "balance": player.money}
             
             # Check if there are community chest cards available
             community_chest_cards = game_state.community_chest_cards
@@ -3556,3 +3552,22 @@ class SpecialSpaceController:
         except Exception as e:
             logging.error(f"Error handling market fluctuation space: {str(e)}")
             return {"success": False, "error": str(e)}
+
+    def send_to_jail(self, player_id):
+        """
+        Send a player to jail. This is a wrapper around handle_go_to_jail for better naming.
+        
+        Args:
+            player_id (int): The ID of the player to send to jail.
+            
+        Returns:
+            dict: A dictionary with the results of the jail action.
+        """
+        # Get the player to determine their game_id
+        player = Player.query.get(player_id)
+        if not player:
+            logging.error(f"Player {player_id} not found in send_to_jail")
+            return {"success": False, "error": "Player not found"}
+            
+        # Call the existing handle_go_to_jail method
+        return self.handle_go_to_jail(player.game_id, player_id)

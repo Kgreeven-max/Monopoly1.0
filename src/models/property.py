@@ -233,6 +233,10 @@ class Property(db.Model):
 
         return 0 # Default case if type is somehow unknown
 
+    def get_rent(self, dice_roll=None):
+        """Alias for calculate_rent to maintain backward compatibility"""
+        return self.calculate_rent(dice_roll)
+        
     def update_value(self, new_value):
         """Update the property value due to market changes"""
         self.current_price = int(new_value)

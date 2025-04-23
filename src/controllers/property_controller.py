@@ -1152,11 +1152,12 @@ def register_property_events(socketio_instance, app_config):
             logger.info(f"handle_buy_property received extra args: {args}") # Log extra arguments if any
             
         player_id = data.get('playerId')
+        pin = data.get('pin')  # Get PIN for authentication
         property_id = data.get('propertyId')
         sid = request.sid
         
-        if not player_id or property_id is None:
-            emit('property_error', {'error': 'Missing player ID or property ID'}, room=sid)
+        if not player_id or not pin or property_id is None:
+            emit('property_error', {'error': 'Missing player ID, PIN, or property ID'}, room=sid)
             return
             
         logger.info(f"[PropertyController] Received buy_property event from Player ID: {player_id} for Property ID: {property_id} (SID: {sid})")
@@ -1167,8 +1168,23 @@ def register_property_events(socketio_instance, app_config):
         if not game_logic:
             emit('property_error', {'error': 'Required service unavailable'}, room=sid)
             return
+
+        # --- Expected Action Validation ---
+        game_state = GameState.query.get(1) # Assuming game_id = 1
+        if game_state:
+            allowed_states = [None, 'roll_dice', 'roll_again', 'buy_or_auction_prompt', 'manage_assets_or_bankrupt', 'insufficient_funds_for_rent', 'jail_action_prompt']
+            current_expected = game_state.expected_action_type
+            if current_expected not in allowed_states:
+                logger.warning(f"Player {player_id} tried to buy property {property_id} while action '{current_expected}' was expected.")
+                emit('property_error', {'error': f"Cannot buy property now. Expected action: {current_expected}"}, room=sid)
+                return
+        else:
+            logger.error("Could not retrieve GameState for expected action validation in handle_buy_property.")
+            emit('property_error', {'error': 'Server error: Could not validate game state'}, room=sid)
+            return
+        # --- End Expected Action Validation ---
             
-        result = property_controller.buy_property(player_id, property_id)
+        result = property_controller.buy_property(player_id, pin, property_id)
         
         if result['success']:
             emit('property_bought_confirmed', result, room=sid) 
@@ -1183,7 +1199,7 @@ def register_property_events(socketio_instance, app_config):
                  else:
                      logger.error(f"Failed to get updated game state after property purchase by {player_id}.")
         else:
-            emit('property_error', result, room=sid) 
+            emit('property_error', result, room=sid)
 
     @socketio_instance.on('mortgage_property')
     def handle_mortgage_property(data):

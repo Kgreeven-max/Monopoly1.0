@@ -275,6 +275,10 @@ class BotController:
         if action_type == 'buy_or_auction_prompt':
             property_id = landing_action.get('property_id')
             cost = landing_action.get('cost')
+            
+            # Refresh player object to ensure we have the latest position
+            db.session.refresh(player)
+            
             if self._decide_buy_property(player, property_id, cost):
                 self.logger.info(f"Bot {player_id} decided to BUY property {property_id}")
                 # Call PlayerActionController's logic or a direct controller method
@@ -290,11 +294,11 @@ class BotController:
 
         elif action_type == 'draw_chance_card':
             self.logger.info(f"Bot {player_id} drawing Chance card.")
-            self.special_space_controller.process_chance_card(player_id, game_id)
+            self.special_space_controller.process_chance_card(player_id, game_state.id)
 
         elif action_type == 'draw_community_chest_card':
             self.logger.info(f"Bot {player_id} drawing Community Chest card.")
-            self.special_space_controller.process_community_chest_card(player_id, game_id)
+            self.special_space_controller.process_community_chest_card(player_id, game_state.id)
         
         elif action_type == 'pay_tax':
              tax_details = landing_action.get('tax_details', {})
@@ -327,6 +331,11 @@ class BotController:
          """Handles the logic after a bot declines to buy."""
          # Need to check game settings if auction is required
          game_state = GameState.query.get(game_id)
+         
+         if not game_state:
+             self.logger.error(f"Could not find game_state for game ID {game_id} in _decline_buy_action")
+             return
+             
          if game_state.auction_required:
               self.logger.info(f"Bot {player_id} triggering auction for property {property_id}")
               # Auction controller should handle the flow from here

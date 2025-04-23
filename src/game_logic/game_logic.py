@@ -416,7 +416,7 @@ class GameLogic:
          
          if prop_type == PropertyType.STREET:
              # Base rent depends on development level
-             rent = property_obj.get_rent() # Use property model method
+             rent = property_obj.calculate_rent() # Use property model method
              # Check for monopoly (owner owns all properties in the group)
              owned_group_props = Property.query.filter_by(owner_id=owner.id, color_group=property_obj.color_group, game_id=game_id).count()
              total_group_props = Property.query.filter_by(color_group=property_obj.color_group, game_id=game_id).count()
