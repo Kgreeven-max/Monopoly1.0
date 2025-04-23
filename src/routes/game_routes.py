@@ -70,7 +70,15 @@ def register_game_routes(app, game_controller):
     @admin_required
     def start_game():
         """Start the game"""
-        result = game_controller.start_game()
+        # Create data dictionary with admin_pin
+        data = request.json or {}
+        
+        # Ensure admin_pin is passed from the request
+        if 'admin_pin' not in data:
+            # Get admin key from app config
+            data['admin_pin'] = current_app.config.get('ADMIN_KEY')
+        
+        result = game_controller.start_game(data)
         
         if result.get('success'):
             return jsonify(result), 200
