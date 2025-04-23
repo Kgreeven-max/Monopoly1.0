@@ -44,6 +44,13 @@ class BotController:
         # self.trade_controller = app_config.get('trade_controller') # Needed for trading logic
         self.socketio = app_config.get('socketio')
         
+        # Add the bot controller instance to app_config for the bot action thread
+        app_config['bot_controller_instance'] = self
+        
+        # Store reference to Flask app instance - needed for app context in bot thread
+        if not app_config.get('app'):
+            app_config['app'] = current_app._get_current_object()
+        
         if not all([self.game_logic, self.game_controller, self.property_controller, 
                      self.auction_controller, self.banker, self.special_space_controller, self.socketio]):
              self.logger.error("BotController missing one or more dependencies!")
@@ -91,24 +98,22 @@ class BotController:
             db.session.commit()
             self.logger.info(f"Committed new bot player {bot_player.username} with ID: {bot_player.id}")
             
-            # Create the bot strategy object
-            bot_instance = None
+            # Create the bot strategy object based on type
             if bot_type == 'aggressive':
-                bot_instance = AggressiveBot(bot_player.id, difficulty)
+                active_bots[bot_player.id] = AggressiveBot(bot_player.id, difficulty)
             elif bot_type == 'strategic':
-                bot_instance = StrategicBot(bot_player.id, difficulty)
+                active_bots[bot_player.id] = StrategicBot(bot_player.id, difficulty)
             elif bot_type == 'opportunistic':
-                bot_instance = OpportunisticBot(bot_player.id, difficulty)
+                active_bots[bot_player.id] = OpportunisticBot(bot_player.id, difficulty)
             elif bot_type == 'shark':
-                bot_instance = SharkBot(bot_player.id, difficulty)
+                active_bots[bot_player.id] = SharkBot(bot_player.id, difficulty)
             elif bot_type == 'investor':
-                bot_instance = InvestorBot(bot_player.id, difficulty)
+                active_bots[bot_player.id] = InvestorBot(bot_player.id, difficulty)
             else:  # default to conservative
-                bot_instance = ConservativeBot(bot_player.id, difficulty)
+                active_bots[bot_player.id] = ConservativeBot(bot_player.id, difficulty)
             
-            # Store in active bots dictionary
-            if bot_instance:
-                active_bots[bot_player.id] = bot_instance
+            self.logger.info(f"Registered bot in active_bots dictionary with key {bot_player.id}")
+            self.logger.info(f"Active bots: {list(active_bots.keys())}")
             
             # Start the bot action thread if not running
             start_bot_action_thread(self.socketio, self.app_config)
@@ -134,122 +139,121 @@ class BotController:
 
     def take_turn(self, player_id, game_id=1):
         """Determine and execute the bot's actions for its turn."""
-        with self.app_config.get('app').app_context(): # Ensure app context for the whole turn
-            self.logger.info(f"--- Bot Player {player_id} starting turn in Game {game_id} ---")
-            time.sleep(random.uniform(0.5, 1.5)) # Simulate thinking time
+        self.logger.info(f"--- Bot Player {player_id} starting turn in Game {game_id} ---")
+        time.sleep(random.uniform(0.5, 1.5)) # Simulate thinking time
 
-            try:
-                # Continuously check game state in case something changed (e.g., game ended)
+        try:
+            # Continuously check game state in case something changed (e.g., game ended)
+            game_state = GameState.query.get(game_id)
+            if not game_state or game_state.status != 'active':
+                self.logger.warning(f"Game {game_id} is not active. Bot {player_id} stopping turn.")
+                return
+            if game_state.current_player_id != player_id:
+                self.logger.warning(f"Bot {player_id} attempted to take turn, but current player is {game_state.current_player_id}. Stopping.")
+                return
+
+            player = Player.query.get(player_id)
+            if not player or player.is_bankrupt or not player.in_game:
+                self.logger.warning(f"Bot player {player_id} is invalid or bankrupt. Ending turn.")
+                self.game_controller._internal_end_turn(player_id, game_id)
+                return
+
+            # 1. Handle Jail
+            if player.in_jail:
+                jail_action_taken = self._handle_jail(player, game_state)
+                if jail_action_taken: # If stayed in jail or managed assets
+                    # Check if turn should end based on jail action result
+                    if game_state.expected_action_type != 'roll_again': # If didn't roll doubles to get out
+                         self.logger.info(f"Bot {player_id} finished jail action, ending turn.")
+                         # End turn might have been called by GameLogic already if roll failed
+                         # Ensure state is consistent before potentially ending turn again.
+                         current_game_state = GameState.query.get(game_id)
+                         if current_game_state.current_player_id == player_id: 
+                             self.game_controller._internal_end_turn(player_id, game_id)
+                         return # End processing for this turn
+                # If jail_action_taken is False, it means bot got out and needs to proceed with roll
+                
+            # 2. Main Turn Loop (Handles doubles)
+            turn_active = True
+            roll_count = 0
+            max_rolls = 3 # Prevent infinite loop in case of unexpected state
+
+            while turn_active and roll_count < max_rolls:
+                roll_count += 1
+                self.logger.info(f"Bot {player_id} performing roll #{roll_count}")
+                time.sleep(random.uniform(0.5, 1.0))
+                
+                # Check game state again before rolling
                 game_state = GameState.query.get(game_id)
-                if not game_state or game_state.status != 'active':
-                    self.logger.warning(f"Game {game_id} is not active. Bot {player_id} stopping turn.")
-                    return
-                if game_state.current_player_id != player_id:
-                    self.logger.warning(f"Bot {player_id} attempted to take turn, but current player is {game_state.current_player_id}. Stopping.")
-                    return
+                if not game_state or game_state.status != 'active' or game_state.current_player_id != player_id:
+                     self.logger.warning(f"Game state changed mid-turn for bot {player_id}. Stopping.")
+                     turn_active = False; break
 
-                player = Player.query.get(player_id)
-                if not player or player.is_bankrupt or not player.in_game:
-                    self.logger.warning(f"Bot player {player_id} is invalid or bankrupt. Ending turn.")
-                    self.game_controller._internal_end_turn(player_id, game_id)
-                    return
+                # Validate expected action before rolling
+                if game_state.expected_action_type not in [None, 'roll_again']: 
+                     self.logger.warning(f"Bot {player_id} expected action is '{game_state.expected_action_type}', cannot roll. Handling action first.")
+                     self._handle_pending_action(player, game_state)
+                     # Re-check state after handling pending action
+                     game_state = GameState.query.get(game_id)
+                     if not game_state or game_state.status != 'active' or game_state.current_player_id != player_id:
+                          self.logger.warning(f"Game state changed after handling pending action for bot {player_id}. Stopping.")
+                          turn_active = False; break
+                     # If action resolved and turn didn't end, loop might continue if doubles occurred before pending action
+                     if game_state.expected_action_type == 'roll_again': continue # Proceed to roll
+                     else: turn_active = False; break # Turn ended or another action is now pending
 
-                # 1. Handle Jail
-                if player.in_jail:
-                    jail_action_taken = self._handle_jail(player, game_state)
-                    if jail_action_taken: # If stayed in jail or managed assets
-                        # Check if turn should end based on jail action result
-                        if game_state.expected_action_type != 'roll_again': # If didn't roll doubles to get out
-                             self.logger.info(f"Bot {player_id} finished jail action, ending turn.")
-                             # End turn might have been called by GameLogic already if roll failed
-                             # Ensure state is consistent before potentially ending turn again.
-                             current_game_state = GameState.query.get(game_id)
-                             if current_game_state.current_player_id == player_id: 
-                                 self.game_controller._internal_end_turn(player_id, game_id)
-                             return # End processing for this turn
-                    # If jail_action_taken is False, it means bot got out and needs to proceed with roll
-                    
-                # 2. Main Turn Loop (Handles doubles)
-                turn_active = True
-                roll_count = 0
-                max_rolls = 3 # Prevent infinite loop in case of unexpected state
+                # Perform Roll
+                roll_result = self.game_logic.roll_dice_and_move(player_id, game_id)
+                if not roll_result or not roll_result.get('success'):
+                    self.logger.error(f"Bot {player_id} failed to roll dice or move: {roll_result.get('error')}")
+                    turn_active = False; break # End turn on critical roll error
 
-                while turn_active and roll_count < max_rolls:
-                    roll_count += 1
-                    self.logger.info(f"Bot {player_id} performing roll #{roll_count}")
-                    time.sleep(random.uniform(0.5, 1.0))
-                    
-                    # Check game state again before rolling
-                    game_state = GameState.query.get(game_id)
-                    if not game_state or game_state.status != 'active' or game_state.current_player_id != player_id:
-                         self.logger.warning(f"Game state changed mid-turn for bot {player_id}. Stopping.")
-                         turn_active = False; break
+                # Process Landing Action
+                landing_action = roll_result.get('landing_action', {})
+                self._handle_landing_action(player, landing_action, game_state)
 
-                    # Validate expected action before rolling
-                    if game_state.expected_action_type not in [None, 'roll_again']: 
-                         self.logger.warning(f"Bot {player_id} expected action is '{game_state.expected_action_type}', cannot roll. Handling action first.")
-                         self._handle_pending_action(player, game_state)
-                         # Re-check state after handling pending action
-                         game_state = GameState.query.get(game_id)
-                         if not game_state or game_state.status != 'active' or game_state.current_player_id != player_id:
-                              self.logger.warning(f"Game state changed after handling pending action for bot {player_id}. Stopping.")
-                              turn_active = False; break
-                         # If action resolved and turn didn't end, loop might continue if doubles occurred before pending action
-                         if game_state.expected_action_type == 'roll_again': continue # Proceed to roll
-                         else: turn_active = False; break # Turn ended or another action is now pending
-                        
-                    # Perform Roll
-                    roll_result = self.game_logic.roll_dice_and_move(player_id, game_id)
-                    if not roll_result or not roll_result.get('success'):
-                        self.logger.error(f"Bot {player_id} failed to roll dice or move: {roll_result.get('error')}")
-                        turn_active = False; break # End turn on critical roll error
-
-                    # Process Landing Action
-                    landing_action = roll_result.get('landing_action', {})
-                    self._handle_landing_action(player, landing_action, game_state)
-
-                    # Check if turn ended by landing action (e.g., go to jail, bankruptcy potential)
-                    # Re-fetch game state as handlers might modify it
-                    game_state = GameState.query.get(game_id)
-                    if not game_state or game_state.status != 'active' or game_state.current_player_id != player_id:
-                        self.logger.info(f"Turn ended for bot {player_id} after handling landing action.")
-                        turn_active = False; break 
-                       
-                    # Check for doubles
-                    if roll_result.get('next_action') != 'roll_again':
-                        self.logger.info(f"Bot {player_id} did not roll doubles or turn ended. Finishing turn sequence.")
-                        turn_active = False # End loop if not rolling again
-                    else:
-                         self.logger.info(f"Bot {player_id} rolled doubles, continuing turn.")
-                         # Update expected state for roll_again if GameLogic didn't
-                         if game_state.expected_action_type != 'roll_again':
-                              game_state.expected_action_type = 'roll_again'
-                              game_state.expected_action_details = None
-                              db.session.add(game_state)
-                              db.session.commit()
-
-                # 3. End Turn (if not already ended)
-                # Check final state after loop
-                final_game_state = GameState.query.get(game_id)
-                if final_game_state and final_game_state.status == 'active' and final_game_state.current_player_id == player_id:
-                     self.logger.info(f"Bot {player_id} turn loop finished. Explicitly ending turn.")
-                     self.game_controller._internal_end_turn(player_id, game_id)
+                # Check if turn ended by landing action (e.g., go to jail, bankruptcy potential)
+                # Re-fetch game state as handlers might modify it
+                game_state = GameState.query.get(game_id)
+                if not game_state or game_state.status != 'active' or game_state.current_player_id != player_id:
+                    self.logger.info(f"Turn ended for bot {player_id} after handling landing action.")
+                    turn_active = False; break 
+                   
+                # Check for doubles
+                if roll_result.get('next_action') != 'roll_again':
+                    self.logger.info(f"Bot {player_id} did not roll doubles or turn ended. Finishing turn sequence.")
+                    turn_active = False # End loop if not rolling again
                 else:
-                     self.logger.info(f"Bot {player_id} turn already ended or game state changed.")
+                     self.logger.info(f"Bot {player_id} rolled doubles, continuing turn.")
+                     # Update expected state for roll_again if GameLogic didn't
+                     if game_state.expected_action_type != 'roll_again':
+                          game_state.expected_action_type = 'roll_again'
+                          game_state.expected_action_details = None
+                          db.session.add(game_state)
+                          db.session.commit()
 
-            except Exception as e:
-                db.session.rollback()
-                self.logger.error(f"Exception during bot {player_id} turn: {e}", exc_info=True)
-                # Attempt to end turn gracefully if possible
-                try:
-                     current_game_state = GameState.query.get(game_id)
-                     if current_game_state and current_game_state.current_player_id == player_id:
-                          self.game_controller._internal_end_turn(player_id, game_id)
-                except Exception as inner_e:
-                     self.logger.error(f"Failed to gracefully end turn for bot {player_id} after error: {inner_e}")
+            # 3. End Turn (if not already ended)
+            # Check final state after loop
+            final_game_state = GameState.query.get(game_id)
+            if final_game_state and final_game_state.status == 'active' and final_game_state.current_player_id == player_id:
+                 self.logger.info(f"Bot {player_id} turn loop finished. Explicitly ending turn.")
+                 self.game_controller._internal_end_turn(player_id, game_id)
+            else:
+                 self.logger.info(f"Bot {player_id} turn already ended or game state changed.")
 
-            self.logger.info(f"--- Bot Player {player_id} finished turn --- ")
-            return {'success': True} # Indicate completion
+        except Exception as e:
+            db.session.rollback()
+            self.logger.error(f"Exception during bot {player_id} turn: {e}", exc_info=True)
+            # Attempt to end turn gracefully if possible
+            try:
+                 current_game_state = GameState.query.get(game_id)
+                 if current_game_state and current_game_state.current_player_id == player_id:
+                      self.game_controller._internal_end_turn(player_id, game_id)
+            except Exception as inner_e:
+                 self.logger.error(f"Failed to gracefully end turn for bot {player_id} after error: {inner_e}")
+
+        self.logger.info(f"--- Bot Player {player_id} finished turn --- ")
+        return {'success': True} # Indicate completion
 
     def _handle_pending_action(self, player, game_state):
          """Handles actions that were pending at the start of the bot's turn decision."""
@@ -763,6 +767,17 @@ def init_bots_from_database():
 def start_bot_action_thread(socketio, app_config):
     """Starts the background thread for processing bot actions"""
     global bot_action_thread, bot_action_running
+    
+    # Debug: Log active bots state
+    logger.info(f"Current active bots: {list(active_bots.keys())}")
+    
+    # Also check if any bots exist in the database
+    flask_app = app_config.get('app')
+    if flask_app:
+        with flask_app.app_context():
+            bot_count = Player.query.filter_by(is_bot=True, in_game=True).count()
+            logger.info(f"Found {bot_count} bots marked in_game in the database")
+    
     if bot_action_thread is None or not bot_action_thread.is_alive():
         bot_action_running = True
         # Pass app_config to the thread target
@@ -794,8 +809,8 @@ def process_bot_actions(socketio, app_config):
                 if not current_game_state or not current_game_state.game_running:
                     logger.info("Game not running, bot actions paused.")
                     # No need for db access here, sleep outside context? Safer inside.
-                    # time.sleep(10) 
-                    # continue # Continue inside context before sleep
+                    time.sleep(5) # Add a sleep here before continuing
+                    continue # Continue inside context before sleep
                 else: # Only process if game is running
                     # Acquire lock to prevent concurrent modifications
                     with bot_action_lock:
@@ -810,30 +825,28 @@ def process_bot_actions(socketio, app_config):
                         else:
                             # 1. Process whose turn it is
                             current_player_id = current_game_state.current_player_id
-                            if current_player_id in active_bots:
-                                bot = active_bots[current_player_id]
-                                connection_status = core_socket_controller.get_player_connection_status(current_player_id)
-                                if not connection_status.get('success', False):
-                                    logger.info(f"Bot {bot.player.username} is currently marked disconnected, skipping turn.")
-                                else:
-                                    logger.info(f"Processing turn for bot: {bot.player.username}")
-                                    # --- Pass necessary dependencies to take_turn --- 
-                                    # Assuming BotPlayer's take_turn method is adapted to use these directly
-                                    # or BotController instance has a method that uses them.
-                                    # Example: bot_controller_instance.take_turn(current_player_id, current_game_state.id)
-                                    bot_controller_instance.take_turn(current_player_id, current_game_state.id) # Use the BotController's method
-                                    
-                            # 2. Process bot responses to auctions (if any active)
-                            # process_bot_auctions(socketio) # Needs update for app_config
+                            if current_player_id is None:
+                                logger.warning("No current player ID set in game state.")
+                                time.sleep(2)
+                                continue
                             
-                            # 3. Process general bot decisions (e.g., property management)
-                            # Needs careful context handling if modifying DB
-                            # for bot_id, bot in list(active_bots.items()):
-                            #     if bot.player.id != current_player_id:
-                            #          bot.manage_assets(current_game_state, banker)
-                                    
-                            # 4. Process scheduled events (if any)
-                            # handle_scheduled_event(socketio, app_config)
+                            logger.info(f"Current player ID: {current_player_id}, Active bots: {list(active_bots.keys())}")
+                            
+                            if current_player_id in active_bots:
+                                # We found a bot whose turn it is
+                                logger.info(f"Processing turn for bot player ID: {current_player_id}")
+                                
+                                # Bots don't need socket connections - they're automated players
+                                # Skip connection status check and proceed with the turn
+                                
+                                # Use the BotController's method
+                                try:
+                                    bot_controller_instance.take_turn(current_player_id, current_game_state.id)
+                                    logger.info(f"Bot {current_player_id} completed its turn")
+                                except Exception as e:
+                                    logger.error(f"Error during bot {current_player_id} turn: {str(e)}", exc_info=True)
+                            else:
+                                logger.info(f"Current player {current_player_id} is not a bot or not in active_bots dictionary")
 
             # --- End App Context ---
 

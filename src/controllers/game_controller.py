@@ -315,8 +315,51 @@ class GameController:
                     self.logger.error(f"No game state found")
                     return {'success': False, 'error': 'Game state not found'}
             
+            # Register all bot players in the active_bots dictionary
+            # Import required modules here to avoid circular imports
+            from src.controllers.bot_controller import active_bots, ConservativeBot, AggressiveBot, StrategicBot, OpportunisticBot
+            from src.models.player import Player
+            
+            bot_players = Player.query.filter_by(is_bot=True, in_game=True).all()
+            self.logger.info(f"Found {len(bot_players)} bot players to register for game start")
+            
+            for bot_player in bot_players:
+                # If bot already in active_bots, skip
+                if bot_player.id in active_bots:
+                    continue
+                    
+                # Infer bot type from name as a fallback
+                bot_type = 'conservative'  # Default
+                if 'aggressive' in bot_player.username.lower():
+                    bot_type = 'aggressive'
+                elif 'strategic' in bot_player.username.lower():
+                    bot_type = 'strategic'
+                elif 'opportunistic' in bot_player.username.lower():
+                    bot_type = 'opportunistic'
+                
+                # Create appropriate bot instance
+                if bot_type == 'aggressive':
+                    active_bots[bot_player.id] = AggressiveBot(bot_player.id, 'medium')
+                elif bot_type == 'strategic':
+                    active_bots[bot_player.id] = StrategicBot(bot_player.id, 'medium')
+                elif bot_type == 'opportunistic':
+                    active_bots[bot_player.id] = OpportunisticBot(bot_player.id, 'medium')
+                else:
+                    active_bots[bot_player.id] = ConservativeBot(bot_player.id, 'medium')
+                
+                self.logger.info(f"Registered bot {bot_player.username} (ID: {bot_player.id}) with type {bot_type}")
+            
+            self.logger.info(f"Active bots after registration: {list(active_bots.keys())}")
+            
             # Initialize player order if not set
             if not game_state.player_order:
+                # Query active players from the database
+                active_players = Player.query.filter_by(in_game=True).all()
+                
+                if not active_players:
+                    self.logger.error("No active players found to start the game")
+                    return {'success': False, 'error': 'Cannot start game with no players'}
+                
                 # Randomize player order
                 player_ids = [str(player.id) for player in active_players]
                 import random
@@ -342,8 +385,18 @@ class GameController:
             game_state.expected_action_type = 'roll_dice'
             game_state.expected_action_details = None
             
+            # Mark the game_running flag
+            game_state.game_running = True
+            
             db.session.add(game_state)
             db.session.commit()
+            self.logger.info(f"Game state set to active, current player: {first_player.username}")
+            
+            # Ensure bot thread is started after committing the database changes
+            if hasattr(self.app_config.get('bot_controller', {}), 'socketio') and self.app_config.get('app'):
+                from src.controllers.bot_controller import start_bot_action_thread
+                self.logger.info("Starting bot action thread from game controller")
+                start_bot_action_thread(self.app_config.get('bot_controller').socketio, self.app_config)
             
             # Emit game started event
             if self.socketio:

@@ -285,6 +285,8 @@ with app.app_context(): # Use app context to access db/config safely
     app.config['socket_controller'] = socket_controller # Store socket controller
     app.config['economic_manager'] = economic_manager # Store economic cycle manager
     app.config['economic_controller'] = economic_controller # Store economic cycle controller
+    # Add app instance itself to the app_config for bot controller
+    app.config['app'] = app
 
     # ---- Stage 3: Initialize controllers dependent on stored config ----
     game_controller = GameController(app.config) # Needs game_logic etc. in app_config

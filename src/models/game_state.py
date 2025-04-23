@@ -50,6 +50,20 @@ class GameState(db.Model):
     # Relationships
     current_player = db.relationship('Player', foreign_keys=[current_player_id])
     
+    @property
+    def game_running(self):
+        """Check if game is currently running (active)"""
+        return self.status == 'active'
+        
+    @game_running.setter
+    def game_running(self, value):
+        """Set game running status by updating the status field"""
+        if value:
+            self.status = 'active'
+        # If setting to False and currently active, set to Paused
+        elif self.status == 'active':
+            self.status = 'Paused'
+    
     def __repr__(self):
         return f'<GameState ID: {self.game_id} Status: {self.status} Turn: {self.turn_number} Player: {self.current_player_id}>'
     
