@@ -143,34 +143,34 @@ class GameController:
 
     def create_new_game(self, difficulty='normal', lap_limit=0, free_parking_fund=True, 
                          auction_required=True, turn_timeout=60):
-        """Create a new game with specified settings"""
+        """Create a new game with default properties"""
+        self.logger.info(f"Creating new game with settings: difficulty={difficulty}, lap_limit={lap_limit}")
+        
         try:
-            self.logger.info(f"Creating new game with settings: difficulty={difficulty}, lap_limit={lap_limit}")
-            
-            # Get the existing game state
+            # Check if game exists and reset it
             game_state = GameState.query.first()
-            if not game_state:
-                # If no game state exists, create a new one
-                import uuid
-                game_state = GameState(game_id=str(uuid.uuid4()))
-                self.logger.info(f"Created new GameState instance with game_id: {game_state.game_id}")
-                db.session.add(game_state)
-                db.session.commit()
-            else:
-                # If game state exists, reset it to get a new game_id
+            if game_state:
                 self.logger.info(f"Resetting existing GameState with ID: {game_state.id}")
                 game_state.reset()
+                game_id = game_state.game_id  # Store the game_id for later use
+            else:
+                # Create a new game_state if one doesn't exist
+                import uuid
+                game_id = str(uuid.uuid4())
+                game_state = GameState(game_id=game_id, difficulty=difficulty)
+                db.session.add(game_state)
+                db.session.commit()
                 
-            # Store the new game_id for reference
-            new_game_id = game_state.game_id
-            
-            # Set the game properties
+            game_state.status = 'setup'
             game_state.difficulty = difficulty
-            game_state.total_laps = lap_limit  # Update field name if different
             game_state.free_parking_fund = free_parking_fund
             game_state.auction_required = auction_required
+            game_state.turn_timeout = turn_timeout
+            game_state.total_laps = lap_limit  # Set lap limit once
+
+            # Set the game properties
+            # Note: Difficulty and free_parking_fund are already set above
             game_state.turn_timer = turn_timeout
-            game_state.status = 'setup'  # Set to setup state
             
             self.logger.info(f"Game state transitioned to 'setup' mode. Ready for player addition.")
             
@@ -208,16 +208,16 @@ class GameController:
                 self.logger.info(f"Continuing with game creation despite verification error")
             
             # Now initialize properties for this new game
-            self._initialize_properties(new_game_id)
+            self._initialize_properties(game_id)
             
             # Save all changes
             db.session.commit()
             
-            self.logger.info(f"New game created with difficulty {difficulty} and game_id {new_game_id}")
+            self.logger.info(f"New game created with difficulty {difficulty} and game_id {game_id}")
             
             return {
                 'success': True,
-                'game_id': new_game_id,
+                'game_id': game_id,
                 'message': 'New game created'
             }
             
@@ -645,7 +645,8 @@ class GameController:
                 game_state.difficulty = config_data['difficulty']
                 
             if 'lap_limit' in config_data:
-                game_state.lap_limit = config_data['lap_limit']
+                # Fix: Use total_laps instead of lap_limit
+                game_state.total_laps = config_data['lap_limit']
                 
             if 'free_parking_fund' in config_data:
                 game_state.free_parking_fund = config_data['free_parking_fund']
@@ -948,8 +949,9 @@ class GameController:
                 return True
             
             # Check if we've reached the lap limit
-            if game_state.lap_limit > 0 and game_state.current_lap > game_state.lap_limit:
-                self.logger.info(f"Lap limit {game_state.lap_limit} reached. Ending game.")
+            # Fix: Use total_laps instead of lap_limit
+            if game_state.total_laps > 0 and game_state.current_lap > game_state.total_laps:
+                self.logger.info(f"Lap limit {game_state.total_laps} reached. Ending game.")
                 self.end_game(reason="lap_limit_reached")
                 return True
             
