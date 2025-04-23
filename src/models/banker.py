@@ -27,16 +27,16 @@ class Banker:
             self.logger.error(f"Payment failed: Player {player_id} not found.")
             return {"success": False, "error": "Player not found."}
             
-        if player.cash < amount:
-            self.logger.info(f"Payment failed: Player {player.username} (ID: {player_id}) has insufficient funds. Required: {amount}, Available: {player.cash}.")
-            return {"success": False, "error": "Insufficient funds.", "required": amount, "available": player.cash}
+        if player.money < amount:
+            self.logger.info(f"Payment failed: Player {player.username} (ID: {player_id}) has insufficient funds. Required: {amount}, Available: {player.money}.")
+            return {"success": False, "error": "Insufficient funds.", "required": amount, "available": player.money}
             
         try:
-            player.cash -= amount
+            player.money -= amount
             db.session.add(player)
             db.session.commit()
-            self.logger.info(f"Player {player_id} paid ${amount} to the bank for '{description}'. New balance: ${player.cash}")
-            return {"success": True, "player_id": player_id, "new_balance": player.cash}
+            self.logger.info(f"Player {player_id} paid ${amount} to the bank for '{description}'. New balance: ${player.money}")
+            return {"success": True, "player_id": player_id, "new_balance": player.money}
         except Exception as e:
             db.session.rollback()
             self.logger.error(f"Database error during player_pays_bank for player {player_id}, amount {amount}: {e}", exc_info=True)
@@ -54,11 +54,11 @@ class Banker:
             return {"success": False, "error": "Player not found."}
             
         try:
-            player.cash += amount
+            player.money += amount
             db.session.add(player)
             db.session.commit()
-            self.logger.info(f"Bank paid ${amount} to player {player_id} for '{description}'. New balance: ${player.cash}")
-            return {"success": True, "player_id": player_id, "new_balance": player.cash}
+            self.logger.info(f"Bank paid ${amount} to player {player_id} for '{description}'. New balance: ${player.money}")
+            return {"success": True, "player_id": player_id, "new_balance": player.money}
         except Exception as e:
             db.session.rollback()
             self.logger.error(f"Database error during bank_pays_player for player {player_id}, amount {amount}: {e}", exc_info=True)
@@ -84,28 +84,71 @@ class Banker:
             self.logger.error(f"Player payment failed: Payee {to_player_id} not found.")
             return {"success": False, "error": "Receiving player not found."}
             
-        if from_player.cash < amount:
-            self.logger.info(f"Payment failed: Player {from_player.username} (ID: {from_player_id}) has insufficient funds to pay player {to_player.username} (ID: {to_player_id}). Required: {amount}, Available: {from_player.cash}.")
-            return {"success": False, "error": "Insufficient funds.", "required": amount, "available": from_player.cash}
+        if from_player.money < amount:
+            self.logger.info(f"Payment failed: Player {from_player.username} (ID: {from_player_id}) has insufficient funds to pay player {to_player.username} (ID: {to_player_id}). Required: {amount}, Available: {from_player.money}.")
+            return {"success": False, "error": "Insufficient funds.", "required": amount, "available": from_player.money}
             
         try:
-            from_player.cash -= amount
-            to_player.cash += amount
+            from_player.money -= amount
+            to_player.money += amount
             db.session.add(from_player)
             db.session.add(to_player)
             db.session.commit()
-            self.logger.info(f"Player {from_player_id} paid ${amount} to player {to_player_id} for '{description}'. Balances: Payer=${from_player.cash}, Payee=${to_player.cash}")
+            self.logger.info(f"Player {from_player_id} paid ${amount} to player {to_player_id} for '{description}'. Balances: Payer=${from_player.money}, Payee=${to_player.money}")
             return {
                 "success": True, 
                 "from_player_id": from_player_id,
-                "from_player_new_balance": from_player.cash,
+                "from_player_new_balance": from_player.money,
                 "to_player_id": to_player_id,
-                "to_player_new_balance": to_player.cash
+                "to_player_new_balance": to_player.money
             }
         except Exception as e:
             db.session.rollback()
             self.logger.error(f"Database error during player_pays_player from {from_player_id} to {to_player_id}, amount {amount}: {e}", exc_info=True)
             return {"success": False, "error": "Database error during payment processing."}
+
+    def update_loan_rates(self, base_interest_rate):
+        """Update loan rates based on the current base interest rate
+        
+        Args:
+            base_interest_rate: The new base interest rate
+            
+        Returns:
+            Dict with result of operation
+        """
+        try:
+            from src.models.finance.loan import Loan
+            
+            # Get all active loans
+            active_loans = Loan.query.filter_by(is_active=True).all()
+            
+            updated_count = 0
+            for loan in active_loans:
+                # Update the loan interest rate based on its type and the base rate
+                if not loan.fixed_rate:
+                    # For variable rate loans, update the rate
+                    # The formula can be adjusted based on loan risk, player credit score, etc.
+                    loan.interest_rate = base_interest_rate + loan.rate_premium
+                    db.session.add(loan)
+                    updated_count += 1
+            
+            if updated_count > 0:
+                db.session.commit()
+                self.logger.info(f"Updated interest rates for {updated_count} loans based on new base rate: {base_interest_rate}")
+            
+            return {
+                "success": True,
+                "updated_count": updated_count,
+                "base_rate": base_interest_rate
+            }
+            
+        except Exception as e:
+            db.session.rollback()
+            self.logger.error(f"Error updating loan rates: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": f"Error updating loan rates: {str(e)}"
+            }
 
     # --- Deprecated Methods --- 
     # These methods were overly specific and included logic (like property updates, 

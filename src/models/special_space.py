@@ -69,6 +69,22 @@ class SpecialSpace(db.Model):
             
         return result
 
+    def get_action_data(self) -> Dict:
+        """Get the action data for this special space
+        
+        Returns:
+            Dictionary with action data or empty dict if none exists
+        """
+        if not self.action_data:
+            return {}
+            
+        try:
+            return json.loads(self.action_data)
+        except (json.JSONDecodeError, TypeError):
+            logger = logging.getLogger(__name__)
+            logger.error(f"Invalid JSON in action_data for special space {self.id} ({self.name})")
+            return {}
+
 
 class CardDeck:
     """Represents a deck of Chance or Community Chest cards."""

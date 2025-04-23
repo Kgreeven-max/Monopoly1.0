@@ -18,7 +18,9 @@ class Property(db.Model):
     type = db.Column(db.Enum(PropertyType), nullable=False)
     position = db.Column(db.Integer, unique=True, nullable=False)
     price = db.Column(db.Integer, nullable=False)
+    current_price = db.Column(db.Integer, nullable=True)  # Current price after economic effects
     rent = db.Column(db.Integer)  # Base rent
+    current_rent = db.Column(db.Integer, nullable=True)  # Current rent after economic effects
     rent_house_1 = db.Column(db.Integer)
     rent_house_2 = db.Column(db.Integer)
     rent_house_3 = db.Column(db.Integer)

@@ -78,6 +78,7 @@ from src.migrations.add_credit_score import run_migration as run_credit_score_mi
 from src.migrations.add_updated_at_column import run_migration as run_updated_at_migration
 from src.migrations.add_inflation_rate import run_migration as run_inflation_rate_migration
 from src.migrations.add_started_at_column import run_migration as run_started_at_migration
+from src.migrations.fix_cash_to_money import run_migration as run_fix_cash_to_money_migration
 from src.controllers.trade_controller import TradeController # Import TradeController
 from src.routes.trade_routes import trade_routes # Import trade routes
 
@@ -173,6 +174,16 @@ with app.app_context(): # Use app context to access db/config safely
             logging.warning('Failed to run started_at and ended_at migration.')
     except Exception as e:
         logging.error(f'Error running started_at and ended_at migration: {str(e)}', exc_info=True)
+        
+    # Run migration to fix cash to money references and add current_price/current_rent columns
+    try:
+        fix_cash_migration_result = run_fix_cash_to_money_migration()
+        if fix_cash_migration_result:
+            logging.info('Successfully ran cash to money fix migration.')
+        else:
+            logging.warning('Failed to run cash to money fix migration.')
+    except Exception as e:
+        logging.error(f'Error running cash to money fix migration: {str(e)}', exc_info=True)
     
     # Ensure GameState instance exists and has a game_id
     # Use a direct SQL query instead of ORM to avoid issues with missing columns

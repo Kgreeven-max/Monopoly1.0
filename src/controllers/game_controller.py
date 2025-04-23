@@ -254,7 +254,7 @@ class GameController:
                 player = Player(username=username, pin=pin)
             
             # Set player attributes
-            player.cash = self._get_starting_cash(game_state.difficulty)
+            player.money = self._get_starting_cash(game_state.difficulty)
             player.position = 0
             player.is_bankrupt = False
             player.turns_in_jail = 0
@@ -858,20 +858,23 @@ class GameController:
 
 
     def _internal_end_turn(self, player_id, game_id):
-        """Internal logic for ending a player's turn and setting up the next player's turn."""
-        self.logger.info(f"Attempting to end turn internally for Player {player_id} in Game {game_id}")
+        """End player's turn and setup next player's turn.
         
+        Args:
+            player_id (int): ID of the player whose turn is ending
+            game_id (int): ID of the game
+            
+        Returns:
+            dict: Result of the action
+        """
+        self.logger.info(f"_internal_end_turn: game_id parameter = {game_id}, game_state.id = {game_id}")
         try:
-            # --- Get Game State ---
+            # Get game state
             game_state = GameState.query.get(game_id)
-            
-            # Log the game IDs for debugging
-            self.logger.info(f"_internal_end_turn: game_id parameter = {game_id}, game_state.id = {game_state.id if game_state else 'None'}")
-            
             if not game_state:
-                self.logger.error(f"Game state {game_id} not found.")
-                return False
-                
+                self.logger.error(f"Game state {game_id} not found")
+                return {"success": False, "error": "Game state not found"}
+            
             if game_state.status != 'active':
                 self.logger.warning(f"Game {game_id} is not active.")
                 return False
@@ -1990,9 +1993,9 @@ class GameController:
                 # Notify about player money update
                 self.socketio.emit('player_money_updated', {
                     'player_id': player_id,
-                    'old_balance': player.money - sale_value,
+                    'old_balance': player.money - refund_amount,
                     'new_balance': player.money,
-                    'change': sale_value,
+                    'change': refund_amount,
                     'reason': 'improvement_sale'
                 }, room=game_id)
                 
@@ -2007,7 +2010,7 @@ class GameController:
             return {
                 'success': True, 
                 'message': f'{improvement_type.capitalize()} sold successfully',
-                'sale_value': sale_value,
+                'sale_value': refund_amount,
                 'houses': property_obj.houses,
                 'hotels': property_obj.hotels
             }
@@ -2054,7 +2057,7 @@ class GameController:
             players = Player.query.filter_by(in_game=True).all()
             for player in players:
                 player.position = 0
-                player.cash = self._get_starting_cash()
+                player.money = self._get_starting_cash()
                 player.in_jail = False
                 player.jail_turns = 0
                 

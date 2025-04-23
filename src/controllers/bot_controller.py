@@ -279,7 +279,7 @@ class BotController:
                 self.logger.info(f"Bot {player_id} decided to BUY property {property_id}")
                 # Call PlayerActionController's logic or a direct controller method
                 # Assuming direct call to property controller for simplicity here
-                buy_result = self.property_controller.buy_property(player_id, property_id)
+                buy_result = self.property_controller.buy_property(player_id, player.pin, property_id)
                 if not buy_result.get('success'):
                      self.logger.error(f"Bot {player_id} failed to buy property {property_id}: {buy_result.get('error')}")
                      # If buy fails, maybe decline and auction? Or just end turn?
@@ -359,7 +359,7 @@ class BotController:
         else:
             # Pay fine on the 3rd turn if possible
             fine = 50 # Standard fine
-            if player.cash >= fine:
+            if player.money >= fine:
                 self.logger.info(f"Bot {player_id} paying ${fine} fine to get out of jail.")
                 pay_result = self.banker.player_pays_bank(player_id, fine, "Jail fine")
                 if pay_result['success']:
@@ -387,13 +387,13 @@ class BotController:
         affordable_threshold = 1.5 # Buy if cost is less than cash / threshold
         min_cash_after = 100 # Try to keep at least this much cash after buying
         
-        if player.cash >= cost + min_cash_after: # Check affordability first
+        if player.money >= cost + min_cash_after: # Check affordability first
         # if player.cash / affordable_threshold > cost: 
             # TODO: Add basic property evaluation (e.g., based on type or group)
-            self.logger.debug(f"Bot {player.id} decides TRUE for buying property {property_id} (Cost: {cost}, Cash: {player.cash})")
+            self.logger.debug(f"Bot {player.id} decides TRUE for buying property {property_id} (Cost: {cost}, Cash: {player.money})")
             return True
         else:
-            self.logger.debug(f"Bot {player.id} decides FALSE for buying property {property_id} (Cost: {cost}, Cash: {player.cash})")
+            self.logger.debug(f"Bot {player.id} decides FALSE for buying property {property_id} (Cost: {cost}, Cash: {player.money})")
             return False
 
     def _manage_assets(self, player, amount_needed):
@@ -409,13 +409,13 @@ class BotController:
 
         amount_raised = 0
         for prop in properties_to_mortgage:
-            if player.cash + amount_raised >= amount_needed:
+            if player.money + amount_raised >= amount_needed:
                  break # Raised enough
             
             self.logger.info(f"Bot {player_id} attempting to mortgage {prop.name} (Value: {prop.mortgage_value})")
             time.sleep(random.uniform(0.2, 0.5))
             # Assuming mortgage_property exists and handles cash transfer
-            mortgage_result = self.property_controller.mortgage_property(player_id, prop.id)
+            mortgage_result = self.property_controller.mortgage_property(player_id, player.pin, prop.id)
             if mortgage_result.get('success'):
                  amount_raised += prop.mortgage_value # Add mortgage value to potential cash
                  self.logger.info(f"Bot {player_id} successfully mortgaged {prop.name}. Raised ${amount_raised} so far.")
@@ -424,8 +424,8 @@ class BotController:
 
         # Re-check cash after attempting mortgages
         db.session.refresh(player) # Refresh player object to get updated cash
-        if player.cash >= amount_needed:
-            self.logger.info(f"Bot {player_id} successfully raised enough funds (${player.cash}) after managing assets.")
+        if player.money >= amount_needed:
+            self.logger.info(f"Bot {player_id} successfully raised enough funds (${player.money}) after managing assets.")
             # Now attempt the original payment again if possible (e.g., rent/fine)
             # This requires more state - knowing WHAT the original debt was for.
             # For now, assume the calling context might re-attempt payment or the next turn starts.
@@ -436,7 +436,7 @@ class BotController:
                  game_state.expected_action_details = None
                  db.session.commit()
         else:
-            self.logger.warning(f"Bot {player_id} FAILED to raise sufficient funds (${amount_needed} needed, has ${player.cash}). Declaring bankruptcy.")
+            self.logger.warning(f"Bot {player_id} FAILED to raise sufficient funds (${amount_needed} needed, has ${player.money}). Declaring bankruptcy.")
             # Declare bankruptcy
             self.game_controller.declare_bankruptcy(player_id)
 
@@ -456,20 +456,20 @@ class BotController:
             max_willing_bid = int(property_obj.price * max_bid_percentage)
             min_cash_after = 50 # Keep some cash reserve
 
-            if current_bid < max_willing_bid and player.cash > current_bid + min_cash_after:
+            if current_bid < max_willing_bid and player.money > current_bid + min_cash_after:
                 # Bid slightly more than current bid
                 bid_increment = max(1, int(current_bid * 0.05)) # Bid 5% more, min $1
                 next_bid = min(current_bid + bid_increment, max_willing_bid) # Don't exceed max willing bid
                 
                 # Ensure bot can actually afford the next bid
-                if player.cash >= next_bid + min_cash_after:
+                if player.money >= next_bid + min_cash_after:
                     self.logger.info(f"Bot {player_id} decided to BID ${next_bid} on property {property_id} (Current: {current_bid}, Max: {max_willing_bid})")
                     return next_bid
                 else:
                     self.logger.info(f"Bot {player_id} willing to bid ${next_bid} but cannot afford with reserve. Passing.")
                     return None
             else:
-                self.logger.debug(f"Bot {player_id} will not bid on property {property_id} (Current: {current_bid}, Max: {max_willing_bid}, Cash: {player.cash})")
+                self.logger.debug(f"Bot {player_id} will not bid on property {property_id} (Current: {current_bid}, Max: {max_willing_bid}, Cash: {player.money})")
                 return None
 
 def register_bot_events(socketio, app_config):

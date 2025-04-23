@@ -174,7 +174,7 @@ class EconomicCycleManager:
         
         try:
             players = Player.query.filter_by(in_game=True).all()
-            return sum(player.cash for player in players)
+            return sum(player.money for player in players)
         except Exception as e:
             self.logger.error(f"Error calculating total cash: {str(e)}", exc_info=True)
             return 0

@@ -395,7 +395,7 @@ class GameLogic:
                                 "owner_name": owner.username, 
                                 "rent_amount": rent_amount,
                                 "required": rent_amount,
-                                "available": player.cash,
+                                "available": player.money,
                                 "next_action": "manage_assets_or_bankrupt" # Indicate need for player action
                             }
             
