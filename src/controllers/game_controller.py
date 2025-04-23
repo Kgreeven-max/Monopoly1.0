@@ -253,11 +253,16 @@ class GameController:
             else:
                 player = Player(username=username, pin=pin)
             
+            # Set player attributes
             player.cash = self._get_starting_cash(game_state.difficulty)
             player.position = 0
             player.is_bankrupt = False
             player.turns_in_jail = 0
             player.is_in_jail = False
+            
+            # Set the game_id to the current game state ID
+            player.game_id = game_state.id
+            self.logger.info(f"Setting game_id {game_state.id} for player {username}")
             
             db.session.add(player)
             db.session.commit()
@@ -359,6 +364,13 @@ class GameController:
                 if not active_players:
                     self.logger.error("No active players found to start the game")
                     return {'success': False, 'error': 'Cannot start game with no players'}
+                
+                # Ensure all active players have the correct game_id
+                for player in active_players:
+                    if player.game_id != game_state.id:
+                        self.logger.info(f"Setting correct game_id ({game_state.id}) for player {player.id} ({player.username})")
+                        player.game_id = game_state.id
+                        db.session.add(player)
                 
                 # Randomize player order
                 player_ids = [str(player.id) for player in active_players]
@@ -845,19 +857,24 @@ class GameController:
 
 
     def _internal_end_turn(self, player_id, game_id):
-        """Internal helper to end turn, find next player, and update state."""
+        """Internal logic for ending a player's turn and setting up the next player's turn."""
         self.logger.info(f"Attempting to end turn internally for Player {player_id} in Game {game_id}")
         
         try:
+            # --- Get Game State ---
             game_state = GameState.query.get(game_id)
-            if not game_state:
-                self.logger.error(f"Game state {game_id} not found during end turn.")
-                return False
             
-            if game_state.status != 'active':
-                self.logger.warning(f"Cannot end turn for inactive game {game_id}.")
+            # Log the game IDs for debugging
+            self.logger.info(f"_internal_end_turn: game_id parameter = {game_id}, game_state.id = {game_state.id if game_state else 'None'}")
+            
+            if not game_state:
+                self.logger.error(f"Game state {game_id} not found.")
                 return False
-
+                
+            if game_state.status != 'active':
+                self.logger.warning(f"Game {game_id} is not active.")
+                return False
+             
             current_player_id = game_state.current_player_id
             if current_player_id != player_id:
                 self.logger.warning(f"Ending turn for actual current player {current_player_id} instead of requested {player_id}.")
@@ -871,14 +888,19 @@ class GameController:
 
             # --- Clear Expected Action --- 
             self.logger.debug(f"Clearing expected action state for game {game_id} at end of turn.")
-            game_state.expected_action_type = None
+            game_state.expected_action_type = None 
             game_state.expected_action_details = None
             db.session.add(game_state)
 
             # --- Find Next Player --- 
-            players = Player.query.filter_by(game_id=game_id, in_game=True, is_bankrupt=False).order_by(Player.turn_order).all()
+            # Fix: Use only in_game to filter, as is_bankrupt is a property not a column
+            # Use game_state.id for consistency to ensure we're using the numeric ID
+            players = Player.query.filter_by(game_id=game_state.id, in_game=True).order_by(Player.turn_order).all()
+            # Filter out bankrupt players in Python since is_bankrupt is a property
+            players = [p for p in players if not p.is_bankrupt]
+            
             if not players:
-                self.logger.error(f"No active players found in game {game_id}")
+                self.logger.error(f"No active players found in game {game_id} (game_state.id={game_state.id})")
                 return False
             
             # Find current player's index
@@ -918,7 +940,8 @@ class GameController:
 
             # --- Win Condition Checks --- 
             # Check if only one player remains
-            active_players_count = Player.query.filter_by(game_id=game_id, in_game=True, is_bankrupt=False).count()
+            # Fix: Don't use is_bankrupt in filter, instead count active players from already filtered list
+            active_players_count = len(players)
             if active_players_count <= 1:
                 self.logger.info(f"Only {active_players_count} player(s) remaining. Ending game.")
                 self.end_game(reason="last_player_standing")
