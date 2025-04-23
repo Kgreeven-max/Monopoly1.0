@@ -107,7 +107,12 @@ class GameModeController:
                     return {"success": False, "error": f"Game not found with ID: {game_id}"}
             
             # Log that we found the game
-            self.logger.info(f"Found game with ID: {game_id}")
+            self.logger.info(f"Found game with ID: {game_id}, status: {game_state.status}")
+            
+            # Verify game is in the appropriate state
+            if game_state.status not in ['setup', 'Waiting']:
+                self.logger.warning(f"Game with ID {game_id} is not in setup state, current status: {game_state.status}")
+                return {"success": False, "error": f"Game must be in setup state to initialize mode, current status: {game_state.status}"}
             
             # Check if game mode already exists
             existing_mode = GameMode.query.filter_by(game_id=game_id).first()
@@ -141,6 +146,7 @@ class GameModeController:
                 }
             
             # Create new game mode using factory method
+            self.logger.info(f"Creating new game mode: {mode_id} for game {game_id}")
             game_mode = GameMode.create_for_game(game_id, mode_id)
             
             # Save to database
@@ -161,6 +167,8 @@ class GameModeController:
                     'mode': mode_id,
                     'settings': game_mode.to_dict()
                 })
+            
+            self.logger.info(f"Successfully initialized game mode {mode_id} for game {game_id}")
             
             return {
                 "success": True,

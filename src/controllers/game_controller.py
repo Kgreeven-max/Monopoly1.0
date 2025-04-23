@@ -145,6 +145,8 @@ class GameController:
                          auction_required=True, turn_timeout=60):
         """Create a new game with specified settings"""
         try:
+            self.logger.info(f"Creating new game with settings: difficulty={difficulty}, lap_limit={lap_limit}")
+            
             # Get the existing game state
             game_state = GameState.query.first()
             if not game_state:
@@ -168,7 +170,9 @@ class GameController:
             game_state.free_parking_fund = free_parking_fund
             game_state.auction_required = auction_required
             game_state.turn_timer = turn_timeout
-            game_state.status = 'setup'
+            game_state.status = 'setup'  # Set to setup state
+            
+            self.logger.info(f"Game state transitioned to 'setup' mode. Ready for player addition.")
             
             # Reset all bots by setting them to not in game
             bots = Player.query.filter_by(is_bot=True).all()
@@ -178,35 +182,26 @@ class GameController:
             # Clear the active_bots dictionary from bot_controller if it exists
             from src.controllers.bot_controller import active_bots
             active_bots.clear()
-            self.logger.info(f"Cleared {len(bots)} bots during game reset")
             
-            # Make sure the game state is in the session (though it should be already)
-            db.session.add(game_state)
+            # Clear all existing players from the game
+            players = Player.query.filter_by(in_game=True).all()
+            for player in players:
+                player.in_game = False
+                self.logger.info(f"Removed player {player.username} from game")
             
-            # CRITICAL: Commit the changes to the database
-            self.logger.info(f"Committing game with ID {new_game_id} to database")
-            db.session.commit()
-            
-            # Verify the update was successful using direct SQL
-            import sqlalchemy
-            from sqlalchemy import text
+            # Validate and update property multipliers
             try:
-                # Create a new connection to ensure we're not using any cached data
-                connection = db.engine.connect()
-                verification_query = text(f"SELECT id, game_id FROM game_state WHERE id = :id")
-                verification_result = connection.execute(verification_query, {"id": game_state.id}).fetchone()
-                connection.close()
-                
-                if not verification_result:
-                    self.logger.error(f"Failed to find game with ID {game_state.id} in database after commit")
-                    return {'success': False, 'error': 'Game state verification failed after commit'}
-                
-                verified_id, verified_game_id = verification_result
-                if verified_game_id != new_game_id:
-                    self.logger.error(f"Game ID mismatch: expected {new_game_id}, found {verified_game_id}")
-                    return {'success': False, 'error': 'Game ID verification failed'}
-                    
-                self.logger.info(f"Successfully verified game_id {new_game_id} in database with ID {verified_id}")
+                from src.models.property import Property
+                # Check if certain property price multipliers need to be applied
+                props = Property.query.all()
+                if not props:
+                    self.logger.warning(f"No properties found in database for verification")
+                # If properties exist but are from a different game, delete them
+                else:
+                    for prop in props:
+                        db.session.delete(prop)
+                    db.session.commit()
+                    self.logger.info(f"Cleared properties from previous game")
             except Exception as ve:
                 self.logger.error(f"Error during verification: {str(ve)}")
                 # Continue anyway - don't fail the game creation just because verification had issues
@@ -214,6 +209,9 @@ class GameController:
             
             # Now initialize properties for this new game
             self._initialize_properties(new_game_id)
+            
+            # Save all changes
+            db.session.commit()
             
             self.logger.info(f"New game created with difficulty {difficulty} and game_id {new_game_id}")
             
@@ -302,30 +300,29 @@ class GameController:
                 self.logger.warning(f"Invalid admin pin provided for game start")
                 return {'success': False, 'error': 'Invalid admin credentials'}
             
+            # Get game_id if specified, otherwise use the default game
+            game_id = data.get('game_id')
+            
             # Get current game state
-            game_state = GameState.query.first()
-            if not game_state:
-                self.logger.error(f"No game state found")
-                return {'success': False, 'error': 'Game state not found'}
+            if game_id:
+                game_state = GameState.query.filter_by(game_id=game_id).first()
+                if not game_state:
+                    self.logger.error(f"No game state found with game_id: {game_id}")
+                    return {'success': False, 'error': f'Game state not found with ID: {game_id}'}
+            else:
+                game_state = GameState.query.first()
+                if not game_state:
+                    self.logger.error(f"No game state found")
+                    return {'success': False, 'error': 'Game state not found'}
             
-            # Check if a game is already in progress
-            if game_state.status == 'active':
-                self.logger.info(f"Game already active, returning current state")
-                # Just return current game state
-                if self.game_logic and hasattr(self.game_logic, 'get_game_state'):
-                    return {
-                        'success': True, 
-                        'message': 'Game already active', 
-                        'game_state': self.game_logic.get_game_state(game_state.id)
-                    }
-                else:
-                    return {'success': True, 'message': 'Game already active'}
-            
-            # Get active players
-            active_players = Player.query.filter_by(in_game=True).all()
-            if not active_players:
-                self.logger.warning(f"No active players found to start game")
-                return {'success': False, 'error': 'No active players'}
+            # Initialize player order if not set
+            if not game_state.player_order:
+                # Randomize player order
+                player_ids = [str(player.id) for player in active_players]
+                import random
+                random.shuffle(player_ids)
+                game_state.player_order = ','.join(player_ids)
+                self.logger.info(f"Initialized player order: {game_state.player_order}")
             
             # Initialize special spaces and cards
             self._initialize_board_elements()
@@ -333,14 +330,16 @@ class GameController:
             # Set game as active
             game_state.status = 'active'
             game_state.start_time = datetime.now()
+            game_state.started_at = datetime.now()  # Set the started_at timestamp
             game_state.current_lap = 1
             
-            # Select first player randomly
-            first_player = random.choice(active_players)
+            # Select first player based on player order
+            first_player_id = int(game_state.player_order.split(',')[0])
+            first_player = Player.query.get(first_player_id)
             game_state.current_player_id = first_player.id
             
-            # Clear any pending expected actions
-            game_state.expected_action_type = None
+            # Initialize expected action to roll dice for first player
+            game_state.expected_action_type = 'roll_dice'
             game_state.expected_action_details = None
             
             db.session.add(game_state)
@@ -349,7 +348,7 @@ class GameController:
             # Emit game started event
             if self.socketio:
                 self.socketio.emit('game_started', {
-                    'game_id': game_state.id,
+                    'game_id': game_state.game_id,
                     'first_player': {
                         'id': first_player.id,
                         'name': first_player.username
@@ -371,10 +370,11 @@ class GameController:
                 return {
                     'success': True, 
                     'message': 'Game started successfully', 
-                    'game_state': self.game_logic.get_game_state(game_state.id)
+                    'game_state': self.game_logic.get_game_state(game_state.id),
+                    'game_id': game_state.game_id
                 }
             else:
-                return {'success': True, 'message': 'Game started successfully'}
+                return {'success': True, 'message': 'Game started successfully', 'game_id': game_state.game_id}
                 
         except Exception as e:
             db.session.rollback()
@@ -491,14 +491,34 @@ class GameController:
         try:
             game_state = GameState.get_instance()
             
+            # Add safeguard for started_at attribute
+            try:
+                started_at_value = game_state.started_at.isoformat() if game_state.started_at else None
+            except AttributeError:
+                self.logger.warning("GameState missing 'started_at' attribute - initializing to None")
+                game_state.started_at = None
+                db.session.add(game_state)
+                db.session.commit()
+                started_at_value = None
+                
+            # Add safeguard for ended_at attribute
+            try:
+                ended_at_value = game_state.ended_at.isoformat() if game_state.ended_at else None
+            except AttributeError:
+                self.logger.warning("GameState missing 'ended_at' attribute - initializing to None")
+                game_state.ended_at = None
+                db.session.add(game_state)
+                db.session.commit()
+                ended_at_value = None
+            
             result = {
                 'success': True,
                 'game_id': game_state.game_id,
                 'status': game_state.status,
                 'difficulty': game_state.difficulty,
                 'current_lap': game_state.current_lap,
-                'started_at': game_state.started_at.isoformat() if game_state.started_at else None,
-                'ended_at': game_state.ended_at.isoformat() if game_state.ended_at else None
+                'started_at': started_at_value,
+                'ended_at': ended_at_value
             }
             
             if game_state.status == 'active' and game_state.current_player_id:
@@ -1941,6 +1961,8 @@ class GameController:
             game_state.status = 'setup'
             game_state.current_player_id = None
             game_state.start_time = None
+            game_state.started_at = None  # Explicitly reset started_at timestamp
+            game_state.ended_at = None    # Explicitly reset ended_at timestamp
             game_state.current_lap = 0
             game_state.expected_action_type = None
             game_state.expected_action_details = None

@@ -666,11 +666,11 @@
             console.log('Admin initialized with key:', window.adminKey);
             console.log('Admin key length:', window.adminKey.length);
 
+            // Fetch initial game state
+            fetchGameState();
+
             // Fetch and populate bot options
             fetchBotOptions(); 
-            
-            // Fetch initial bot list on load - REMOVED
-            // fetchActiveBots();
             
             // Add event listener for the bot form
             const addBotForm = document.getElementById('add-bot-form');
@@ -704,6 +704,33 @@
                 } else {
                     console.error("Failed to fetch active bots list:", data ? data.error : 'Unknown error');
                     document.getElementById('active-bots-list').innerHTML = '<p class="text-danger">Error fetching bot list.</p>';
+                }
+            });
+
+            // Listen for game state updates
+            socket.on('game_state_update', (data) => {
+                console.log('Game state update received:', data);
+                if (data) {
+                    // Update game status display
+                    const gameStatusElement = document.getElementById('game-status');
+                    if (gameStatusElement) {
+                        // Map backend status values to user-friendly display values
+                        const statusMap = {
+                            'setup': 'Waiting',
+                            'active': 'In Progress',
+                            'paused': 'Paused',
+                            'ended': 'Ended'
+                        };
+                        
+                        const displayStatus = statusMap[data.status] || data.status || 'Unknown';
+                        gameStatusElement.textContent = displayStatus;
+                        
+                        // Enable/disable start button based on game status
+                        const startButton = document.querySelector('button[onclick="startGame()"]');
+                        if (startButton) {
+                            startButton.disabled = data.status !== 'setup';
+                        }
+                    }
                 }
             });
 
@@ -1005,6 +1032,64 @@
             .catch(error => {
                 console.error('Error updating game status:', error);
                 alert(`Error updating game status: ${error.message}`);
+            });
+        }
+        
+        // Fetch and update the game state
+        function fetchGameState() {
+            console.log('Fetching current game state...');
+            
+            fetch('/api/game/state', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errData => {
+                        throw new Error(errData.error || `HTTP error! Status: ${response.status}`);
+                    }).catch(() => {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    console.log('Game state fetched successfully:', data);
+                    
+                    // Update game status display
+                    const gameStatusElement = document.getElementById('game-status');
+                    if (gameStatusElement) {
+                        // Map backend status values to user-friendly display values
+                        const statusMap = {
+                            'setup': 'Waiting',
+                            'active': 'In Progress',
+                            'paused': 'Paused',
+                            'ended': 'Ended'
+                        };
+                        
+                        const displayStatus = statusMap[data.status] || data.status || 'Unknown';
+                        gameStatusElement.textContent = displayStatus;
+                        
+                        // Enable/disable start button based on game status
+                        const startButton = document.querySelector('button[onclick="startGame()"]');
+                        if (startButton) {
+                            startButton.disabled = data.status !== 'setup';
+                        }
+                    }
+                    
+                    // Update other game state information if needed
+                    // For example, player count, current player, etc.
+                } else {
+                    console.error('Failed to fetch game state:', data.error);
+                    // Don't update UI on error to avoid confusing the user
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching game state:', error);
+                // Don't update UI on error to avoid confusing the user
             });
         }
         

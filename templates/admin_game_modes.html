@@ -2523,47 +2523,61 @@ function loadGameModesOverview() {
     gameModes = fetchGameModes();
     
     // Update the game modes count
-    document.getElementById('gameModeCount').textContent = gameModes.length;
+    const gameModeCountEl = document.getElementById('gameModeCount');
+    if (gameModeCountEl) {
+        gameModeCountEl.textContent = gameModes.length;
+    }
     
     // Update the default game mode
     const defaultMode = gameModes.find(mode => mode.isDefault);
-    document.getElementById('defaultGameMode').textContent = defaultMode ? defaultMode.name : 'None';
+    const defaultGameModeEl = document.getElementById('defaultGameMode');
+    if (defaultGameModeEl) {
+        defaultGameModeEl.textContent = defaultMode ? defaultMode.name : 'None';
+    }
     
     // Calculate active games
     const totalGames = gameModes.reduce((sum, mode) => sum + mode.games, 0);
-    document.getElementById('activeGamesCount').textContent = totalGames;
+    const activeGamesCountEl = document.getElementById('activeGamesCount');
+    if (activeGamesCountEl) {
+        activeGamesCountEl.textContent = totalGames;
+    }
     
     // Calculate active players
     const totalPlayers = gameModes.reduce((sum, mode) => sum + mode.activePlayers, 0);
-    document.getElementById('activePlayers').textContent = totalPlayers;
+    const activePlayersEl = document.getElementById('activePlayers');
+    if (activePlayersEl) {
+        activePlayersEl.textContent = totalPlayers;
+    }
     
     // Populate the game modes table
-    const tableBody = document.getElementById('gameModesTable').getElementsByTagName('tbody')[0];
-    tableBody.innerHTML = '';
-    
-    gameModes.forEach(mode => {
-        const row = tableBody.insertRow();
+    const tableBody = document.getElementById('gameModesTable')?.getElementsByTagName('tbody')[0];
+    if (tableBody) {
+        tableBody.innerHTML = '';
         
-        row.insertCell(0).textContent = mode.name;
-        row.insertCell(1).textContent = mode.description;
-        row.insertCell(2).textContent = `$${mode.startingCash}`;
-        row.insertCell(3).textContent = mode.games;
-        row.insertCell(4).textContent = mode.activePlayers;
-        
-        const statusCell = row.insertCell(5);
-        statusCell.innerHTML = mode.isDefault ? 
-            '<span class="status-badge status-active">Default</span>' : 
-            '<span class="status-badge status-inactive">Alternative</span>';
-        
-        const actionsCell = row.insertCell(6);
-        actionsCell.innerHTML = `
-            <button class="btn btn-sm btn-primary" onclick="openEditModeModal(${mode.id})">Edit</button>
-            <button class="btn btn-sm ${mode.isDefault ? 'btn-secondary disabled' : 'btn-danger'}" 
-                ${mode.isDefault ? 'disabled' : `onclick="deleteGameMode(${mode.id})"`}>
-                Delete
-            </button>
-        `;
-    });
+        gameModes.forEach(mode => {
+            const row = tableBody.insertRow();
+            
+            row.insertCell(0).textContent = mode.name;
+            row.insertCell(1).textContent = mode.description;
+            row.insertCell(2).textContent = `$${mode.startingCash}`;
+            row.insertCell(3).textContent = mode.games;
+            row.insertCell(4).textContent = mode.activePlayers;
+            
+            const statusCell = row.insertCell(5);
+            statusCell.innerHTML = mode.isDefault ? 
+                '<span class="status-badge status-active">Default</span>' : 
+                '<span class="status-badge status-inactive">Alternative</span>';
+            
+            const actionsCell = row.insertCell(6);
+            actionsCell.innerHTML = `
+                <button class="btn btn-sm btn-primary" onclick="openEditModeModal(${mode.id})">Edit</button>
+                <button class="btn btn-sm ${mode.isDefault ? 'btn-secondary disabled' : 'btn-danger'}" 
+                    ${mode.isDefault ? 'disabled' : `onclick="deleteGameMode(${mode.id})"`}>
+                    Delete
+                </button>
+            `;
+        });
+    }
     
     // Update the mode distribution chart
     updateModeDistributionChart();
@@ -2614,14 +2628,18 @@ function loadAvailableModes() {
     
     // Populate the game mode selector
     const modeSelector = document.getElementById('gameSettingsMode');
-    modeSelector.innerHTML = '<option value="">-- Select Game Mode --</option>';
-    
-    gameModes.forEach(mode => {
-        const option = document.createElement('option');
-        option.value = mode.id;
-        option.textContent = mode.name;
-        modeSelector.appendChild(option);
-    });
+    if (modeSelector) {
+        modeSelector.innerHTML = '<option value="">-- Select Game Mode --</option>';
+        
+        gameModes.forEach(mode => {
+            const option = document.createElement('option');
+            option.value = mode.id;
+            option.textContent = mode.name;
+            modeSelector.appendChild(option);
+        });
+    } else {
+        console.warn("Element with ID 'gameSettingsMode' not found in the DOM");
+    }
 }
 
 function loadModeSettings(modeId) {

@@ -22,7 +22,9 @@ class GameState(db.Model):
     base_interest_rate = db.Column(db.Float, default=0.05)  # Added missing attribute
     tax_rate = db.Column(db.Float, default=0.1)  # 10% default
     start_time = db.Column(db.DateTime, default=datetime.utcnow)
+    started_at = db.Column(db.DateTime, nullable=True)  # When the game actually started (not just created)
     end_time = db.Column(db.DateTime, nullable=True)  # End time for timed games
+    ended_at = db.Column(db.DateTime, nullable=True)  # When the game actually ended
     status = db.Column(db.String(20), default='Waiting') # Waiting, Setup, In Progress, Paused, Ended
     difficulty = db.Column(db.String(10), default='normal')  # easy, normal, hard
     game_id = db.Column(db.String(36), unique=True, nullable=False)  # UUID for socket room
@@ -285,7 +287,9 @@ class GameState(db.Model):
         self.base_interest_rate = 0.05
         self.tax_rate = 0.1
         self.start_time = datetime.utcnow()
+        self.started_at = None  # Reset the started_at timestamp
         self.end_time = None
+        self.ended_at = None  # Also reset the ended_at timestamp for consistency
         self.status = 'setup'
         # Keep the difficulty setting
         # self.difficulty = 'normal'

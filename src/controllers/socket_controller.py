@@ -20,6 +20,7 @@ from src.controllers.social.socket_handlers import register_social_socket_handle
 # Import core handlers and controller
 from .socket_core import register_core_socket_handlers, SocketController as CoreSocketController 
 import eventlet
+import random
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -215,17 +216,17 @@ def register_socket_events(app_socketio, app_config):
              logger.error("CoreSocketController not found in app_config for handle_start_game")
              emit('game_error', {'error': 'Internal server error'}, room=sid)
              return
-             
-        # Removed player_id identification, only admin key matters now.
-        # player_id = core_controller._get_player_id_from_sid(sid) 
 
+        # Get specified game_id if provided
+        game_id = data.get('game_id')
+        
         game_logic = app_config.get('game_logic')
         if not game_logic:
             logger.error("GameLogic not found in app_config for handle_start_game")
             emit('game_error', {'error': 'Game logic unavailable'}, room=sid)
             return
             
-        result = game_logic.start_game() # Assuming game_id=1 for now
+        result = game_logic.start_game(data)
 
         if not result or not result.get('success'):
              error_message = result.get('error', 'Failed to start game.') if result else 'Failed to start game.'
@@ -235,7 +236,169 @@ def register_socket_events(app_socketio, app_config):
              # Success is broadcast by GameLogic via game_started/game_state_update
              logger.info(f"Game start initiated successfully by admin (SID: {sid}).")
              # Optionally send confirmation back to requesting admin
-             emit('start_game_initiated', {'success': True}, room=sid)
+             emit('game_started', {'success': True, 'game_id': result.get('game_id')}, room=sid)
+
+    @app_socketio.on('create_game')
+    def handle_create_game(data, *args):
+        """Handles request to create a new game with specified settings."""
+        sid = request.sid
+        admin_key = data.get('admin_key')
+        expected_admin_key = app_config.get('ADMIN_KEY')
+        
+        logger.info(f"[Socket] Received 'create_game' event (SID: {sid})")
+        
+        # Admin Authorization Check
+        if not admin_key or admin_key != expected_admin_key:
+            logger.warning(f"Unauthorized 'create_game' attempt from SID {sid}.")
+            emit('game_error', {'error': 'Unauthorized: Only admins can create games.', 'action': 'create_game'}, room=sid)
+            return
+            
+        # Get the game controller from app config
+        game_controller = app_config.get('game_controller')
+        if not game_controller:
+            logger.error("GameController not found in app_config for handle_create_game")
+            emit('game_error', {'error': 'Game controller unavailable'}, room=sid)
+            return
+            
+        # Extract game settings from the request
+        difficulty = data.get('difficulty', 'normal')
+        mode = data.get('mode', 'classic')
+        lap_limit = data.get('lap_limit', 0)
+        free_parking_fund = data.get('free_parking_fund', True)
+        auction_required = data.get('auction_required', True)
+        turn_timeout = data.get('turn_timeout', 60)
+        
+        # Create new game
+        result = game_controller.create_new_game(
+            difficulty=difficulty,
+            lap_limit=lap_limit,
+            free_parking_fund=free_parking_fund,
+            auction_required=auction_required,
+            turn_timeout=turn_timeout
+        )
+        
+        if not result or not result.get('success'):
+            error_message = result.get('error', 'Failed to create game.') if result else 'Failed to create game.'
+            logger.warning(f"Game creation failed: {error_message}")
+            emit('game_error', {'error': error_message, 'action': 'create_game'}, room=sid)
+            return
+            
+        game_id = result.get('game_id')
+        logger.info(f"Game created successfully with ID: {game_id}")
+        
+        # Initialize game mode if not classic
+        if mode != 'classic':
+            game_mode_controller = app_config.get('game_mode_controller')
+            if game_mode_controller:
+                mode_result = game_mode_controller.initialize_game_mode(game_id, mode)
+                if not mode_result.get('success'):
+                    logger.warning(f"Failed to initialize game mode: {mode_result.get('error')}")
+        
+        # Send success response
+        emit('game_created', {
+            'success': True,
+            'game_id': game_id,
+            'mode': mode,
+            'difficulty': difficulty
+        }, room=sid)
+        
+    @app_socketio.on('add_player')
+    def handle_add_player(data, *args):
+        """Handles request to add a human player to the game."""
+        sid = request.sid
+        admin_key = data.get('admin_key')
+        expected_admin_key = app_config.get('ADMIN_KEY')
+        
+        logger.info(f"[Socket] Received 'add_player' event (SID: {sid})")
+        
+        # Admin Authorization Check
+        if not admin_key or admin_key != expected_admin_key:
+            logger.warning(f"Unauthorized 'add_player' attempt from SID {sid}.")
+            emit('game_error', {'error': 'Unauthorized: Only admins can add players.', 'action': 'add_player'}, room=sid)
+            return
+            
+        # Get the game controller from app config
+        game_controller = app_config.get('game_controller')
+        if not game_controller:
+            logger.error("GameController not found in app_config for handle_add_player")
+            emit('game_error', {'error': 'Game controller unavailable'}, room=sid)
+            return
+            
+        # Extract player data
+        username = data.get('username')
+        if not username:
+            emit('game_error', {'error': 'Username is required', 'action': 'add_player'}, room=sid)
+            return
+            
+        # Generate a PIN for the player
+        pin = ''.join([str(random.randint(0, 9)) for _ in range(4)])
+        
+        # Add player to the game
+        result = game_controller.add_player(username, pin)
+        
+        if not result or not result.get('success'):
+            error_message = result.get('error', 'Failed to add player.') if result else 'Failed to add player.'
+            logger.warning(f"Player addition failed: {error_message}")
+            emit('game_error', {'error': error_message, 'action': 'add_player'}, room=sid)
+            return
+            
+        player_id = result.get('player_id')
+        logger.info(f"Player {username} added successfully with ID: {player_id}")
+        
+        # Send success response
+        emit('player_added', {
+            'success': True,
+            'player_id': player_id,
+            'player_name': username,
+            'pin': pin,
+            'is_bot': False
+        }, room=sid)
+
+    @app_socketio.on('remove_player')
+    def handle_remove_player(data, *args):
+        """Handles request to remove a player from the game."""
+        sid = request.sid
+        admin_key = data.get('admin_key')
+        expected_admin_key = app_config.get('ADMIN_KEY')
+        
+        logger.info(f"[Socket] Received 'remove_player' event (SID: {sid})")
+        
+        # Admin Authorization Check
+        if not admin_key or admin_key != expected_admin_key:
+            logger.warning(f"Unauthorized 'remove_player' attempt from SID {sid}.")
+            emit('game_error', {'error': 'Unauthorized: Only admins can remove players.', 'action': 'remove_player'}, room=sid)
+            return
+            
+        # Get the admin controller from app config
+        admin_controller = app_config.get('admin_controller')
+        if not admin_controller:
+            logger.error("AdminController not found in app_config for handle_remove_player")
+            emit('game_error', {'error': 'Admin controller unavailable'}, room=sid)
+            return
+            
+        # Extract player data
+        player_id = data.get('player_id')
+        if not player_id:
+            emit('game_error', {'error': 'Player ID is required', 'action': 'remove_player'}, room=sid)
+            return
+            
+        # Remove player from the game
+        result = admin_controller.remove_player(player_id, handle_properties='bank', reason='Admin removal')
+        
+        if not result or not result.get('success'):
+            error_message = result.get('error', 'Failed to remove player.') if result else 'Failed to remove player.'
+            logger.warning(f"Player removal failed: {error_message}")
+            emit('game_error', {'error': error_message, 'action': 'remove_player'}, room=sid)
+            return
+            
+        logger.info(f"Player {player_id} removed successfully")
+        
+        # Send success response
+        emit('player_removed', {
+            'success': True,
+            'player_id': player_id,
+            'message': 'Player removed successfully'
+        }, room=sid)
 
     @app_socketio.on('request_game_state')
     def handle_request_game_state(data=None, *args):
@@ -272,6 +435,53 @@ def register_socket_events(app_socketio, app_config):
         else:
             logger.error(f"Could not retrieve game state {game_id} for player {player_id}")
             emit('game_error', {'error': 'Could not retrieve game state'}, room=sid)
+
+    @app_socketio.on('add_bot')
+    def handle_add_bot(data, *args):
+        """Handles request to add a bot player to the game."""
+        sid = request.sid
+        admin_key = data.get('admin_key')
+        expected_admin_key = app_config.get('ADMIN_KEY')
+        
+        logger.info(f"[Socket] Received 'add_bot' event (SID: {sid})")
+        
+        # Admin Authorization Check
+        if not admin_key or admin_key != expected_admin_key:
+            logger.warning(f"Unauthorized 'add_bot' attempt from SID {sid}.")
+            emit('game_error', {'error': 'Unauthorized: Only admins can add bots.', 'action': 'add_bot'}, room=sid)
+            return
+            
+        # Get the bot controller from app config
+        bot_controller = app_config.get('bot_controller')
+        if not bot_controller:
+            logger.error("BotController not found in app_config for handle_add_bot")
+            emit('game_error', {'error': 'Bot controller unavailable'}, room=sid)
+            return
+            
+        # Extract bot data
+        bot_name = data.get('name', f"Bot_{random.randint(1000, 9999)}")
+        bot_type = data.get('type', 'conservative')
+        difficulty = data.get('difficulty', 'normal')
+        
+        # Create the bot
+        result = bot_controller.create_bot(bot_name, bot_type, difficulty)
+        
+        if not result:
+            logger.warning(f"Bot creation failed")
+            emit('game_error', {'error': 'Failed to create bot player', 'action': 'add_bot'}, room=sid)
+            return
+            
+        logger.info(f"Bot {bot_name} created successfully with ID: {result.id}")
+        
+        # Send success response
+        emit('player_added', {
+            'success': True,
+            'player_id': result.id,
+            'player_name': result.username,
+            'is_bot': True,
+            'bot_type': bot_type,
+            'difficulty': difficulty
+        }, room=sid)
 
     # --- End Player Action Handlers ---
 
