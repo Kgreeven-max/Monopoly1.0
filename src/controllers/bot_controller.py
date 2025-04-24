@@ -311,7 +311,7 @@ class BotController:
              else:
                   # Tax paid, clear expected state if it was set
                   current_game_state = GameState.query.get(game_id)
-                  if current_game_state.expected_action_type == 'pay_tax':
+                  if current_game_state and current_game_state.expected_action_type == 'pay_tax':
                        current_game_state.expected_action_type = None
                        current_game_state.expected_action_details = None
                        db.session.commit()
