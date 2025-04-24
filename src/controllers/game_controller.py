@@ -1124,6 +1124,18 @@ class GameController:
             player.money -= property_obj.price
             property_obj.owner_id = player_id
             
+            # Create transaction record
+            from src.models.transaction import Transaction
+            transaction = Transaction(
+                from_player_id=player_id,
+                to_player_id=None,  # Bank
+                amount=property_obj.price,
+                transaction_type="property_purchase",
+                description=f"Purchase of {property_obj.name}",
+                property_id=property_id
+            )
+            db.session.add(transaction)
+            
             # Update property group ownership stats for monopoly calculations
             self._update_property_group_stats(player_id, property_obj)
             

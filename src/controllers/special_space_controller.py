@@ -294,18 +294,21 @@ class SpecialSpaceController:
                 logging.error(f"Player {player_id} not found")
                 return {"success": False, "error": "Player not found"}
             
-            # Get the jail position from the board configuration
-            board_config = self.board_controller.get_board_configuration(game_state.board_id)
-            jail_position = None
+            # Get the jail position from the board configuration or use default
+            jail_position = 10  # Default jail position in standard Monopoly
             
-            for space in board_config["spaces"]:
-                if space.get("type") == "jail":
-                    jail_position = space.get("position")
-                    break
-                
-            if jail_position is None:
-                logging.error(f"Jail position not found on board for game {game_id}")
-                return {"success": False, "error": "Jail position not found on board"}
+            # Check if board_controller is available before using it
+            if self.board_controller is not None:
+                try:
+                    board_config = self.board_controller.get_board_configuration(game_state.board_id)
+                    for space in board_config["spaces"]:
+                        if space.get("type") == "jail":
+                            jail_position = space.get("position")
+                            break
+                except Exception as e:
+                    logging.warning(f"Error getting jail position from board configuration: {e}. Using default position.")
+            else:
+                logging.warning("Board controller not available. Using default jail position (10).")
             
             # Update player's status and position
             player_data = game_state.get_player_data(player_id)
@@ -1800,7 +1803,7 @@ class SpecialSpaceController:
             
             # Check if passing GO
             if target_position < current_position:
-                # Player passed GO, collect salary
+                # Player passes GO (except for direct to jail)
                 go_salary = game_state.config.get("go_salary", 200)
                 player_state["balance"] += go_salary
                 pass_go_msg = f" Passed GO and collected ${go_salary}."
@@ -2281,10 +2284,19 @@ class SpecialSpaceController:
                 game_state = GameState.query.get(game_id)
                 if game_state:
                     # Set expected action to end turn
-                    game_state.expected_actions = [{
-                        "player_id": player_id,
-                        "action": "end_turn"
-                    }]
+                    # Check if expected_actions attribute exists, otherwise use expected_action_type
+                    if hasattr(game_state, 'expected_actions'):
+                        game_state.expected_actions = [{
+                            "player_id": player_id,
+                            "action": "end_turn"
+                        }]
+                    else:
+                        # Use the expected_action_type attribute instead
+                        game_state.expected_action_type = "end_turn"
+                        game_state.expected_action_details = {
+                            "player_id": player_id
+                        }
+                    
                     db.session.commit()
                     logging.info(f"Updated expected actions to end_turn for player {player_id}")
             except Exception as e:
@@ -2552,10 +2564,21 @@ class SpecialSpaceController:
             # Count player's buildings
             houses = 0
             hotels = 0
-            for prop in game_state.properties:
-                if prop.get("owner_id") == player_id:
-                    houses += prop.get("houses", 0)
-                    hotels += prop.get("hotels", 0)
+            
+            try:
+                # Query properties from database instead of accessing game_state.properties
+                player_properties = Property.query.filter_by(owner_id=player_id).all()
+                
+                for prop in player_properties:
+                    if hasattr(prop, 'hotel') and prop.hotel:
+                        hotels += 1
+                    elif hasattr(prop, 'houses'):
+                        houses += prop.houses
+                        
+                logging.info(f"Player {player_id} has {houses} houses and {hotels} hotels")
+            except Exception as e:
+                # Log error but continue with 0 buildings to avoid crashing
+                logging.error(f"Error counting buildings for player {player_id}: {str(e)}")
             
             # Calculate and apply payment
             total_cost = (houses * house_cost) + (hotels * hotel_cost)
@@ -2717,10 +2740,19 @@ class SpecialSpaceController:
                 game_state = GameState.query.get(game_id)
                 if game_state:
                     # Set expected action to end turn
-                    game_state.expected_actions = [{
-                        "player_id": player_id,
-                        "action": "end_turn"
-                    }]
+                    # Check if expected_actions attribute exists, otherwise use expected_action_type
+                    if hasattr(game_state, 'expected_actions'):
+                        game_state.expected_actions = [{
+                            "player_id": player_id,
+                            "action": "end_turn"
+                        }]
+                    else:
+                        # Use the expected_action_type attribute instead
+                        game_state.expected_action_type = "end_turn"
+                        game_state.expected_action_details = {
+                            "player_id": player_id
+                        }
+                    
                     db.session.commit()
                     logging.info(f"Updated expected actions to end_turn for player {player_id}")
             except Exception as e:

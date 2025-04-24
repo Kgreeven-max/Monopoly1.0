@@ -330,7 +330,25 @@ class BotController:
     def _decline_buy_action(self, player_id, property_id, game_id):
          """Handles the logic after a bot declines to buy."""
          # Need to check game settings if auction is required
-         game_state = GameState.query.get(game_id)
+         # Try to get game state by id - first check if this is a UUID string
+         game_state = None
+         
+         try:
+             # Try with the provided game_id first
+             game_state = GameState.query.get(game_id)
+             
+             # If not found and it looks like a UUID, try to find by game_id field instead of primary key
+             if not game_state and isinstance(game_id, str) and '-' in game_id:
+                 self.logger.info(f"Looking up GameState by UUID field: {game_id}")
+                 game_state = GameState.query.filter_by(game_id=game_id).first()
+             
+             if not game_state:
+                 # Final fallback - get main game state
+                 self.logger.warning(f"Could not find game_state for game ID {game_id}, falling back to primary game")
+                 game_state = GameState.get_instance()
+         except Exception as e:
+             self.logger.error(f"Error finding game state: {str(e)}")
+             return
          
          if not game_state:
              self.logger.error(f"Could not find game_state for game ID {game_id} in _decline_buy_action")
@@ -339,7 +357,7 @@ class BotController:
          if game_state.auction_required:
               self.logger.info(f"Bot {player_id} triggering auction for property {property_id}")
               # Auction controller should handle the flow from here
-              self.auction_controller.start_auction(property_id, game_id)
+              self.auction_controller.start_auction(property_id, game_state.id)
          else:
               self.logger.info(f"Bot {player_id} declined property {property_id}, no auction required. Turn should end.")
               # Clear expected state manually if GameController didn't already
@@ -348,7 +366,6 @@ class BotController:
                    game_state.expected_action_details = None
                    db.session.commit()
               # Turn progression is handled by the main loop or GameController
-              # No need to call end_turn here explicitly unless needed as fallback
 
     def _handle_jail(self, player, game_state):
         """Decides and performs action for a bot in jail."""

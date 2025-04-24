@@ -2562,7 +2562,126 @@ class AdminController:
         except Exception as e:
             logger.error(f"Error getting transactions: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
-    
+            
+    def create_transaction(self, from_player_id, to_player_id, amount, transaction_type="admin_transfer", description="Admin created transaction"):
+        """
+        Create a new transaction between players or between player and bank.
+        
+        Args:
+            from_player_id (int, optional): Source player ID (None for bank)
+            to_player_id (int, optional): Destination player ID (None for bank)
+            amount (int): Transaction amount (positive number)
+            transaction_type (str): Type of transaction
+            description (str): Description of the transaction
+            
+        Returns:
+            Dict with operation result
+        """
+        try:
+            if amount <= 0:
+                return {"success": False, "error": "Amount must be positive"}
+                
+            # Validate players exist if IDs provided
+            from_player = None
+            to_player = None
+            
+            if from_player_id:
+                from_player = Player.query.get(from_player_id)
+                if not from_player:
+                    return {"success": False, "error": f"Source player with ID {from_player_id} not found"}
+                    
+                # Check if player has enough money
+                if from_player.money < amount:
+                    return {"success": False, "error": f"Source player doesn't have enough money (has ${from_player.money}, needs ${amount})"}
+            
+            if to_player_id:
+                to_player = Player.query.get(to_player_id)
+                if not to_player:
+                    return {"success": False, "error": f"Destination player with ID {to_player_id} not found"}
+            
+            # Get previous balances for logging
+            from_previous_balance = from_player.money if from_player else None
+            to_previous_balance = to_player.money if to_player else None
+            
+            # Create transaction record
+            transaction = Transaction(
+                from_player_id=from_player_id,
+                to_player_id=to_player_id,
+                amount=amount,
+                transaction_type=transaction_type,
+                description=description,
+                timestamp=datetime.datetime.now()
+            )
+            
+            # Update player balances
+            if from_player:
+                from_player.money -= amount
+                
+            if to_player:
+                to_player.money += amount
+                
+            # Save changes
+            db.session.add(transaction)
+            
+            if from_player:
+                db.session.add(from_player)
+                
+            if to_player:
+                db.session.add(to_player)
+                
+            db.session.commit()
+            
+            # Log the action
+            logger.info(f"Admin created transaction: {transaction_type}, amount: ${amount}, "
+                       f"from: {from_player.username if from_player else 'Bank'}, "
+                       f"to: {to_player.username if to_player else 'Bank'}, "
+                       f"description: {description}")
+            
+            # Notify clients of the update via socket if available
+            socket_controller = current_app.config.get('socket_controller')
+            if socket_controller:
+                # Notify about player updates
+                if from_player_id:
+                    socket_controller.notify_player_update(from_player_id)
+                    
+                if to_player_id:
+                    socket_controller.notify_player_update(to_player_id)
+                
+                # Notify admins about the action
+                socket_controller.notify_admin_action({
+                    "action": "transaction_created",
+                    "transaction_id": transaction.id,
+                    "from_player_id": from_player_id,
+                    "from_player_name": from_player.username if from_player else "Bank",
+                    "to_player_id": to_player_id,
+                    "to_player_name": to_player.username if to_player else "Bank",
+                    "amount": amount,
+                    "transaction_type": transaction_type,
+                    "description": description,
+                    "timestamp": datetime.datetime.now().isoformat()
+                })
+            
+            return {
+                "success": True,
+                "transaction_id": transaction.id,
+                "from_player_id": from_player_id,
+                "from_player_name": from_player.username if from_player else "Bank",
+                "from_previous_balance": from_previous_balance,
+                "from_new_balance": from_player.money if from_player else None,
+                "to_player_id": to_player_id,
+                "to_player_name": to_player.username if to_player else "Bank",
+                "to_previous_balance": to_previous_balance,
+                "to_new_balance": to_player.money if to_player else None,
+                "amount": amount,
+                "transaction_type": transaction_type,
+                "description": description
+            }
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error creating transaction: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}
+
     def get_all_loans(self, filters=None):
         """
         Get all loans in the system with filtering options.

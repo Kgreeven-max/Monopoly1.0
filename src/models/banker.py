@@ -47,6 +47,18 @@ class Banker:
             player.money -= amount
             self._balance += amount  # Update bank balance
             db.session.add(player)
+            
+            # Create transaction record
+            from .transaction import Transaction
+            transaction = Transaction(
+                from_player_id=player_id,
+                to_player_id=None,  # Bank
+                amount=amount,
+                transaction_type="payment_to_bank",
+                description=description
+            )
+            db.session.add(transaction)
+            
             db.session.commit()
             self.logger.info(f"Player {player_id} paid ${amount} to the bank for '{description}'. New balance: ${player.money}")
             return {"success": True, "player_id": player_id, "new_balance": player.money}
@@ -70,6 +82,18 @@ class Banker:
             player.money += amount
             self._balance -= amount  # Update bank balance
             db.session.add(player)
+            
+            # Create transaction record
+            from .transaction import Transaction
+            transaction = Transaction(
+                from_player_id=None,  # Bank
+                to_player_id=player_id,
+                amount=amount,
+                transaction_type="payment_from_bank",
+                description=description
+            )
+            db.session.add(transaction)
+            
             db.session.commit()
             self.logger.info(f"Bank paid ${amount} to player {player_id} for '{description}'. New balance: ${player.money}")
             return {"success": True, "player_id": player_id, "new_balance": player.money}
@@ -113,6 +137,18 @@ class Banker:
             
             db.session.add(from_player)
             db.session.add(to_player)
+            
+            # Create transaction record
+            from .transaction import Transaction
+            transaction = Transaction(
+                from_player_id=from_player_id,
+                to_player_id=to_player_id,
+                amount=amount,
+                transaction_type="player_to_player",
+                description=description
+            )
+            db.session.add(transaction)
+            
             db.session.commit()
             self.logger.info(f"Player {from_player_id} paid ${amount} to player {to_player_id} for '{description}'. Balances: Payer=${from_player.money}, Payee=${to_player.money}")
             return {
