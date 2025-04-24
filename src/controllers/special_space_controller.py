@@ -13,6 +13,7 @@ from src.models.banker import Banker
 from src.models.community_fund import CommunityFund
 from src.models import db
 from src.models.game_settings import GameSettings
+from src.models.property import Property
 
 
 class SpecialSpaceController:
@@ -2389,11 +2390,22 @@ class SpecialSpaceController:
         action = card.get("action")
         result = {"action": action}
         
-        # Get player state
-        player_state = next((p for p in game_state.players if p.get("id") == player_id), None)
-        if not player_state:
-            logging.error(f"Player state for {player_id} not found in game {game_state.id}")
-            return {"error": "Player state not found"}
+        # Get player directly from database instead of game_state.players
+        from src.models.player import Player
+        player = Player.query.get(player_id)
+        if not player:
+            logging.error(f"Player {player_id} not found in database")
+            return {"error": "Player not found"}
+        
+        # Create a simple player state dict
+        player_state = {
+            "id": player.id,
+            "position": player.position,
+            "balance": player.money,  # Use 'money' field from player model
+            "in_jail": player.in_jail,
+            "jail_turns": player.jail_turns,
+            "jail_cards": player.jail_cards if hasattr(player, 'jail_cards') else 0
+        }
         
         # Process card action
         if action == "move_to":
@@ -2404,6 +2416,7 @@ class SpecialSpaceController:
             # Check if passing GO
             if new_position < old_position:
                 # Player passes GO (except for direct to jail)
+                player.money += 200  # Update actual player model
                 player_state["balance"] += 200
                 result["passed_go"] = True
                 result["collect_amount"] = 200
@@ -2411,6 +2424,7 @@ class SpecialSpaceController:
                 result["passed_go"] = False
             
             # Update player position
+            player.position = new_position  # Update actual player model
             player_state["position"] = new_position
             result["old_position"] = old_position
             result["new_position"] = new_position
@@ -2422,6 +2436,7 @@ class SpecialSpaceController:
             new_position = (old_position + steps) % 40  # Ensure it wraps around the board
             
             # Update player position
+            player.position = new_position  # Update actual player model
             player_state["position"] = new_position
             result["old_position"] = old_position
             result["new_position"] = new_position
@@ -2448,6 +2463,7 @@ class SpecialSpaceController:
             # Check if passing GO
             if new_position < old_position:
                 # Player passes GO
+                player.money += 200  # Update actual player model
                 player_state["balance"] += 200
                 result["passed_go"] = True
                 result["collect_amount"] = 200
@@ -2455,6 +2471,7 @@ class SpecialSpaceController:
                 result["passed_go"] = False
             
             # Update player position
+            player.position = new_position  # Update actual player model
             player_state["position"] = new_position
             result["old_position"] = old_position
             result["new_position"] = new_position
@@ -2463,6 +2480,7 @@ class SpecialSpaceController:
         elif action == "collect":
             # Player collects money from the bank
             amount = card.get("amount", 0)
+            player.money += amount  # Update actual player model
             player_state["balance"] += amount
             result["amount"] = amount
             result["new_balance"] = player_state.get("balance")
@@ -2470,12 +2488,13 @@ class SpecialSpaceController:
         elif action == "pay":
             # Player pays money to the bank
             amount = card.get("amount", 0)
+            player.money -= amount  # Update actual player model
             player_state["balance"] -= amount
             result["amount"] = amount
             result["new_balance"] = player_state.get("balance")
             
             # Add money to community fund if configured
-            if game_state.community_fund_enabled:
+            if hasattr(game_state, 'community_fund_enabled') and game_state.community_fund_enabled:
                 game_state.community_fund += amount
                 result["community_fund"] = game_state.community_fund
             
@@ -2811,16 +2830,26 @@ class SpecialSpaceController:
         result = {"processed": True, "type": card_type}
         
         try:
+            # Get the player from the database
+            from src.models.player import Player
+            from src.models import db
+            
+            player = Player.query.get(player_id)
+            if not player:
+                logging.error(f"Player {player_id} not found in database")
+                return {"processed": False, "error": "Player not found"}
+            
             if card_type == "collect":
                 # Player receives money
                 amount = card.get("amount", 0)
+                player.money += amount  # Update actual player model
                 player_state["balance"] += amount
                 result["amount"] = amount
                 
             elif card_type == "pay":
                 # Player pays money
                 amount = card.get("amount", 0)
-                player_balance = player_state.get("balance", 0)
+                player_balance = player.money
                 
                 # Check if player has enough money
                 if player_balance < amount:
@@ -2829,10 +2858,12 @@ class SpecialSpaceController:
                     amount = player_balance
                     result["partial_payment"] = True
                 
+                player.money -= amount  # Update actual player model
                 player_state["balance"] -= amount
                 
                 # Add to community fund if applicable
-                if game_state.rules.get("money_in_free_parking", False):
+                community_fund_enabled = game_state.settings.get("money_in_free_parking", False) if hasattr(game_state, 'settings') else False
+                if community_fund_enabled:
                     game_state.community_fund += amount
                 
                 result["amount"] = amount
@@ -2843,51 +2874,57 @@ class SpecialSpaceController:
                 total_collected = 0
                 collections = []
                 
-                for other_player in game_state.players:
-                    if other_player.get("id") != player_id and other_player.get("is_active", True):
-                        other_player_balance = other_player.get("balance", 0)
-                        
-                        # Check if other player has enough money
-                        payment_amount = min(amount, other_player_balance)
-                        
-                        if payment_amount > 0:
-                            other_player["balance"] -= payment_amount
-                            total_collected += payment_amount
-                            
-                            collections.append({
-                                "player_id": other_player.get("id"),
-                                "amount": payment_amount,
-                                "full_payment": payment_amount == amount
-                            })
+                # Get all active players except the current player
+                other_players = Player.query.filter(Player.id != player_id, Player.in_game == True).all()
                 
+                for other_player in other_players:
+                    other_player_balance = other_player.money
+                    
+                    # Check if other player has enough money
+                    payment_amount = min(amount, other_player_balance)
+                    
+                    if payment_amount > 0:
+                        other_player.money -= payment_amount  # Update actual player model
+                        total_collected += payment_amount
+                        
+                        collections.append({
+                            "player_id": other_player.id,
+                            "amount": payment_amount,
+                            "full_payment": payment_amount == amount
+                        })
+                
+                player.money += total_collected  # Update actual player model
                 player_state["balance"] += total_collected
                 result["total_collected"] = total_collected
                 result["collections"] = collections
                 
             elif card_type == "pay_per_building":
                 # Player pays per house and hotel
+                from src.models.property import Property
+                
                 house_fee = card.get("house_fee", 0)
                 hotel_fee = card.get("hotel_fee", 0)
                 total_fee = 0
                 property_fees = []
                 
-                # Count houses and hotels for each property
-                for space in game_state.board:
-                    if space.get("type") == "property" and space.get("owner_id") == player_id:
-                        houses = space.get("houses", 0)
-                        hotels = space.get("hotels", 0)
-                        property_fee = (houses * house_fee) + (hotels * hotel_fee)
-                        
-                        if property_fee > 0:
-                            total_fee += property_fee
-                            property_fees.append({
-                                "property_id": space.get("id"),
-                                "houses": houses,
-                                "hotels": hotels,
-                                "fee": property_fee
-                            })
+                # Count houses and hotels for each property owned by the player
+                properties = Property.query.filter_by(owner_id=player_id).all()
                 
-                player_balance = player_state.get("balance", 0)
+                for prop in properties:
+                    houses = prop.houses if hasattr(prop, 'houses') else 0
+                    hotels = prop.hotels if hasattr(prop, 'hotels') else 0
+                    property_fee = (houses * house_fee) + (hotels * hotel_fee)
+                    
+                    if property_fee > 0:
+                        total_fee += property_fee
+                        property_fees.append({
+                            "property_id": prop.id,
+                            "houses": houses,
+                            "hotels": hotels,
+                            "fee": property_fee
+                        })
+                
+                player_balance = player.money
                 
                 # Check if player has enough money
                 if player_balance < total_fee:
@@ -2896,10 +2933,12 @@ class SpecialSpaceController:
                     total_fee = player_balance
                     result["partial_payment"] = True
                 
+                player.money -= total_fee  # Update actual player model
                 player_state["balance"] -= total_fee
                 
                 # Add to community fund if applicable
-                if game_state.rules.get("money_in_free_parking", False):
+                community_fund_enabled = game_state.settings.get("money_in_free_parking", False) if hasattr(game_state, 'settings') else False
+                if community_fund_enabled:
                     game_state.community_fund += total_fee
                 
                 result["total_fee"] = total_fee
@@ -2907,29 +2946,53 @@ class SpecialSpaceController:
                 
             elif card_type == "get_out_of_jail":
                 # Player receives get out of jail free card
-                player_state["jail_free_cards"] = player_state.get("jail_free_cards", 0) + 1
+                if hasattr(player, 'jail_cards'):
+                    player.jail_cards += 1  # Update actual player model
+                    player_state["jail_cards"] = player.jail_cards
+                else:
+                    logging.warning(f"Player model does not have jail_cards attribute")
                 
             elif card_type == "go_to_jail":
                 # Player goes to jail
+                player.in_jail = True  # Update actual player model
+                player.jail_turns = 0
+                player.position = 10  # Standard jail position
+                
                 player_state["in_jail"] = True
                 player_state["jail_turns"] = 0
+                player_state["position"] = 10
                 
-                # Find the jail space and move player there
-                jail_space = next((s for s in game_state.board if s.get("type") == "jail"), None)
-                if jail_space:
-                    player_state["position"] = jail_space.get("position", 0)
-                    result["jail_position"] = player_state["position"]
+                result["jail_position"] = 10
                 
             elif card_type == "move":
-                # Movement will be handled by the move controller
-                # This just prepares the data for that controller
-                result["requires_move"] = True
-                result["card_data"] = card
+                # Movement card (e.g., Advance to GO)
+                destination = card.get("destination")
+                
+                if destination == "go":
+                    player.position = 0  # Update actual player model
+                    player_state["position"] = 0
+                    
+                    # Collect GO money if specified
+                    if card.get("collect_go", False):
+                        go_amount = 200  # Standard GO amount
+                        player.money += go_amount  # Update actual player model
+                        player_state["balance"] += go_amount
+                        result["collected_go"] = go_amount
+                    
+                    result["new_position"] = 0
+                
+                else:
+                    logging.warning(f"Unknown move destination: {destination}")
+                    result["processed"] = False
+                    result["error"] = f"Unknown move destination: {destination}"
                 
             else:
                 logging.warning(f"Unknown community chest card type: {card_type}")
                 result["processed"] = False
                 result["error"] = f"Unknown card type: {card_type}"
+            
+            # Save changes to the database
+            db.session.commit()
                 
             return result
             
@@ -2964,14 +3027,17 @@ class SpecialSpaceController:
                 logging.error(f"Player {player_id} not found")
                 return {"success": False, "error": "Player not found"}
             
-            # Get the player state
-            player_state = next((p for p in game_state.players if p.get("id") == player_id), None)
-            if not player_state:
-                logging.error(f"Player state for {player_id} not found in game {game_id}")
-                return {"success": False, "error": "Player state not found"}
+            # Create a player state from the player object instead of using game_state.players
+            player_state = {
+                "id": player.id,
+                "balance": player.money,
+                "in_jail": player.in_jail,
+                "jail_turns": player.jail_turns,
+                "jail_cards": player.jail_cards if hasattr(player, 'jail_cards') else 0
+            }
             
             # Check if player is actually in jail
-            if not player_state.get("in_jail", False):
+            if not player.in_jail:
                 logging.warning(f"Player {player_id} is not in jail but tried to use jail action")
                 return {"success": False, "error": "Player is not in jail"}
             
@@ -2980,14 +3046,15 @@ class SpecialSpaceController:
             
             if action == "pay":
                 # Pay the fine to get out of jail
-                jail_fine = game_state.rules.get("jail_fine", 50)  # Default to $50
+                jail_fine = game_state.settings.get("jail_fine", 50) if hasattr(game_state, 'settings') else 50  # Default to $50
                 
-                if player_state["balance"] >= jail_fine:
-                    player_state["balance"] -= jail_fine
-                    player_state["in_jail"] = False
+                if player.money >= jail_fine:
+                    player.money -= jail_fine
+                    player.in_jail = False
                     
                     # Add to community fund if rule is enabled
-                    if game_state.rules.get("money_in_free_parking", False):
+                    community_fund_enabled = game_state.settings.get("money_in_free_parking", False) if hasattr(game_state, 'settings') else False
+                    if community_fund_enabled:
                         game_state.community_fund += jail_fine
                     
                     message = f"Player {player.username} paid ${jail_fine} to get out of jail"
@@ -3002,17 +3069,33 @@ class SpecialSpaceController:
                         "timestamp": datetime.datetime.now().isoformat()
                     }
                     
+                    # Update game log
+                    current_log = json.loads(game_state.game_log) if hasattr(game_state, 'game_log') and game_state.game_log else []
+                    current_log.append(log_entry)
+                    if hasattr(game_state, 'game_log'):
+                        game_state.game_log = json.dumps(current_log)
+                    
                     # Update expected actions
-                    game_state.expected_actions = [{
-                        "player_id": player_id, 
-                        "action": "roll_dice"
-                    }]
+                    if hasattr(game_state, 'expected_actions'):
+                        game_state.expected_actions = [{
+                            "player_id": player_id, 
+                            "action": "roll_dice"
+                        }]
+                    else:
+                        # Use expected_action_type instead if expected_actions is not available
+                        game_state.expected_action_type = "roll_dice"
+                        game_state.expected_action_details = json.dumps({"player_id": player_id})
+                    
+                    # Save changes to database
+                    from src.models import db
+                    db.session.commit()
+                    
                 else:
                     return {
                         "success": False, 
                         "error": f"Insufficient funds to pay the jail fine of ${jail_fine}",
                         "needed": jail_fine,
-                        "balance": player_state["balance"]
+                        "balance": player.money
                     }
                 
             elif action == "use_card":
@@ -3020,12 +3103,13 @@ class SpecialSpaceController:
                 jail_cards = player_state.get("jail_cards", 0)
                 
                 if jail_cards > 0:
-                    player_state["jail_cards"] -= 1
-                    player_state["in_jail"] = False
+                    if hasattr(player, 'jail_cards'):
+                        player.jail_cards -= 1
+                    player.in_jail = False
                     
                     message = f"Player {player.username} used a Get Out of Jail Free card"
                     result["message"] = message
-                    result["remaining_cards"] = player_state["jail_cards"]
+                    result["remaining_cards"] = player.jail_cards if hasattr(player, 'jail_cards') else 0
                     
                     # Add to game log
                     log_entry = {
@@ -3034,230 +3118,94 @@ class SpecialSpaceController:
                         "timestamp": datetime.datetime.now().isoformat()
                     }
                     
+                    # Update game log
+                    current_log = json.loads(game_state.game_log) if hasattr(game_state, 'game_log') and game_state.game_log else []
+                    current_log.append(log_entry)
+                    if hasattr(game_state, 'game_log'):
+                        game_state.game_log = json.dumps(current_log)
+                    
                     # Update expected actions
-                    game_state.expected_actions = [{
-                        "player_id": player_id, 
-                        "action": "roll_dice"
-                    }]
+                    if hasattr(game_state, 'expected_actions'):
+                        game_state.expected_actions = [{
+                            "player_id": player_id, 
+                            "action": "roll_dice"
+                        }]
+                    else:
+                        # Use expected_action_type instead if expected_actions is not available
+                        game_state.expected_action_type = "roll_dice"
+                        game_state.expected_action_details = json.dumps({"player_id": player_id})
+                    
+                    # Save changes to database
+                    from src.models import db
+                    db.session.commit()
+                    
                 else:
                     return {"success": False, "error": "No Get Out of Jail Free cards available"}
                 
             elif action == "roll":
-                # Try to roll doubles
-                dice1 = random.randint(1, 6)
-                dice2 = random.randint(1, 6)
-                is_doubles = dice1 == dice2
+                # Player will attempt to roll doubles to get out of jail
+                # This action is just to verify and mark that they've attempted to use this option
                 
-                player_state["jail_turns"] = player_state.get("jail_turns", 0) + 1
-                max_jail_turns = game_state.rules.get("max_jail_turns", 3)
+                jail_turns = player.jail_turns
                 
-                if is_doubles:
-                    # Got doubles, get out of jail
-                    player_state["in_jail"] = False
-                    message = f"Player {player.username} rolled doubles ({dice1}, {dice2}) and got out of jail"
+                # Check if player has exceeded max jail turns
+                max_jail_turns = game_state.settings.get("max_jail_turns", 3) if hasattr(game_state, 'settings') else 3
+                if jail_turns >= max_jail_turns:
+                    # Force payment after max turns
+                    jail_fine = game_state.settings.get("jail_fine", 50) if hasattr(game_state, 'settings') else 50
                     
-                    # Move player position based on roll
-                    player_state["position"] = (player_state["position"] + dice1 + dice2) % len(game_state.board_config)
-                    
-                    result["message"] = message
-                    result["dice"] = [dice1, dice2]
-                    result["doubles"] = True
-                    result["position"] = player_state["position"]
-                    
-                    # Add to game log
-                    log_entry = {
-                        "type": "jail_roll_success",
-                        "player_id": player_id,
-                        "dice": [dice1, dice2],
-                        "position": player_state["position"],
-                        "timestamp": datetime.datetime.now().isoformat()
-                    }
-                    
-                    # Check what the player landed on and set expected actions accordingly
-                    space = next((s for s in game_state.board_config if s.get("position") == player_state["position"]), None)
-                    if space:
-                        space_type = space.get("type")
-                        result["space_type"] = space_type
+                    if player.money >= jail_fine:
+                        player.money -= jail_fine
+                        player.in_jail = False
                         
-                        # Set expected actions based on space type
-                        if space_type in ["property", "railroad", "utility"]:
-                            if space.get("owner_id") is None:
-                                game_state.expected_actions = [{
-                                    "player_id": player_id,
-                                    "action": "buy_property",
-                                    "property_id": space.get("id"),
-                                    "options": ["buy", "auction"]
-                                }]
-                            else:
-                                game_state.expected_actions = [{
-                                    "player_id": player_id,
-                                    "action": "end_turn"
-                                }]
-                        elif space_type == "tax":
-                            game_state.expected_actions = [{
-                                "player_id": player_id,
-                                "action": "pay_tax",
-                                "tax_id": space.get("id")
-                            }]
-                        elif space_type == "chance":
-                            game_state.expected_actions = [{
-                                "player_id": player_id,
-                                "action": "draw_chance"
-                            }]
-                        elif space_type == "community_chest":
-                            game_state.expected_actions = [{
-                                "player_id": player_id,
-                                "action": "draw_community_chest"
-                            }]
-                        elif space_type == "go_to_jail":
-                            # Send player to jail
-                            return self.handle_go_to_jail(game_id, player_id)
-                        else:
-                            game_state.expected_actions = [{
-                                "player_id": player_id,
-                                "action": "end_turn"
-                            }]
-                    
-                elif player_state["jail_turns"] >= max_jail_turns:
-                    # Max jail turns reached, must pay to get out
-                    jail_fine = game_state.rules.get("jail_fine", 50)
-                    
-                    if player_state["balance"] >= jail_fine:
-                        player_state["balance"] -= jail_fine
-                        player_state["in_jail"] = False
-                        
-                        # Add to community fund if rule is enabled
-                        if game_state.rules.get("money_in_free_parking", False):
-                            game_state.community_fund += jail_fine
-                        
-                        message = f"Player {player.username} spent {max_jail_turns} turns in jail and was forced to pay ${jail_fine}"
-                        
-                        # Roll and move player
-                        player_state["position"] = (player_state["position"] + dice1 + dice2) % len(game_state.board_config)
-                        
+                        message = f"Player {player.username} paid ${jail_fine} after maximum jail turns"
                         result["message"] = message
-                        result["dice"] = [dice1, dice2]
-                        result["forced_pay"] = True
+                        result["forced_payment"] = True
                         result["amount"] = jail_fine
-                        result["position"] = player_state["position"]
-                        
-                        # Add to game log
-                        log_entry = {
-                            "type": "jail_forced_pay",
-                            "player_id": player_id,
-                            "amount": jail_fine,
-                            "dice": [dice1, dice2],
-                            "position": player_state["position"],
-                            "timestamp": datetime.datetime.now().isoformat()
-                        }
-                        
-                        # Set expected actions based on the space landed on (same logic as above)
-                        space = next((s for s in game_state.board_config if s.get("position") == player_state["position"]), None)
-                        if space:
-                            space_type = space.get("type")
-                            result["space_type"] = space_type
-                            
-                            # Set expected actions based on space type (same logic as above)
-                            if space_type in ["property", "railroad", "utility"]:
-                                if space.get("owner_id") is None:
-                                    game_state.expected_actions = [{
-                                        "player_id": player_id,
-                                        "action": "buy_property",
-                                        "property_id": space.get("id"),
-                                        "options": ["buy", "auction"]
-                                    }]
-                                else:
-                                    game_state.expected_actions = [{
-                                        "player_id": player_id,
-                                        "action": "end_turn"
-                                    }]
-                            elif space_type == "tax":
-                                game_state.expected_actions = [{
-                                    "player_id": player_id,
-                                    "action": "pay_tax",
-                                    "tax_id": space.get("id")
-                                }]
-                            elif space_type == "chance":
-                                game_state.expected_actions = [{
-                                    "player_id": player_id,
-                                    "action": "draw_chance"
-                                }]
-                            elif space_type == "community_chest":
-                                game_state.expected_actions = [{
-                                    "player_id": player_id,
-                                    "action": "draw_community_chest"
-                                }]
-                            elif space_type == "go_to_jail":
-                                # Send player to jail
-                                return self.handle_go_to_jail(game_id, player_id)
-                            else:
-                                game_state.expected_actions = [{
-                                    "player_id": player_id,
-                                    "action": "end_turn"
-                                }]
                     else:
-                        # Can't pay and at max turns - would trigger bankruptcy process
-                        result["success"] = False
-                        result["error"] = f"Insufficient funds to pay the mandatory jail fine of ${jail_fine}"
-                        result["needs_bankruptcy_check"] = True
-                        result["dice"] = [dice1, dice2]
-                        result["jail_turns"] = player_state["jail_turns"]
-                        result["max_jail_turns"] = max_jail_turns
-                        
-                        # Add to game log
-                        log_entry = {
-                            "type": "jail_bankrupt",
-                            "player_id": player_id,
-                            "needed": jail_fine,
-                            "balance": player_state["balance"],
-                            "timestamp": datetime.datetime.now().isoformat()
-                        }
+                        # Handle bankruptcy case
+                        message = f"Player {player.username} cannot afford jail fine after maximum jail turns"
+                        result["message"] = message
+                        result["bankruptcy"] = True
                 else:
-                    # Failed to roll doubles and still have turns left
-                    message = f"Player {player.username} rolled ({dice1}, {dice2}) and stays in jail. {max_jail_turns - player_state['jail_turns']} attempts remaining"
+                    # Increment jail turns
+                    player.jail_turns += 1
+                    
+                    message = f"Player {player.username} will roll for jail release (turn {player.jail_turns}/{max_jail_turns})"
                     result["message"] = message
-                    result["dice"] = [dice1, dice2]
-                    result["jail_turns"] = player_state["jail_turns"]
-                    result["remaining_turns"] = max_jail_turns - player_state["jail_turns"]
-                    
-                    # Add to game log
-                    log_entry = {
-                        "type": "jail_roll_fail",
-                        "player_id": player_id,
-                        "dice": [dice1, dice2],
-                        "jail_turns": player_state["jail_turns"],
-                        "remaining_turns": max_jail_turns - player_state["jail_turns"],
-                        "timestamp": datetime.datetime.now().isoformat()
-                    }
-                    
-                    # Update expected actions
+                    result["jail_turns"] = player.jail_turns
+                    result["max_jail_turns"] = max_jail_turns
+                
+                # Update expected actions to roll dice
+                if hasattr(game_state, 'expected_actions'):
                     game_state.expected_actions = [{
-                        "player_id": player_id,
-                        "action": "end_turn"
+                        "player_id": player_id, 
+                        "action": "roll_dice",
+                        "jail_roll": True
                     }]
+                else:
+                    # Use expected_action_type instead if expected_actions is not available
+                    game_state.expected_action_type = "roll_dice"
+                    game_state.expected_action_details = json.dumps({
+                        "player_id": player_id,
+                        "jail_roll": True
+                    })
+                
+                # Save changes to database
+                from src.models import db
+                db.session.commit()
+                
             else:
-                return {"success": False, "error": f"Invalid jail action: {action}"}
-            
-            # Update game log
-            current_log = json.loads(game_state.game_log) if game_state.game_log else []
-            current_log.append(log_entry)
-            game_state.game_log = json.dumps(current_log)
-            
-            # Commit changes to the database
-            db.session.commit()
+                return {"success": False, "error": f"Unknown jail action: {action}"}
             
             # Emit an event to notify clients
-            self.socketio.emit('jail_action', {
-                'game_id': game_id,
-                'player_id': player_id,
-                'action': action,
-                'result': result
-            }, room=game_id)
+            if self.socketio:
+                self.socketio.emit('jail_action', result, room=game_id)
             
             return result
             
         except Exception as e:
-            logging.error(f"Error processing jail action: {str(e)}")
+            logging.error(f"Error handling jail action: {str(e)}")
             return {"success": False, "error": str(e)}
 
     def handle_free_parking_space(self, game_id, player_id):
