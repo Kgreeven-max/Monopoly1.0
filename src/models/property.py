@@ -651,4 +651,15 @@ class Property(db.Model):
                 "missing_requirements": missing_requirements
             }
         
-        return {"requirements_met": True, "message": "All requirements met for development"} 
+        return {"requirements_met": True, "message": "All requirements met for development"}
+
+    @property
+    def improvement_level(self):
+        """Get the property's improvement level based on houses and hotel.
+        
+        Returns:
+            int: 0 for no improvements, 1-4 for houses, 5 for hotel
+        """
+        if self.hotel:
+            return 5
+        return self.houses 
