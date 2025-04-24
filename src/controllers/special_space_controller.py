@@ -19,17 +19,19 @@ from src.models.property import Property
 class SpecialSpaceController:
     """Controller for managing special spaces and card actions"""
     
-    def __init__(self, socketio=None, game_controller=None, economic_controller=None):
+    def __init__(self, socketio=None, game_controller=None, economic_controller=None, board_controller=None):
         """Initialize special space controller
         
         Args:
             socketio: Flask-SocketIO instance for real-time communication
             game_controller: GameController instance for game state management
             economic_controller: EconomicCycleController instance for economic effects
+            board_controller: BoardController instance for board management
         """
         self.socketio = socketio
         self.game_controller = game_controller
         self.economic_controller = economic_controller
+        self.board_controller = board_controller
         
         # Initialize card decks
         self.chance_deck = CardDeck("chance", socketio, None, None)

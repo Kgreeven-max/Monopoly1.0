@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 def register_board_routes(app):
     """Register board-related routes with the Flask app"""
     board_controller = BoardController()
+    app.config['board_controller'] = board_controller
     
     @app.route('/api/board/state', methods=['GET'])
     @display_required

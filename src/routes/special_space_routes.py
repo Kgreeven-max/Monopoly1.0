@@ -24,9 +24,15 @@ def register_special_space_routes(app):
     community_fund = app.config.get('community_fund')
     socketio = app.config.get('socketio')
     economic_controller = app.config.get('economic_controller')
+    board_controller = app.config.get('board_controller')
     
     # Create special space controller
-    special_space_controller = SpecialSpaceController(socketio=socketio, game_controller=None, economic_controller=economic_controller)
+    special_space_controller = SpecialSpaceController(
+        socketio=socketio, 
+        game_controller=None, 
+        economic_controller=economic_controller,
+        board_controller=board_controller
+    )
     app.config['special_space_controller'] = special_space_controller
     
     # Get routes
