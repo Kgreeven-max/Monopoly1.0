@@ -1,6 +1,7 @@
 from datetime import datetime
 import random
 import logging
+from flask import current_app
 from .. import db # Relative import for db
 from ..player import Player # Relative import for Player
 from ..property import Property # Relative import for Property
@@ -11,6 +12,8 @@ from ..bot_events.base_event import BotEvent
 from ...services.bot_action_handler import BotActionHandler 
 # New import for the decision maker
 from ...logic.bot_decision_maker import BotDecisionMaker
+# Import finance controller
+from ...controllers.finance_controller import FinanceController
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +121,38 @@ class BotPlayer:
         if event_action:
             logger.info(f"Bot {self.player_id} triggered special event: {event_action.get('event', {}).get('name', 'Unknown')}")
             actions.append(event_action)
+        
+        # Consider taking a loan based on financial situation
+        if random.random() < 0.3:  # 30% chance to consider a loan each turn
+            loan_decision = self.decision_maker.decide_take_loan()
+            
+            if loan_decision.get('take_loan', False) and loan_decision.get('loan_amount', 0) > 0:
+                logger.info(f"Bot {self.player_id} deciding to take a loan of ${loan_decision['loan_amount']}. Reason: {loan_decision['reason']}")
+                
+                # Execute the loan application
+                try:
+                    finance_controller = current_app.config.get('finance_controller')
+                    if finance_controller:
+                        loan_result = finance_controller.create_loan(
+                            player_id=self.player_id,
+                            pin=self.player.pin,
+                            amount=loan_decision['loan_amount']
+                        )
+                        
+                        if loan_result.get('success', False):
+                            logger.info(f"Bot {self.player_id} successfully took a loan of ${loan_decision['loan_amount']}")
+                            actions.append({
+                                "action": "took_loan",
+                                "amount": loan_decision['loan_amount'],
+                                "loan_id": loan_result.get('loan', {}).get('id'),
+                                "reason": loan_decision['reason']
+                            })
+                        else:
+                            logger.warning(f"Bot {self.player_id} loan application failed: {loan_result.get('error', 'Unknown error')}")
+                    else:
+                        logger.warning(f"Bot {self.player_id} could not take loan: Finance controller not available")
+                except Exception as e:
+                    logger.error(f"Error while Bot {self.player_id} was taking a loan: {str(e)}")
         
         # TODO: Add calls to decision maker for property management (mortgage, build houses)
         # property_management_actions = self.decision_maker.manage_properties()

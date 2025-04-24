@@ -187,6 +187,96 @@ class BotDecisionMaker:
         logger.debug(f"Auction bid decision for {property_obj.name}: Bid {final_bid}. Reason: {reason}")
         return {"bid_amount": final_bid, "reason": reason}
 
+    def decide_take_loan(self, cash_needed: int = 0):
+        """Decide whether to take a loan and for how much.
+        
+        Args:
+            cash_needed: Optional amount of cash needed for immediate expenses.
+                         If 0, bot decides based on general financial situation.
+        
+        Returns:
+            Dictionary with loan decision and parameters
+        """
+        logger.debug(f"Player {self.player.id} considering taking a loan. Cash needed: {cash_needed}")
+        
+        # Check current cash and property assets
+        current_cash = self.player.cash
+        owned_properties = Property.query.filter_by(owner_id=self.player.id).all()
+        property_value = sum(prop.current_price for prop in owned_properties)
+        net_worth = current_cash + property_value
+        
+        # If no properties, don't take a loan
+        if len(owned_properties) == 0:
+            return {
+                "take_loan": False,
+                "reason": "No properties to secure loan"
+            }
+        
+        # Calculate maximum viable loan amount (80% of net worth)
+        max_loan_amount = int(net_worth * 0.8)
+        
+        # Determine if loan is needed and for how much
+        loan_amount = 0
+        take_loan = False
+        reason = ""
+        
+        if cash_needed > 0:
+            # Specific need case
+            if current_cash >= cash_needed:
+                # No loan needed
+                take_loan = False
+                reason = f"Sufficient cash available (${current_cash})"
+            else:
+                # Take loan for the shortfall plus buffer
+                shortfall = cash_needed - current_cash
+                buffer = int(shortfall * 0.5)  # Add 50% buffer
+                loan_amount = min(shortfall + buffer, max_loan_amount)
+                take_loan = True
+                reason = f"Need ${shortfall} with buffer (total: ${loan_amount})"
+        else:
+            # General financial strategy case
+            # Higher risk tolerance -> more likely to take opportunistic loans
+            if current_cash < 200 and property_value > 500:
+                # Low cash situation
+                loan_amount = min(300, max_loan_amount)
+                take_loan = random.random() < self.risk_tolerance
+                reason = f"Low cash situation (${current_cash}), risk assessment: {take_loan}"
+            elif self.risk_tolerance > 0.7 and len(owned_properties) >= 3:
+                # Strategic loan for expansion (high risk bot)
+                loan_amount = min(500, max_loan_amount)
+                take_loan = random.random() < (self.risk_tolerance - 0.5)
+                reason = f"Strategic expansion opportunity, risk assessment: {take_loan}"
+        
+        # Apply difficulty factor
+        if self.difficulty == 'hard':
+            # Hard bots make better loan decisions
+            if take_loan and loan_amount > max_loan_amount * 0.7:
+                # Reduce loan amount to safer level
+                loan_amount = int(max_loan_amount * 0.7)
+                reason += f" (adjusted to safer amount: ${loan_amount})"
+        elif self.difficulty == 'easy':
+            # Easy bots might take excessive loans
+            if take_loan and random.random() < 0.3:
+                loan_amount = int(max_loan_amount * 0.9)
+                reason += f" (easy bot taking larger loan: ${loan_amount})"
+        
+        # Decision accuracy factor - chance to make a random decision
+        if random.random() > self.decision_accuracy:
+            # Make a random loan decision
+            prev_decision = take_loan
+            take_loan = random.random() < 0.5
+            if take_loan != prev_decision:
+                reason += f" (Accuracy deviation, original decision: {prev_decision})"
+                if take_loan and loan_amount == 0:
+                    loan_amount = min(200, max_loan_amount)
+        
+        return {
+            "take_loan": take_loan,
+            "loan_amount": loan_amount if take_loan else 0,
+            "max_loan_amount": max_loan_amount,
+            "reason": reason
+        }
+
     # TODO: Add other decision methods as needed:
     # - decide_mortgage_property(property_obj)
     # - decide_unmortgage_property(property_obj)

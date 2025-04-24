@@ -1301,11 +1301,11 @@ class SpecialSpaceController:
                     if community_fund:
                         community_fund.add_funds(tax_amount, f"Tax payment: {tax_space.name}")
                     else:
-                        # Fall back to game state settings
-                        settings = game_state.settings or {}
-                        current_fund = settings.get("community_fund", 0)
-                        settings["community_fund"] = current_fund + tax_amount
-                        game_state.settings = settings
+                        # Fall back to updating game state directly
+                        game_state.community_fund += tax_amount
+                        # Ensure community_fund_enabled is set to true
+                        if not hasattr(game_state, 'community_fund_enabled'):
+                            game_state.community_fund_enabled = True
                         db.session.add(game_state)
                     
                     db.session.commit()
@@ -2542,15 +2542,24 @@ class SpecialSpaceController:
             total_paid = 0
             recipients = []
             
-            for p in game_state.players:
-                if p.get("id") != player_id and p.get("active", True):
+            # Get all players from the database
+            other_players = game_state.get_players()
+            
+            for p in other_players:
+                if p.id != player_id and hasattr(p, 'active') and p.active:
                     # Pay to this player
-                    p["balance"] += amount
+                    p.money += amount
                     total_paid += amount
-                    recipients.append({"player_id": p.get("id"), "amount": amount})
+                    recipients.append({"player_id": p.id, "amount": amount})
+                    db.session.add(p)
             
             # Deduct total from current player
+            player.money -= total_paid
+            db.session.add(player)
+            
+            # Update the player state for the return value
             player_state["balance"] -= total_paid
+            
             result["amount_per_player"] = amount
             result["total_paid"] = total_paid
             result["recipients"] = recipients
@@ -2592,7 +2601,12 @@ class SpecialSpaceController:
             result["new_balance"] = player_state.get("balance")
             
             # Add money to community fund if configured
-            if game_state.community_fund_enabled:
+            if hasattr(game_state, 'community_fund_enabled') and game_state.community_fund_enabled:
+                game_state.community_fund += total_cost
+                result["community_fund"] = game_state.community_fund
+            else:
+                # Ensure community_fund_enabled attribute exists and set to True
+                game_state.community_fund_enabled = True
                 game_state.community_fund += total_cost
                 result["community_fund"] = game_state.community_fund
             

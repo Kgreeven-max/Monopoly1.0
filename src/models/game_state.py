@@ -16,6 +16,7 @@ class GameState(db.Model):
     current_lap = db.Column(db.Integer, default=0)
     total_laps = db.Column(db.Integer, default=0)  # For limited-lap games
     community_fund = db.Column(db.Integer, default=0)
+    community_fund_enabled = db.Column(db.Boolean, default=True)  # Enable community fund feature
     inflation_state = db.Column(db.String(20), default='stable')  # stable, inflation, deflation, recession, boom
     inflation_factor = db.Column(db.Float, default=1.0)
     inflation_rate = db.Column(db.Float, default=0.03)  # Added missing attribute
@@ -136,6 +137,7 @@ class GameState(db.Model):
             'total_laps': self.total_laps,
             'turn_number': self.turn_number,
             'community_fund': self.community_fund,
+            'community_fund_enabled': self.community_fund_enabled,
             'inflation_state': self.inflation_state,
             'inflation_factor': self.inflation_factor,
             'inflation_rate': self.inflation_rate,
@@ -311,6 +313,7 @@ class GameState(db.Model):
         self.current_lap = 0
         self.total_laps = 0
         self.community_fund = 0
+        self.community_fund_enabled = True  # Make sure this is enabled by default
         self.inflation_state = 'stable'
         self.inflation_factor = 1.0
         self.inflation_rate = 0.03
@@ -383,5 +386,29 @@ class GameState(db.Model):
         except Exception as e:
             logger.error(f"Error refreshing game state: {str(e)}", exc_info=True)
             return False
+
+    def get_players(self):
+        """Get all players in the current game
+        
+        Returns:
+            List of player objects from the database
+        """
+        try:
+            from src.models.player import Player
+            
+            if not self.player_order:
+                return []
+                
+            player_ids = [int(pid) for pid in self.player_order.split(',') if pid]
+            players = Player.query.filter(Player.id.in_(player_ids)).all()
+            
+            # Sort players according to player_order
+            player_dict = {player.id: player for player in players}
+            sorted_players = [player_dict.get(pid) for pid in player_ids if pid in player_dict]
+            
+            return sorted_players
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Error getting players: {str(e)}")
+            return []
 
 # End of GameState class 
