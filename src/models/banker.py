@@ -14,7 +14,19 @@ class Banker:
     def __init__(self, socketio):
         self.socketio = socketio # Store socketio instance
         self.logger = logging.getLogger("banker")
+        self._balance = 15000  # Initial bank balance
         self.logger.info("Banker initialized.")
+        
+    @property
+    def balance(self):
+        """Get the current bank balance"""
+        return self._balance
+        
+    def set_balance(self, amount):
+        """Set the bank balance"""
+        self._balance = amount
+        self.logger.info(f"Bank balance set to ${amount}")
+        return self._balance
         
     def player_pays_bank(self, player_id: int, amount: int, description: str) -> dict:
         """Process a payment from a player to the bank."""
@@ -33,6 +45,7 @@ class Banker:
             
         try:
             player.money -= amount
+            self._balance += amount  # Update bank balance
             db.session.add(player)
             db.session.commit()
             self.logger.info(f"Player {player_id} paid ${amount} to the bank for '{description}'. New balance: ${player.money}")
@@ -55,6 +68,7 @@ class Banker:
             
         try:
             player.money += amount
+            self._balance -= amount  # Update bank balance
             db.session.add(player)
             db.session.commit()
             self.logger.info(f"Bank paid ${amount} to player {player_id} for '{description}'. New balance: ${player.money}")
@@ -91,6 +105,12 @@ class Banker:
         try:
             from_player.money -= amount
             to_player.money += amount
+            
+            # Bank reserves don't change on direct player-to-player transfers
+            # But we still want to track the transaction for accounting purposes
+            # The line below is optional; it enables the banker to track the volume of money flowing between players
+            # self._transaction_volume += amount
+            
             db.session.add(from_player)
             db.session.add(to_player)
             db.session.commit()

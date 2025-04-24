@@ -1504,7 +1504,7 @@
         
         // Finance - Refresh financial overview
         function refreshFinancialOverview() {
-            console.log('Refreshing financial overview...');
+            console.log('Loading financial overview...');
             
             fetch('/api/admin/finance/overview', {
                 method: 'GET',
@@ -1520,80 +1520,44 @@
             })
             .then(data => {
                 if (data.success) {
-                    // Update financial stats
-                    const statsElement = safeGetElement('finance-stats');
-                    if (statsElement) {
-                        // Check if stats exists before trying to access properties
-                        const stats = data.stats || {};
-                        
-                        let statsHtml = `
-                            <table class="table">
-                                <tr><th>Total Money in Game:</th><td>$${stats.total_money || 0}</td></tr>
-                                <tr><th>Bank Reserves:</th><td>$${stats.bank_reserves || 0}</td></tr>
-                                <tr><th>Player Holdings:</th><td>$${stats.player_holdings || 0}</td></tr>
-                                <tr><th>Community Fund:</th><td>$${stats.community_fund || 0}</td></tr>
-                                <tr><th>Total Active Loans:</th><td>$${stats.loans_total || 0}</td></tr>
-                            </table>
-                        `;
-                        statsElement.innerHTML = statsHtml;
-                    }
+                    // Update financial stats in the UI
+                    document.getElementById('total-money-game').textContent = '$' + data.stats.total_money;
+                    document.getElementById('bank-reserves').textContent = '$' + data.stats.bank_reserves;
+                    document.getElementById('player-holdings').textContent = '$' + data.stats.player_holdings;
+                    document.getElementById('community-fund').textContent = '$' + data.stats.community_fund;
+                    document.getElementById('total-active-loans').textContent = '$' + data.stats.loans_total;
                     
                     // Update interest rates
-                    const ratesElement = safeGetElement('interest-rates');
-                    if (ratesElement) {
-                        // Check if rates exists before trying to access properties
-                        const rates = data.rates || {};
-                        
-                        if (rates && rates.rates) {
-                            let ratesHtml = `
-                                <p><strong>Economic State:</strong> ${loadFinancialData({ economic_state: rates.economic_state }).economic_state}</p>
-                                <p><strong>Base Rate:</strong> ${(rates.base_rate * 100).toFixed(1)}%</p>
-                                <h6>Loan Rates:</h6>
-                                <ul>
-                                    <li>Standard: ${(rates.rates.loan.standard * 100).toFixed(1)}%</li>
-                                    <li>Good Credit: ${(rates.rates.loan.good_credit * 100).toFixed(1)}%</li>
-                                    <li>Poor Credit: ${(rates.rates.loan.poor_credit * 100).toFixed(1)}%</li>
-                                </ul>
-                                <h6>CD Rates:</h6>
-                                <ul>
-                                    <li>Short Term (3 laps): ${(rates.rates.cd.short_term * 100).toFixed(1)}%</li>
-                                    <li>Medium Term (5 laps): ${(rates.rates.cd.medium_term * 100).toFixed(1)}%</li>
-                                    <li>Long Term (7 laps): ${(rates.rates.cd.long_term * 100).toFixed(1)}%</li>
-                                </ul>
-                            `;
-                            ratesElement.innerHTML = ratesHtml;
-                        } else {
-                            ratesElement.innerHTML = '<p>No interest rate data available</p>';
-                        }
+                    // First try to use formatted rates, then fall back to calculating percentages from rates
+                    if (data.formatted_rates) {
+                        document.getElementById('base-interest-rate').textContent = data.formatted_rates.base_interest_rate;
+                        document.getElementById('loan-rate').textContent = data.formatted_rates.loan_rate;
+                        document.getElementById('savings-rate').textContent = data.formatted_rates.savings_rate;
+                        document.getElementById('mortgage-rate').textContent = data.formatted_rates.mortgage_rate;
+                    } else if (data.rates) {
+                        document.getElementById('base-interest-rate').textContent = (data.rates.base_rate * 100).toFixed(2) + '%';
+                        document.getElementById('loan-rate').textContent = (data.rates.rates.loan.standard * 100).toFixed(2) + '%';
+                        document.getElementById('savings-rate').textContent = (data.rates.rates.cd.medium_term * 100).toFixed(2) + '%';
+                        document.getElementById('mortgage-rate').textContent = (data.rates.rates.heloc * 100).toFixed(2) + '%';
+                    } else {
+                        // Default values if no rates are available
+                        document.getElementById('base-interest-rate').textContent = '5.00%';
+                        document.getElementById('loan-rate').textContent = '6.50%';
+                        document.getElementById('savings-rate').textContent = '4.00%';
+                        document.getElementById('mortgage-rate').textContent = '5.50%';
                     }
                 } else {
-                    console.error('Failed to fetch finance overview:', data.error);
-                    
-                    // Safely update DOM elements only if they exist
-                    const statsElement = safeGetElement('finance-stats');
-                    if (statsElement) {
-                        statsElement.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
-                    }
-                    
-                    const ratesElement = safeGetElement('interest-rates');
-                    if (ratesElement) {
-                        ratesElement.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
-                    }
+                    console.error('Failed to load financial overview:', data.error);
+                    // Show error in UI
+                    document.getElementById('financial-overview-error').textContent = 'Error: ' + data.error;
+                    document.getElementById('financial-overview-error').style.display = 'block';
                 }
             })
             .catch(error => {
-                console.error('Error fetching finance overview:', error);
-                
-                // Safely update DOM elements only if they exist
-                const statsElement = safeGetElement('finance-stats');
-                if (statsElement) {
-                    statsElement.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
-                }
-                
-                const ratesElement = safeGetElement('interest-rates');
-                if (ratesElement) {
-                    ratesElement.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
-                }
+                console.error('Error loading financial overview:', error);
+                // Show error in UI
+                document.getElementById('financial-overview-error').textContent = 'Error: ' + error.message;
+                document.getElementById('financial-overview-error').style.display = 'block';
             });
         }
         

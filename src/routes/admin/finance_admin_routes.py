@@ -580,8 +580,12 @@ def get_financial_overview():
         if community_fund:
             if hasattr(community_fund, 'balance'):
                 community_fund_balance = community_fund.balance
+            elif hasattr(community_fund, 'funds'):
+                community_fund_balance = community_fund.funds
             elif hasattr(community_fund, 'get_balance'):
                 community_fund_balance = community_fund.get_balance()
+            elif hasattr(community_fund, '_funds'): # Direct access to internal attribute
+                community_fund_balance = community_fund._funds
             elif hasattr(community_fund, 'fund_balance'):
                 community_fund_balance = community_fund.fund_balance
             elif hasattr(community_fund, 'amount'):
@@ -589,6 +593,10 @@ def get_financial_overview():
             # Add fallback for free_parking_fund in game_state
             elif game_state and hasattr(game_state, 'free_parking_fund'):
                 community_fund_balance = game_state.free_parking_fund
+        
+        # Fallback to game state settings
+        if community_fund_balance == 0 and game_state and hasattr(game_state, 'settings'):
+            community_fund_balance = game_state.settings.get("community_fund", 0)
 
         # Count active loans
         active_loans = Loan.query.filter_by(is_active=True).count()
@@ -654,10 +662,27 @@ def get_financial_overview():
             }
         }
         
+        # Format rates for display
+        formatted_rates = {
+            "base_interest_rate": f"{(base_rate * 100):.2f}%",
+            "loan_rate": f"{((base_rate + modifier + 0.02) * 100):.2f}%",
+            "savings_rate": f"{(base_rate * 100):.2f}%",
+            "mortgage_rate": f"{((base_rate + 0.03) * 100):.2f}%"
+        }
+        
+        # Try to get formatted rates from finance controller
+        finance_controller = get_finance_controller()
+        if finance_controller and hasattr(finance_controller, 'format_interest_rates_for_display'):
+            try:
+                formatted_rates = finance_controller.format_interest_rates_for_display()
+            except Exception as e:
+                logger.warning(f"Could not get formatted rates from finance controller: {e}")
+        
         return jsonify({
             "success": True,
             "stats": stats,
-            "rates": rates
+            "rates": rates,
+            "formatted_rates": formatted_rates
         })
         
     except Exception as e:

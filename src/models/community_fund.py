@@ -27,6 +27,11 @@ class CommunityFund:
         """Get the current community fund amount"""
         return self._funds
     
+    @property
+    def balance(self) -> int:
+        """Alias for funds to maintain compatibility with admin dashboard"""
+        return self._funds
+    
     def add_funds(self, amount: int, reason: str = "General contribution") -> int:
         """Add funds to the community fund
         

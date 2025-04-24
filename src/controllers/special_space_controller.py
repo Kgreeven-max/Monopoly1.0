@@ -1233,88 +1233,108 @@ class SpecialSpaceController:
 
     def handle_tax_space(self, game_id, player_id, tax_space_id):
         """
-        Handles when a player lands on a tax space.
+        Handle player landing on a tax space (Income Tax or Luxury Tax).
         
         Args:
-            game_id (str): The ID of the game.
-            player_id (str): The ID of the player who landed on the space.
-            tax_space_id (str): The ID of the tax space.
+            game_id (str): Game ID
+            player_id (str): Player ID
+            tax_space_id (str): ID of the tax space
             
         Returns:
-            dict: A dictionary with success status and relevant information.
+            dict: Results of the tax processing
         """
         try:
-            logging.info(f"Player {player_id} landed on Tax Space {tax_space_id} in game {game_id}")
+            logging.info(f"Player {player_id} landed on tax space {tax_space_id} in game {game_id}")
             
-            # Get the game state and validate it exists
+            # Get the necessary objects
             game_state = GameState.query.get(game_id)
-            if not game_state:
-                logging.error(f"Game {game_id} not found")
-                return {"success": False, "error": "Game not found"}
-            
-            # Get the player and validate they exist
             player = Player.query.get(player_id)
-            if not player:
-                logging.error(f"Player {player_id} not found")
-                return {"success": False, "error": "Player not found"}
-            
-            # Get the tax space details
             tax_space = SpecialSpace.query.get(tax_space_id)
-            if not tax_space:
-                logging.error(f"Tax space {tax_space_id} not found")
-                return {"success": False, "error": "Tax space not found"}
             
-            # Get tax space configuration
-            tax_config = tax_space.config or {}
-            tax_type = tax_config.get("tax_type", "income")  # income or luxury
-            tax_rate = tax_config.get("tax_rate", 0.10)      # Default 10%
-            flat_amount = tax_config.get("flat_amount", 200) # Default $200
+            if not all([game_state, player, tax_space]):
+                missing = []
+                if not game_state: missing.append("Game")
+                if not player: missing.append("Player")
+                if not tax_space: missing.append("Tax space")
+                
+                error_msg = f"Missing required objects: {', '.join(missing)}"
+                logging.error(error_msg)
+                return {"success": False, "error": error_msg}
             
-            # Get player's net worth and current balance
-            player_balance = self.finance_controller.get_balance(player_id)
+            # Parse tax data
+            tax_config = json.loads(tax_space.action_data) if tax_space.action_data else {}
+            tax_type = tax_config.get("tax_type", "fixed")
             
-            # Calculate tax amount based on tax type
+            # Calculate tax amount
+            player_balance = player.money
             tax_amount = 0
-            if tax_type == "income":
-                # Income tax can be either flat amount or percentage of assets
-                if tax_config.get("allow_choice", False):
-                    # Player chooses between flat amount and percentage
-                    # For this implementation, we'll choose the lower amount
-                    percentage_amount = int(player_balance * tax_rate)
-                    tax_amount = min(flat_amount, percentage_amount)
-                else:
-                    # Use the configured flat amount
-                    tax_amount = flat_amount
-            elif tax_type == "luxury":
-                # Luxury tax is typically a flat amount
-                tax_amount = flat_amount
             
-            # Make sure we don't tax more than the player has
+            if tax_type == "fixed":
+                tax_amount = tax_config.get("amount", 200)
+                # Limit to player's balance to avoid bankruptcy
+                tax_amount = min(tax_amount, player_balance)
+            elif tax_type == "percentage":
+                percentage = tax_config.get("percentage", 10)
+                tax_amount = int(player_balance * (percentage / 100))
+            elif tax_type == "income":
+                # Income tax: 10% or $200, whichever is lower
+                percentage_amount = int(player_balance * 0.1)
+                tax_amount = min(percentage_amount, 200)
+            
+            # Ensure tax amount doesn't exceed player's balance
             tax_amount = min(tax_amount, player_balance)
             
             # Process the tax payment
             if tax_amount > 0:
-                # Remove funds from player
-                payment_result = self.finance_controller.remove_funds(player_id, tax_amount)
-                
-                if not payment_result["success"]:
-                    # Handle insufficient funds
-                    logging.warning(f"Player {player_id} has insufficient funds to pay ${tax_amount} tax")
-                    return {
-                        "success": False,
-                        "message": f"Insufficient funds to pay ${tax_amount} tax",
-                        "trigger_bankruptcy": True,
-                        "tax_amount": tax_amount
-                    }
-                
-                # Add to community fund if configured
-                add_to_community_fund = game_state.get_settings().get("taxes_to_community_fund", True)
-                if add_to_community_fund:
-                    current_fund = game_state.get_community_fund()
-                    game_state.set_community_fund(current_fund + tax_amount)
+                # Get the finance controller
+                finance_controller = self.app_config.get('finance_controller')
+                if not finance_controller:
+                    # Fall back to basic payment
+                    player.money -= tax_amount
+                    db.session.add(player)
                     
-                    # Commit the updated game state
-                    self.game_controller.update_game_state(game_id, game_state)
+                    # Add to community fund
+                    community_fund = self.app_config.get('community_fund')
+                    if community_fund:
+                        community_fund.add_funds(tax_amount, f"Tax payment: {tax_space.name}")
+                    else:
+                        # Fall back to game state settings
+                        settings = game_state.settings or {}
+                        current_fund = settings.get("community_fund", 0)
+                        settings["community_fund"] = current_fund + tax_amount
+                        game_state.settings = settings
+                        db.session.add(game_state)
+                    
+                    db.session.commit()
+                else:
+                    # Use finance controller
+                    payment_result = finance_controller.remove_funds(player_id, tax_amount)
+                    
+                    if not payment_result["success"]:
+                        # Handle insufficient funds
+                        logging.warning(f"Player {player_id} has insufficient funds to pay ${tax_amount} tax")
+                        return {
+                            "success": False,
+                            "message": f"Insufficient funds to pay ${tax_amount} tax",
+                            "trigger_bankruptcy": True,
+                            "tax_amount": tax_amount
+                        }
+                    
+                    # Add to community fund if configured
+                    add_to_community_fund = game_state.get_settings().get("taxes_to_community_fund", True)
+                    if add_to_community_fund:
+                        # Try direct community fund first
+                        community_fund = self.app_config.get('community_fund')
+                        if community_fund:
+                            community_fund.add_funds(tax_amount, f"Tax payment: {tax_space.name}")
+                        else:
+                            # Fall back to game state
+                            current_fund = game_state.get_community_fund()
+                            game_state.set_community_fund(current_fund + tax_amount)
+                            
+                            # Commit the updated game state
+                            db.session.add(game_state)
+                            db.session.commit()
                 
                 # Prepare response message
                 tax_name = "Income Tax" if tax_type == "income" else "Luxury Tax"
@@ -1331,34 +1351,38 @@ class SpecialSpaceController:
                 })
                 
                 # Emit an event to notify clients
-                socketio = self.game_controller.socketio
-                socketio.emit('player_paid_tax', {
-                    'game_id': game_id,
-                    'player_id': player_id,
-                    'tax_type': tax_type,
-                    'tax_amount': tax_amount,
-                    'add_to_community_fund': add_to_community_fund,
-                    'message': message
-                }, room=game_id)
+                socketio = self.socketio
+                if socketio:
+                    socketio.emit('tax_paid', {
+                        'game_id': game_id,
+                        'player_id': player_id,
+                        'player_name': player.name,
+                        'tax_type': tax_type,
+                        'tax_amount': tax_amount,
+                        'message': message
+                    }, room=game_id)
                 
                 return {
                     "success": True,
-                    "tax_amount": tax_amount,
+                    "action": "tax_paid",
+                    "tax_type": tax_type,
+                    "amount": tax_amount,
                     "message": message
                 }
             else:
-                message = f"Player {player.name} didn't need to pay tax (amount was $0)"
-                logging.info(message)
-                
                 return {
                     "success": True,
-                    "tax_amount": 0,
-                    "message": message
+                    "action": "no_tax",
+                    "message": f"No tax due (player has ${player_balance})"
                 }
                 
         except Exception as e:
-            logging.error(f"Error handling tax space: {str(e)}")
-            return {"success": False, "error": str(e)}
+            db.session.rollback()
+            logging.error(f"Error processing tax space: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "error": f"Error processing tax: {str(e)}"
+            }
 
     def handle_jail(self, game_id, player_id, reason="landed"):
         """

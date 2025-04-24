@@ -521,59 +521,75 @@ class FinanceController:
         """Get current interest rates for loans, CDs, and HELOCs
         
         Returns:
-            Dictionary with current interest rates
+            Dictionary with rates
         """
-        # Get the current game state
+        # Get base economic state
         game_state = GameState.query.first()
         
-        # Base rates (can be adjusted by economic phase)
-        base_rates = {
-            "loan": {
-                "excellent_credit": 0.045,  # 4.5% for excellent credit
-                "good_credit": 0.06,  # 6% for good credit
-                "standard": 0.08,  # 8% standard rate
-                "poor_credit": 0.12,  # 12% for poor credit
-            },
-            "cd": {
-                "short_term": 0.02,  # 2% for 3-lap CDs
-                "medium_term": 0.03,  # 3% for 5-lap CDs
-                "long_term": 0.04,  # 4% for 7-lap CDs
-            },
-            "heloc": {
-                "undeveloped": 0.07,  # 7% for undeveloped properties
-                "standard": 0.055,  # 5.5% standard rate
-                "developed": 0.05,  # 5% for well-developed properties
+        if not game_state:
+            # Default values if game state is unavailable
+            return {
+                "base_rate": 0.05,  # 5% base rate
+                "economic_state": "normal",
+                "rates": {
+                    "loan": {
+                        "standard": 0.06,  # 6%
+                        "good_credit": 0.05,  # 5%
+                        "excellent_credit": 0.045,  # 4.5%
+                        "poor_credit": 0.08  # 8%
+                    },
+                    "cd": {
+                        "short_term": 0.04,  # 4%
+                        "medium_term": 0.05,  # 5%
+                        "long_term": 0.06  # 6%
+                    },
+                    "heloc": {
+                        "standard": 0.045,  # 4.5%
+                        "undeveloped": 0.05,  # 5%
+                        "developed": 0.04  # 4%
+                    }
+                }
+            }
+        
+        # Get base rate from game state
+        base_rate = getattr(game_state, 'base_interest_rate', 0.05)
+        economic_state = getattr(game_state, 'economic_cycle_state', "normal")
+        
+        # Apply economic state modifier to rates
+        state_modifiers = {
+            "recession": 0.02,  # Higher rates during recession
+            "normal": 0.0,      # Base rate during normal times
+            "growth": -0.01,    # Lower rates during growth
+            "boom": -0.02       # Lowest rates during boom
+        }
+        
+        modifier = state_modifiers.get(economic_state, 0.0)
+        
+        # Define rate structure
+        rates = {
+            "base_rate": base_rate,
+            "economic_state": economic_state,
+            "rates": {
+                "loan": {
+                    "standard": base_rate + modifier + 0.02,
+                    "good_credit": base_rate + modifier,
+                    "excellent_credit": base_rate + modifier - 0.005,
+                    "poor_credit": base_rate + modifier + 0.05
+                },
+                "cd": {
+                    "short_term": base_rate - 0.01,
+                    "medium_term": base_rate,
+                    "long_term": base_rate + 0.01
+                },
+                "heloc": {
+                    "standard": base_rate + 0.01,
+                    "undeveloped": base_rate + 0.015,
+                    "developed": base_rate + 0.005
+                }
             }
         }
         
-        # Adjust rates based on economic phase
-        if game_state and game_state.inflation_state:
-            phase = game_state.inflation_state
-            
-            # Apply economic phase adjustments
-            phase_adjustments = {
-                "recession": -0.01,  # Lower rates in recession
-                "normal": 0,  # No adjustment in normal phase
-                "growth": 0.005,  # Slightly higher in growth
-                "boom": 0.01  # Higher in boom
-            }
-            
-            adjustment = phase_adjustments.get(phase, 0)
-            
-            # Apply adjustment to all rates
-            for category in base_rates:
-                for rate_name in base_rates[category]:
-                    base_rates[category][rate_name] += adjustment
-                    
-                    # Ensure minimum rates
-                    base_rates[category][rate_name] = max(0.01, base_rates[category][rate_name])
-        
-        return {
-            "success": True,
-            "rates": base_rates,
-            "economic_phase": game_state.inflation_state if game_state else "normal",
-            "last_updated": datetime.now().isoformat()
-        }
+        return rates
     
     def get_player_loans(self, player_id: int, pin: str = None) -> Dict:
         """Get all loans for a player
@@ -1218,4 +1234,23 @@ class FinanceController:
                 "reason": tx.reason
             })
         
-        return transactions 
+        return transactions
+    
+    def format_interest_rates_for_display(self):
+        """Format interest rates for display in the admin panel
+        
+        Returns:
+            Dictionary with formatted interest rates
+        """
+        # Get the current rates
+        rates = self.get_interest_rates()
+        
+        # Format rates for display
+        formatted_rates = {
+            "base_interest_rate": f"{rates['base_rate'] * 100:.2f}%",
+            "loan_rate": f"{rates['rates']['loan']['standard'] * 100:.2f}%",
+            "savings_rate": f"{rates['rates']['cd']['medium_term'] * 100:.2f}%",
+            "mortgage_rate": f"{rates['rates']['heloc']['standard'] * 100:.2f}%"
+        }
+        
+        return formatted_rates 
