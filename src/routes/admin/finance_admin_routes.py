@@ -20,7 +20,15 @@ finance_admin_bp = Blueprint('finance_admin', __name__, url_prefix='/finance')
 finance_controller = None
 
 # Initialize the admin controller
-admin_controller = AdminController()
+admin_controller = None
+
+def get_admin_controller():
+    """Get admin controller with dependencies from app context"""
+    global admin_controller
+    if admin_controller is None:
+        from src.controllers.admin_controller import AdminController
+        admin_controller = AdminController()
+    return admin_controller
 
 def get_finance_controller():
     """Get finance controller with dependencies from app context"""
@@ -177,6 +185,7 @@ def get_transactions():
         offset = int(request.args.get('offset', 0))
         
         # Call the controller method
+        admin_controller = get_admin_controller()
         result = admin_controller.get_transactions(filters, limit, offset)
         
         if result.get('success'):
@@ -330,14 +339,17 @@ def audit_economic_system():
 @admin_required
 def get_all_loans():
     """
-    Get a list of all active loans in the game.
+    Get all loans in the system with filtering options.
     
     Query parameters:
     - player_id: Filter by player ID
-    - status: Filter by loan status
+    - status: Filter by loan status ('active' or 'paid')
+    - loan_type: Filter by loan type ('loan', 'heloc', etc.)
+    - limit: Maximum number of loans to return (default: 100)
+    - offset: Offset for pagination (default: 0)
     """
     try:
-        # Get filter parameters
+        # Get filters from query parameters
         filters = {}
         
         if 'player_id' in request.args:
@@ -346,7 +358,14 @@ def get_all_loans():
         if 'status' in request.args:
             filters['status'] = request.args.get('status')
         
+        if 'loan_type' in request.args:
+            filters['loan_type'] = request.args.get('loan_type')
+        
+        limit = int(request.args.get('limit', 100))
+        offset = int(request.args.get('offset', 0))
+        
         # Call the controller method
+        admin_controller = get_admin_controller()
         result = admin_controller.get_all_loans(filters)
         
         if result.get('success'):
@@ -537,6 +556,7 @@ def get_financial_overview():
     """Get financial system overview for the admin dashboard."""
     try:
         # Get player financial data from AdminController
+        admin_controller = get_admin_controller()
         financial_data = admin_controller.get_player_financial_data()
         if not financial_data.get('success'):
             return jsonify({

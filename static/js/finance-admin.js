@@ -109,7 +109,7 @@ function refreshLoans() {
                                     <th>Player</th>
                                     <th>Amount</th>
                                     <th>Interest</th>
-                                    <th>Due Date</th>
+                                    <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -117,13 +117,18 @@ function refreshLoans() {
                 `;
                 
                 loans.forEach(loan => {
+                    // Format due date or calculate from creation date and length
+                    const dueDate = loan.due_lap ? `Lap ${loan.due_lap}` : 'N/A';
+                    // Get loan status with a fallback
+                    const status = loan.status || (loan.is_active ? 'Active' : 'Paid');
+                    
                     loansHtml += `
                         <tr>
                             <td>${loan.id}</td>
-                            <td>${loan.player_name}</td>
+                            <td>${loan.player_name || 'Unknown'}</td>
                             <td>$${loan.amount}</td>
-                            <td>${(loan.interest_rate * 100).toFixed(2)}%</td>
-                            <td>${loan.due_date}</td>
+                            <td>${((loan.interest_rate || 0) * 100).toFixed(2)}%</td>
+                            <td>${status}</td>
                             <td>
                                 <button class="btn btn-sm btn-primary" onclick="viewLoanDetails(${loan.id})">View</button>
                                 <button class="btn btn-sm btn-warning" onclick="extendLoan(${loan.id})">Extend</button>
@@ -143,6 +148,11 @@ function refreshLoans() {
             }
         } else {
             console.error('Failed to refresh loans:', data.error);
+            // Provide fallback content when there's an error
+            const loansElement = document.getElementById('active-loans');
+            if (loansElement) {
+                loansElement.innerHTML = '<p class="text-center">Error loading loans data. Please check the console for details.</p>';
+            }
         }
     })
     .catch(error => {
@@ -151,7 +161,7 @@ function refreshLoans() {
         // Provide fallback content
         const loansElement = document.getElementById('active-loans');
         if (loansElement) {
-            loansElement.innerHTML = '<p class="text-center">Error loading loans data.</p>';
+            loansElement.innerHTML = '<p class="text-center">Error loading loans data. Please check the console for details.</p>';
         }
     });
 }
@@ -175,63 +185,56 @@ function refreshTransactions() {
     .then(data => {
         if (data.success) {
             // Update transactions table
-            const transactionsElement = document.getElementById('recent-transactions');
+            const transactionsElement = document.getElementById('transactions-table');
             if (transactionsElement) {
                 const transactions = data.transactions || [];
                 
                 if (transactions.length === 0) {
-                    transactionsElement.innerHTML = '<p class="text-center">No recent transactions found.</p>';
+                    transactionsElement.innerHTML = '<tr><td colspan="6" class="text-center">No recent transactions found.</td></tr>';
                     return;
                 }
                 
-                let transactionsHtml = `
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Time</th>
-                                    <th>Type</th>
-                                    <th>From</th>
-                                    <th>To</th>
-                                    <th>Amount</th>
-                                    <th>Reason</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
+                let transactionsHtml = '';
                 
                 transactions.forEach(tx => {
+                    // Format transaction data with fallbacks
+                    const timestamp = tx.timestamp || new Date().toISOString();
+                    const type = tx.transaction_type || tx.type || 'N/A';
+                    const from = tx.from_player_name || (tx.from_player_id ? `Player ${tx.from_player_id}` : 'Bank');
+                    const to = tx.to_player_name || (tx.to_player_id ? `Player ${tx.to_player_id}` : 'Bank');
+                    const description = tx.description || tx.reason || '';
+                    
                     transactionsHtml += `
                         <tr>
-                            <td>${tx.timestamp}</td>
-                            <td>${tx.type}</td>
-                            <td>${tx.from}</td>
-                            <td>${tx.to}</td>
+                            <td>${formatDate(timestamp)}</td>
+                            <td>${type}</td>
+                            <td>${from}</td>
+                            <td>${to}</td>
                             <td>$${tx.amount}</td>
-                            <td>${tx.reason}</td>
+                            <td>${description}</td>
                         </tr>
                     `;
                 });
                 
-                transactionsHtml += `
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-                
                 transactionsElement.innerHTML = transactionsHtml;
+                console.log(`Rendered ${transactions.length} transactions`);
             }
         } else {
             console.error('Failed to refresh transactions:', data.error);
+            // Provide fallback content when there's an error
+            const transactionsElement = document.getElementById('transactions-table');
+            if (transactionsElement) {
+                transactionsElement.innerHTML = '<tr><td colspan="6" class="text-center">Error loading transaction data. Please check the console for details.</td></tr>';
+            }
         }
     })
     .catch(error => {
         console.error('Error refreshing transactions:', error);
         
         // Provide fallback content
-        const transactionsElement = document.getElementById('recent-transactions');
+        const transactionsElement = document.getElementById('transactions-table');
         if (transactionsElement) {
-            transactionsElement.innerHTML = '<p class="text-center">Error loading transaction data.</p>';
+            transactionsElement.innerHTML = '<tr><td colspan="6" class="text-center">Error loading transaction data. Please check the console for details.</td></tr>';
         }
     });
 }
@@ -490,6 +493,17 @@ function payoffLoan(loanId) {
             alert(`Failed to pay off loan: ${error.message}`);
             refreshLoans();
         });
+    }
+}
+
+// Helper function to format dates nicely
+function formatDate(isoString) {
+    try {
+        const date = new Date(isoString);
+        return date.toLocaleString();
+    } catch (e) {
+        console.error('Error formatting date:', e);
+        return isoString; // Return the original string if parsing fails
     }
 }
 

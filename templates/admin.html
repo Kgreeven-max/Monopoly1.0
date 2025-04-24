@@ -441,13 +441,12 @@
                                                             <th>Change</th>
                                                             <th>Inflation Factor</th>
                                                             <th>Total Cash</th>
-                                                            <th>Property Value</th>
                                                             <th>Time</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody id="economic-history-body">
+                                                    <tbody id="economic-history-table">
                                                         <tr>
-                                                            <td colspan="6" class="text-center">No economic phase changes recorded.</td>
+                                                            <td colspan="5" class="text-center">No economic phase changes recorded.</td>
                                                         </tr>
                                                     </tbody>
                                                 </table>
@@ -2386,6 +2385,8 @@
         });
         
         function loadEconomicState() {
+            console.log('Loading economic state...');
+            
             fetch('/api/admin/economic/state', {
                 method: 'GET',
                 headers: {
@@ -2400,46 +2401,63 @@
                 return response.json();
             })
             .then(data => {
+                console.log('Economic state API response:', data);
+                
                 if (data.success) {
                     // Update UI with economic state
-                    document.getElementById('economic-state').textContent = data.economic_state || 'Unknown';
-                    document.getElementById('inflation-rate').textContent = formatPercent(data.inflation_rate);
-                    document.getElementById('interest-rate').textContent = formatPercent(data.base_interest_rate);
+                    const state = data.economic_state || {};
                     
-                    // Update progress bar
-                    const position = data.cycle_position * 100;
+                    // Update state labels
+                    document.getElementById('economic-state').textContent = state.current_state || 'Unknown';
+                    document.getElementById('inflation-rate').textContent = state.inflation_rate !== undefined ? 
+                        `${(state.inflation_rate * 100).toFixed(2)}%` : 'Loading...';
+                    document.getElementById('interest-rate').textContent = state.base_interest_rate !== undefined ? 
+                        `${(state.base_interest_rate * 100).toFixed(2)}%` : 'Loading...';
+                    
+                    // Update cycle position
                     const positionBar = document.getElementById('cycle-position-bar');
-                    positionBar.style.width = `${position}%`;
-                    positionBar.setAttribute('aria-valuenow', position);
-                    positionBar.textContent = `${Math.round(position)}%`;
+                    if (positionBar && state.cycle_position !== undefined) {
+                        const position = state.cycle_position * 100;
+                        positionBar.style.width = `${position}%`;
+                        positionBar.setAttribute('aria-valuenow', position);
+                        positionBar.textContent = `${Math.round(position)}%`;
+                    }
                     
-                    // Update toggle switch
-                    document.getElementById('economic-cycle-toggle').checked = data.config.economic_cycle_enabled;
+                    // Update toggle switch if config exists
+                    const cycleToggle = document.getElementById('economic-cycle-toggle');
+                    if (cycleToggle) {
+                        cycleToggle.checked = state.auto_cycle_enabled !== undefined ? 
+                            state.auto_cycle_enabled : true;
+                    }
                     
                     // Color code the economic state
                     const stateElement = document.getElementById('economic-state');
-                    stateElement.className = ''; // Reset classes
-                    
-                    switch (data.economic_state) {
-                        case 'recession':
-                            stateElement.classList.add('text-danger', 'fw-bold');
-                            break;
-                        case 'normal':
-                            stateElement.classList.add('text-secondary', 'fw-bold');
-                            break;
-                        case 'growth':
-                            stateElement.classList.add('text-success', 'fw-bold');
-                            break;
-                        case 'boom':
-                            stateElement.classList.add('text-primary', 'fw-bold');
-                            break;
+                    if (stateElement) {
+                        stateElement.className = ''; // Reset classes
+                        
+                        switch (state.current_state) {
+                            case 'recession':
+                                stateElement.classList.add('text-danger', 'fw-bold');
+                                break;
+                            case 'normal':
+                                stateElement.classList.add('text-secondary', 'fw-bold');
+                                break;
+                            case 'growth':
+                                stateElement.classList.add('text-success', 'fw-bold');
+                                break;
+                            case 'boom':
+                                stateElement.classList.add('text-primary', 'fw-bold');
+                                break;
+                        }
                     }
                     
-                    // TODO: Load economic history
-                    // loadEconomicHistory();
+                    // Load economic history
+                    loadEconomicHistory();
                 } else {
                     console.error('Failed to load economic state:', data.error);
-                    alert('Error: ' + data.error);
+                    document.getElementById('economic-state').textContent = 'Error';
+                    document.getElementById('inflation-rate').textContent = 'Error';
+                    document.getElementById('interest-rate').textContent = 'Error';
                 }
             })
             .catch(error => {
@@ -2447,6 +2465,66 @@
                 document.getElementById('economic-state').textContent = 'Error loading';
                 document.getElementById('inflation-rate').textContent = 'Error loading';
                 document.getElementById('interest-rate').textContent = 'Error loading';
+            });
+        }
+
+        function loadEconomicHistory() {
+            console.log('Loading economic history...');
+            
+            fetch('/api/admin/economic/history', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Key': window.adminKey
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Economic history API response:', data);
+                
+                if (data.success) {
+                    // Update economic history table
+                    const historyTable = document.getElementById('economic-history-table');
+                    if (historyTable) {
+                        if (!data.history || data.history.length === 0) {
+                            historyTable.innerHTML = '<tr><td colspan="5" class="text-center">No economic phase changes recorded.</td></tr>';
+                            return;
+                        }
+                        
+                        let tableHtml = '';
+                        data.history.forEach(record => {
+                            tableHtml += `
+                                <tr>
+                                    <td>${record.lap_number || 'N/A'}</td>
+                                    <td>${record.old_state || 'N/A'} → ${record.new_state || 'N/A'}</td>
+                                    <td>${record.inflation_factor !== undefined ? (record.inflation_factor * 100).toFixed(2) + '%' : 'N/A'}</td>
+                                    <td>${record.total_cash !== undefined ? '$' + record.total_cash : 'N/A'}</td>
+                                    <td>${record.timestamp ? new Date(record.timestamp).toLocaleString() : 'N/A'}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        historyTable.innerHTML = tableHtml;
+                    }
+                } else {
+                    console.error('Failed to load economic history:', data.error);
+                    const historyTable = document.getElementById('economic-history-table');
+                    if (historyTable) {
+                        historyTable.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading economic history.</td></tr>';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error loading economic history:', error);
+                const historyTable = document.getElementById('economic-history-table');
+                if (historyTable) {
+                    historyTable.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading economic history: ' + error.message + '</td></tr>';
+                }
             });
         }
         

@@ -35,6 +35,8 @@ class GameState(db.Model):
     turn_number = db.Column(db.Integer, default=0)  # Total number of turns taken
     mode = db.Column(db.String(20), default='classic')  # Game mode
     _settings = db.Column(db.Text, nullable=True)  # JSON string for game settings
+    _community_chest_cards_json = db.Column(db.Text, nullable=True)  # JSON string for community chest cards
+    game_log = db.Column(db.Text, nullable=True)  # JSON string for game logs
     
     # Game configuration
     auction_required = db.Column(db.Boolean, default=True)  # Whether properties must be auctioned if declined
@@ -109,6 +111,19 @@ class GameState(db.Model):
         else:
             self._expected_action_details_json = json.dumps(details_dict)
     
+    @property
+    def community_chest_cards(self):
+        """Get community chest cards as Python list"""
+        try:
+            return json.loads(self._community_chest_cards_json) if self._community_chest_cards_json else []
+        except (TypeError, json.JSONDecodeError):
+            return []
+            
+    @community_chest_cards.setter
+    def community_chest_cards(self, cards_list):
+        """Store community chest cards as JSON string"""
+        self._community_chest_cards_json = json.dumps(cards_list)
+    
     def to_dict(self):
         """Convert game state to dictionary for API responses"""
         return {
@@ -135,7 +150,8 @@ class GameState(db.Model):
             'end_time': self.end_time.isoformat() if self.end_time else None,
             'turn_timer': self.turn_timer,
             'expected_action_type': self.expected_action_type, # Include expected action
-            'expected_action_details': self.expected_action_details # Include details
+            'expected_action_details': self.expected_action_details, # Include details
+            'community_chest_cards': self.community_chest_cards
         }
     
     def calculate_duration_minutes(self):
@@ -308,6 +324,8 @@ class GameState(db.Model):
         # Keep the difficulty setting
         # self.difficulty = 'normal'
         self._temporary_effects = '[]'
+        self._community_chest_cards_json = None
+        self.game_log = None
         self.last_event_lap = 0
         self.police_activity = 1.0
         self.turn_timer = None

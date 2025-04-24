@@ -79,6 +79,7 @@ from src.migrations.add_updated_at_column import run_migration as run_updated_at
 from src.migrations.add_inflation_rate import run_migration as run_inflation_rate_migration
 from src.migrations.add_started_at_column import run_migration as run_started_at_migration
 from src.migrations.fix_cash_to_money import run_migration as run_fix_cash_to_money_migration
+from src.migrations.add_community_chest_cards import run_migration as run_community_chest_cards_migration
 from src.controllers.trade_controller import TradeController # Import TradeController
 from src.routes.trade_routes import trade_routes # Import trade routes
 
@@ -185,6 +186,16 @@ with app.app_context(): # Use app context to access db/config safely
     except Exception as e:
         logging.error(f'Error running cash to money fix migration: {str(e)}', exc_info=True)
     
+    # Run migration to add _community_chest_cards_json and game_log columns
+    try:
+        community_chest_cards_migration_result = run_community_chest_cards_migration()
+        if community_chest_cards_migration_result:
+            logging.info('Successfully ran community chest cards migration.')
+        else:
+            logging.warning('Failed to run community chest cards migration.')
+    except Exception as e:
+        logging.error(f'Error running community chest cards migration: {str(e)}', exc_info=True)
+    
     # Ensure GameState instance exists and has a game_id
     # Use a direct SQL query instead of ORM to avoid issues with missing columns
     try:
@@ -253,6 +264,10 @@ with app.app_context(): # Use app context to access db/config safely
     property_controller = PropertyController(db, banker, event_system, socketio) # Assuming these dependencies
     auction_controller = AuctionController(db, banker, event_system, socketio) # Assuming these dependencies
     
+    # Initialize finance controller
+    from src.controllers.finance_controller import FinanceController
+    finance_controller = FinanceController(socketio=socketio, banker=banker, game_state=game_state)
+    
     # Initialize socket controller
     from src.controllers.socket_controller import SocketController
     socket_controller = SocketController(socketio, app.config)
@@ -296,6 +311,7 @@ with app.app_context(): # Use app context to access db/config safely
     app.config['socket_controller'] = socket_controller # Store socket controller
     app.config['economic_manager'] = economic_manager # Store economic cycle manager
     app.config['economic_controller'] = economic_controller # Store economic cycle controller
+    app.config['finance_controller'] = finance_controller # Store finance controller
     # Add app instance itself to the app_config for bot controller
     app.config['app'] = app
 
