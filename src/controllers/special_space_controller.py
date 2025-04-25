@@ -14,6 +14,7 @@ from src.models.community_fund import CommunityFund
 from src.models import db
 from src.models.game_settings import GameSettings
 from src.models.property import Property
+from src.models.transaction import Transaction
 
 
 class SpecialSpaceController:
@@ -3482,8 +3483,23 @@ class SpecialSpaceController:
                 "message": "Free Parking - Just visiting!"
             }
             
-            # If community fund is enabled, player collects the money
-            if hasattr(game_state, 'community_fund_enabled') and game_state.community_fund_enabled and game_state.community_fund > 0:
+            # Check multiple possible places for the setting
+            money_in_free_parking = False
+            
+            # Check in rules dict first
+            if hasattr(game_state, 'rules') and isinstance(game_state.rules, dict):
+                money_in_free_parking = game_state.rules.get("money_in_free_parking", False)
+            
+            # Also check in settings
+            if not money_in_free_parking and hasattr(game_state, 'settings') and isinstance(game_state.settings, dict):
+                money_in_free_parking = game_state.settings.get("money_in_free_parking", False)
+            
+            # Also check direct attributes
+            if not money_in_free_parking and hasattr(game_state, 'money_in_free_parking'):
+                money_in_free_parking = game_state.money_in_free_parking
+            
+            # If any of the checks were true and there's money in the community fund
+            if money_in_free_parking and hasattr(game_state, 'community_fund') and game_state.community_fund > 0:
                 amount = game_state.community_fund
                 
                 # Update player's money directly
@@ -3497,6 +3513,17 @@ class SpecialSpaceController:
                 result["amount"] = amount
                 result["new_balance"] = player.money
                 result["message"] = f"Collected ${amount} from Free Parking!"
+                
+                # Add transaction record
+                transaction = Transaction(
+                    from_player_id=None,  # From bank/community fund
+                    to_player_id=player_id,
+                    amount=amount,
+                    transaction_type="free_parking",
+                    description=f"Collected ${amount} from Free Parking",
+                    lap_number=game_state.current_lap if hasattr(game_state, 'current_lap') else 0
+                )
+                db.session.add(transaction)
                 
                 # Add to game log
                 log_entry = {

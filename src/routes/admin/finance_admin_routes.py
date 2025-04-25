@@ -13,7 +13,7 @@ from src.controllers.admin_controller import AdminController
 from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
-finance_admin_bp = Blueprint('finance_admin', __name__, url_prefix='/finance')
+finance_admin_bp = Blueprint('finance_admin', __name__, url_prefix='')
 
 # Initialize the finance controller - this will be replaced with a function
 # that gets dependencies from app context
@@ -346,6 +346,7 @@ def get_admin_loans():
         # Prepare response data
         loans_data = []
         for loan in loans_query:
+            # Always include these basic fields
             loan_dict = {
                 "id": loan.id,
                 "player_id": loan.player_id,
@@ -356,8 +357,15 @@ def get_admin_loans():
                 "interest_rate": loan.interest_rate,
                 "is_active": loan.is_active,
                 "start_lap": loan.start_lap,
-                "due_lap": loan.start_lap + loan.length_laps if hasattr(loan, 'length_laps') else None,
+                "length_laps": loan.length_laps,  # Always include this field
+                "due_lap": loan.start_lap + loan.length_laps,
+                "game_id": loan.game_id
             }
+            
+            # Get current lap from game state for maturity calculations
+            game_state = GameState.query.get(loan.game_id) if loan.game_id else GameState.query.first()
+            current_lap = game_state.current_lap if game_state and hasattr(game_state, 'current_lap') else 0
+            loan_dict["current_lap"] = current_lap
             
             # Add property details for HELOCs
             if loan.loan_type == 'heloc' and hasattr(loan, 'property_id') and loan.property_id:
@@ -366,6 +374,17 @@ def get_admin_loans():
                 if property_obj:
                     loan_dict["property_id"] = property_obj.id
                     loan_dict["property_name"] = property_obj.name
+            
+            # Add fields specific to CDs
+            if loan.loan_type == 'cd':
+                # Calculate maturity and current value
+                maturity_lap = loan.start_lap + loan.length_laps
+                current_value = loan.calculate_current_value(current_lap) if hasattr(loan, 'calculate_current_value') else loan.amount
+                
+                loan_dict["maturity_lap"] = maturity_lap
+                loan_dict["term"] = loan.length_laps
+                loan_dict["is_mature"] = current_lap >= maturity_lap
+                loan_dict["current_value"] = current_value
             
             loans_data.append(loan_dict)
         
@@ -813,6 +832,74 @@ def withdraw_cd(loan_id):
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error withdrawing CD {loan_id}: {e}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@finance_admin_bp.route('/active-cds', methods=['GET'])
+@admin_required
+def get_active_cds():
+    """Get all active CDs for the admin dashboard."""
+    try:
+        # Query only CD financial instruments
+        cds_query = Loan.query.filter_by(is_active=True, loan_type='cd').all()
+        
+        logger.info(f"Found {len(cds_query)} active CDs")
+        
+        # Prepare response data
+        cds_data = []
+        for cd in cds_query:
+            # Get current lap from game state for maturity calculations
+            game_state = GameState.query.get(cd.game_id) if cd.game_id else GameState.query.first()
+            current_lap = game_state.current_lap if game_state and hasattr(game_state, 'current_lap') else 0
+            
+            # Calculate maturity and other CD-specific values
+            maturity_lap = cd.start_lap + cd.length_laps
+            
+            # Include all relevant fields for debugging
+            cd_dict = {
+                "id": cd.id,
+                "player_id": cd.player_id,
+                "player_name": Player.query.get(cd.player_id).username if Player.query.get(cd.player_id) else "Unknown",
+                "loan_type": cd.loan_type,
+                "amount": cd.amount,
+                "outstanding_balance": cd.outstanding_balance,
+                "interest_rate": cd.interest_rate,
+                "is_active": cd.is_active,
+                "start_lap": cd.start_lap,
+                "length_laps": cd.length_laps,
+                "maturity_lap": maturity_lap,
+                "term": cd.length_laps,
+                "is_mature": current_lap >= maturity_lap,
+                "current_lap": current_lap,
+                "game_id": cd.game_id,
+                "created_at": cd.created_at.isoformat() if hasattr(cd, 'created_at') else None
+            }
+            
+            # Try to calculate current value
+            try:
+                if hasattr(cd, 'calculate_current_value'):
+                    cd_dict["current_value"] = cd.calculate_current_value(current_lap)
+                else:
+                    cd_dict["current_value"] = cd.amount
+            except Exception as e:
+                logger.error(f"Error calculating current value for CD {cd.id}: {str(e)}")
+                cd_dict["current_value"] = cd.amount  # Fallback to original amount
+                cd_dict["value_error"] = str(e)
+            
+            cds_data.append(cd_dict)
+            
+        logger.info(f"Returning {len(cds_data)} CDs: {cds_data}")
+        
+        return jsonify({
+            "success": True,
+            "cds": cds_data,
+            "count": len(cds_data)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting active CDs: {str(e)}", exc_info=True)
         return jsonify({
             "success": False,
             "error": str(e)

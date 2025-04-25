@@ -107,6 +107,7 @@ function provideFallbackFinancialData() {
 function refreshLoans() {
     console.log('Refreshing active loans...');
     
+    // Fetch regular loans
     fetch('/api/admin/finance/loans', {
         method: 'GET',
         headers: {
@@ -120,70 +121,175 @@ function refreshLoans() {
         return response.json();
     })
     .then(data => {
+        console.log('Loans API response:', data);
+        
         if (data.success) {
             // Update loans table
             const loansElement = document.getElementById('active-loans');
             if (loansElement) {
                 // Filter to only regular loans, not CDs or HELOCs
                 const loans = (data.loans || []).filter(loan => loan.loan_type === 'loan');
+                console.log(`Found ${loans.length} regular loans`);
                 
                 if (loans.length === 0) {
                     loansElement.innerHTML = '<p class="text-center">No active loans found.</p>';
-                    return;
                 }
-                
-                let loansHtml = `
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Player</th>
-                                    <th>Amount</th>
-                                    <th>Interest</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-                
-                loans.forEach(loan => {
-                    loansHtml += `
-                        <tr>
-                            <td>${loan.id}</td>
-                            <td>${loan.player_name || 'Unknown'}</td>
-                            <td>$${loan.outstanding_balance}</td>
-                            <td>${((loan.interest_rate || 0) * 100).toFixed(2)}%</td>
-                            <td>${loan.is_active ? 'Active' : 'Paid'}</td>
-                            <td>
-                                <button class="btn btn-sm btn-primary" onclick="viewLoanDetails(${loan.id})">View</button>
-                                <button class="btn btn-sm btn-success" onclick="repayLoan(${loan.id})">Repay</button>
-                            </td>
-                        </tr>
+                else {
+                    let loansHtml = `
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Player</th>
+                                        <th>Amount</th>
+                                        <th>Interest</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
                     `;
-                });
-                
-                loansHtml += `
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-                
-                loansElement.innerHTML = loansHtml;
+                    
+                    loans.forEach(loan => {
+                        loansHtml += `
+                            <tr>
+                                <td>${loan.id}</td>
+                                <td>${loan.player_name || 'Unknown'}</td>
+                                <td>$${loan.outstanding_balance}</td>
+                                <td>${((loan.interest_rate || 0) * 100).toFixed(2)}%</td>
+                                <td>${loan.is_active ? 'Active' : 'Paid'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="viewLoanDetails(${loan.id})">View</button>
+                                    <button class="btn btn-sm btn-success" onclick="repayLoan(${loan.id})">Repay</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    loansHtml += `
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    
+                    loansElement.innerHTML = loansHtml;
+                }
             }
             
-            // Update CDs table
-            const cdsElement = document.getElementById('active-cds');
-            if (cdsElement) {
-                // Filter to only CDs
-                const cds = (data.loans || []).filter(loan => loan.loan_type === 'cd' && loan.is_active);
+            // Call the specific endpoint for CDs
+            refreshActiveCDs();
+            
+            // Update HELOCs table if needed
+            const helocsElement = document.getElementById('active-helocs');
+            if (helocsElement) {
+                // Filter to only HELOCs
+                const helocs = (data.loans || []).filter(loan => loan.loan_type === 'heloc' && loan.is_active);
                 
-                if (cds.length === 0) {
-                    cdsElement.innerHTML = '<p class="text-center">No active certificates of deposit found.</p>';
-                    return;
+                if (helocs.length === 0) {
+                    helocsElement.innerHTML = '<p class="text-center">No active home equity lines of credit found.</p>';
                 }
-                
+                else {
+                    let helocsHtml = `
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Player</th>
+                                        <th>Property</th>
+                                        <th>Balance</th>
+                                        <th>Interest</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    helocs.forEach(heloc => {
+                        helocsHtml += `
+                            <tr>
+                                <td>${heloc.id}</td>
+                                <td>${heloc.player_name || 'Unknown'}</td>
+                                <td>${heloc.property_name || 'Unknown'}</td>
+                                <td>$${heloc.outstanding_balance}</td>
+                                <td>${((heloc.interest_rate || 0) * 100).toFixed(2)}%</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="viewLoanDetails(${heloc.id})">View</button>
+                                    <button class="btn btn-sm btn-success" onclick="repayLoan(${heloc.id})">Repay</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    helocsHtml += `
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    
+                    helocsElement.innerHTML = helocsHtml;
+                }
+            }
+        } else {
+            console.error("Failed to load loans:", data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error refreshing loans:', error);
+        
+        // Provide fallback content
+        const loansElement = document.getElementById('active-loans');
+        if (loansElement) {
+            loansElement.innerHTML = '<p class="text-center">Error loading loans data. Please check the console for details.</p>';
+        }
+        
+        refreshActiveCDs(); // Still try to load CDs separately
+        
+        const helocsElement = document.getElementById('active-helocs');
+        if (helocsElement) {
+            helocsElement.innerHTML = '<p class="text-center">Error loading HELOCs data. Please check the console for details.</p>';
+        }
+    });
+}
+
+// New function to specifically fetch active CDs
+function refreshActiveCDs() {
+    console.log('Refreshing active CDs...');
+    const cdsElement = document.getElementById('active-cds');
+    
+    if (!cdsElement) {
+        console.error('CD element not found in DOM');
+        return;
+    }
+    
+    // Show loading indicator
+    cdsElement.innerHTML = '<p class="text-center">Loading certificates of deposit...</p>';
+    
+    // Use the loans endpoint since the /active-cds endpoint is returning 404
+    fetch('/api/admin/finance/loans', {
+        method: 'GET',
+        headers: {
+            'X-Admin-Key': window.adminKey
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Using loans endpoint for CDs');
+        
+        if (data.success) {
+            // Filter to only active CDs
+            const cds = (data.loans || []).filter(loan => loan.loan_type === 'cd' && loan.is_active);
+            console.log(`Found ${cds.length} CDs from loans endpoint`, cds);
+            
+            if (cds.length === 0) {
+                cdsElement.innerHTML = '<p class="text-center">No active certificates of deposit found.</p>';
+            } else {
                 let cdsHtml = `
                     <div class="table-responsive">
                         <table class="table table-striped">
@@ -193,6 +299,7 @@ function refreshLoans() {
                                     <th>Player</th>
                                     <th>Amount</th>
                                     <th>Interest</th>
+                                    <th>Term</th>
                                     <th>Maturity</th>
                                     <th>Actions</th>
                                 </tr>
@@ -201,18 +308,20 @@ function refreshLoans() {
                 `;
                 
                 cds.forEach(cd => {
-                    // Format due date or calculate from creation date and length
-                    const maturityDate = cd.due_lap ? `Lap ${cd.due_lap}` : 'N/A';
-                    // Get CD status with a fallback
-                    const status = cd.status || (cd.is_active ? 'Active' : 'Withdrawn');
+                    // Calculate display values with fallbacks
+                    const termLength = cd.length_laps || cd.term || 0;
+                    const maturityLap = cd.maturity_lap || (cd.start_lap + termLength);
+                    
+                    console.log(`CD ${cd.id}: length_laps=${termLength}, maturity_lap=${maturityLap}`);
                     
                     cdsHtml += `
                         <tr>
                             <td>${cd.id}</td>
-                            <td>${cd.player_name || 'Unknown'}</td>
-                            <td>$${cd.amount}</td>
+                            <td>${cd.player_name || 'Player ' + cd.player_id}</td>
+                            <td>$${cd.amount || cd.outstanding_balance}</td>
                             <td>${((cd.interest_rate || 0) * 100).toFixed(2)}%</td>
-                            <td>${maturityDate}</td>
+                            <td>${termLength} laps</td>
+                            <td>Lap ${maturityLap}</td>
                             <td>
                                 <button class="btn btn-sm btn-primary" onclick="viewLoanDetails(${cd.id})">View</button>
                                 <button class="btn btn-sm btn-success" onclick="withdrawCD(${cd.id})">Withdraw</button>
@@ -228,81 +337,16 @@ function refreshLoans() {
                 `;
                 
                 cdsElement.innerHTML = cdsHtml;
-            }
-            
-            // Update HELOCs table if needed
-            const helocsElement = document.getElementById('active-helocs');
-            if (helocsElement) {
-                // Filter to only HELOCs
-                const helocs = (data.loans || []).filter(loan => loan.loan_type === 'heloc' && loan.is_active);
-                
-                if (helocs.length === 0) {
-                    helocsElement.innerHTML = '<p class="text-center">No active home equity lines of credit found.</p>';
-                    return;
-                }
-                
-                let helocsHtml = `
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Player</th>
-                                    <th>Property</th>
-                                    <th>Balance</th>
-                                    <th>Interest</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-                
-                helocs.forEach(heloc => {
-                    helocsHtml += `
-                        <tr>
-                            <td>${heloc.id}</td>
-                            <td>${heloc.player_name || 'Unknown'}</td>
-                            <td>${heloc.property_name || 'Unknown'}</td>
-                            <td>$${heloc.outstanding_balance}</td>
-                            <td>${((heloc.interest_rate || 0) * 100).toFixed(2)}%</td>
-                            <td>
-                                <button class="btn btn-sm btn-primary" onclick="viewLoanDetails(${heloc.id})">View</button>
-                                <button class="btn btn-sm btn-success" onclick="repayLoan(${heloc.id})">Repay</button>
-                            </td>
-                        </tr>
-                    `;
-                });
-                
-                helocsHtml += `
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-                
-                helocsElement.innerHTML = helocsHtml;
+                console.log('CD table updated successfully');
             }
         } else {
-            console.error("Failed to load loans:", data.error);
+            console.error('Failed to load CDs:', data.error);
+            cdsElement.innerHTML = '<p class="text-center">Error loading CD data. Please check the console for details.</p>';
         }
     })
     .catch(error => {
-        console.error('Error refreshing loans:', error);
-        
-        // Provide fallback content
-        const loansElement = document.getElementById('active-loans');
-        if (loansElement) {
-            loansElement.innerHTML = '<p class="text-center">Error loading loans data. Please check the console for details.</p>';
-        }
-        
-        const cdsElement = document.getElementById('active-cds');
-        if (cdsElement) {
-            cdsElement.innerHTML = '<p class="text-center">Error loading CDs data. Please check the console for details.</p>';
-        }
-        
-        const helocsElement = document.getElementById('active-helocs');
-        if (helocsElement) {
-            helocsElement.innerHTML = '<p class="text-center">Error loading HELOCs data. Please check the console for details.</p>';
-        }
+        console.error('Error refreshing CDs:', error);
+        cdsElement.innerHTML = '<p class="text-center">Error loading CDs. Please check the console for details.</p>';
     });
 }
 
