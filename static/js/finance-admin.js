@@ -124,7 +124,8 @@ function refreshLoans() {
             // Update loans table
             const loansElement = document.getElementById('active-loans');
             if (loansElement) {
-                const loans = data.loans || [];
+                // Filter to only regular loans, not CDs or HELOCs
+                const loans = (data.loans || []).filter(loan => loan.loan_type === 'loan');
                 
                 if (loans.length === 0) {
                     loansElement.innerHTML = '<p class="text-center">No active loans found.</p>';
@@ -177,12 +178,131 @@ function refreshLoans() {
                 
                 loansElement.innerHTML = loansHtml;
             }
+            
+            // Update CDs table
+            const cdsElement = document.getElementById('active-cds');
+            if (cdsElement) {
+                // Filter to only CDs
+                const cds = (data.loans || []).filter(loan => loan.loan_type === 'cd');
+                
+                if (cds.length === 0) {
+                    cdsElement.innerHTML = '<p class="text-center">No active CDs found.</p>';
+                    return;
+                }
+                
+                let cdsHtml = `
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Player</th>
+                                    <th>Amount</th>
+                                    <th>Interest</th>
+                                    <th>Maturity</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                cds.forEach(cd => {
+                    // Format due date or calculate from creation date and length
+                    const maturityDate = cd.due_lap ? `Lap ${cd.due_lap}` : 'N/A';
+                    // Get CD status with a fallback
+                    const status = cd.status || (cd.is_active ? 'Active' : 'Withdrawn');
+                    
+                    cdsHtml += `
+                        <tr>
+                            <td>${cd.id}</td>
+                            <td>${cd.player_name || 'Unknown'}</td>
+                            <td>$${cd.amount}</td>
+                            <td>${((cd.interest_rate || 0) * 100).toFixed(2)}%</td>
+                            <td>${maturityDate}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="viewLoanDetails(${cd.id})">View</button>
+                                <button class="btn btn-sm btn-success" onclick="withdrawCD(${cd.id})">Withdraw</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                cdsHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                cdsElement.innerHTML = cdsHtml;
+            }
+            
+            // Update HELOCs table if needed
+            const helocsElement = document.getElementById('active-helocs');
+            if (helocsElement) {
+                // Filter to only HELOCs
+                const helocs = (data.loans || []).filter(loan => loan.loan_type === 'heloc');
+                
+                if (helocs.length === 0) {
+                    helocsElement.innerHTML = '<p class="text-center">No active HELOCs found.</p>';
+                    return;
+                }
+                
+                let helocsHtml = `
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Player</th>
+                                    <th>Amount</th>
+                                    <th>Interest</th>
+                                    <th>Property</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                helocs.forEach(heloc => {
+                    helocsHtml += `
+                        <tr>
+                            <td>${heloc.id}</td>
+                            <td>${heloc.player_name || 'Unknown'}</td>
+                            <td>$${heloc.amount}</td>
+                            <td>${((heloc.interest_rate || 0) * 100).toFixed(2)}%</td>
+                            <td>${heloc.property_id || 'N/A'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="viewLoanDetails(${heloc.id})">View</button>
+                                <button class="btn btn-sm btn-success" onclick="payoffLoan(${heloc.id})">Payoff</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                helocsHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                helocsElement.innerHTML = helocsHtml;
+            }
         } else {
             console.error('Failed to refresh loans:', data.error);
             // Provide fallback content when there's an error
             const loansElement = document.getElementById('active-loans');
             if (loansElement) {
                 loansElement.innerHTML = '<p class="text-center">Error loading loans data. Please check the console for details.</p>';
+            }
+            
+            const cdsElement = document.getElementById('active-cds');
+            if (cdsElement) {
+                cdsElement.innerHTML = '<p class="text-center">Error loading CDs data. Please check the console for details.</p>';
+            }
+            
+            const helocsElement = document.getElementById('active-helocs');
+            if (helocsElement) {
+                helocsElement.innerHTML = '<p class="text-center">Error loading HELOCs data. Please check the console for details.</p>';
             }
         }
     })
@@ -193,6 +313,16 @@ function refreshLoans() {
         const loansElement = document.getElementById('active-loans');
         if (loansElement) {
             loansElement.innerHTML = '<p class="text-center">Error loading loans data. Please check the console for details.</p>';
+        }
+        
+        const cdsElement = document.getElementById('active-cds');
+        if (cdsElement) {
+            cdsElement.innerHTML = '<p class="text-center">Error loading CDs data. Please check the console for details.</p>';
+        }
+        
+        const helocsElement = document.getElementById('active-helocs');
+        if (helocsElement) {
+            helocsElement.innerHTML = '<p class="text-center">Error loading HELOCs data. Please check the console for details.</p>';
         }
     });
 }
@@ -510,6 +640,41 @@ function payoffLoan(loanId) {
         .catch(error => {
             console.error(`Error paying off loan #${loanId}:`, error);
             alert(`Failed to pay off loan: ${error.message}`);
+            refreshLoans();
+        });
+    }
+}
+
+// Function to withdraw a CD
+function withdrawCD(cdId) {
+    if (confirm(`Are you sure you want to withdraw CD #${cdId}?`)) {
+        console.log(`Withdrawing CD #${cdId}`);
+        
+        fetch(`/api/admin/finance/loans/${cdId}/withdraw`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Admin-Key': window.adminKey
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert(`CD #${cdId} has been withdrawn successfully`);
+                refreshLoans();
+            } else {
+                console.error('Failed to withdraw CD:', data.error);
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error(`Error withdrawing CD #${cdId}:`, error);
+            alert(`Failed to withdraw CD: ${error.message}`);
             refreshLoans();
         });
     }

@@ -696,4 +696,104 @@ def get_financial_overview():
         return jsonify({
             "success": False,
             "error": str(e)
+        }), 500
+
+@finance_admin_bp.route('/loans/<int:loan_id>/withdraw', methods=['POST'])
+@admin_required
+def withdraw_cd(loan_id):
+    """
+    Withdraw a certificate of deposit (CD).
+    
+    Marks a CD as withdrawn and transfers the accumulated value to the player.
+    """
+    try:
+        # Get the loan
+        loan = Loan.query.get(loan_id)
+        if not loan:
+            return jsonify({
+                "success": False,
+                "error": "CD not found"
+            }), 404
+            
+        # Check if it's actually a CD
+        if loan.loan_type != 'cd':
+            return jsonify({
+                "success": False,
+                "error": "This is not a certificate of deposit"
+            }), 400
+            
+        # Get the player
+        player = Player.query.get(loan.player_id)
+        if not player:
+            return jsonify({
+                "success": False,
+                "error": "Player not found"
+            }), 404
+            
+        # Get game state for current lap
+        game_state = GameState.query.first()
+        if not game_state:
+            return jsonify({
+                "success": False,
+                "error": "Game state not found"
+            }), 500
+            
+        current_lap = game_state.current_lap if hasattr(game_state, 'current_lap') else 0
+        
+        # Check if CD is mature (has reached its due date)
+        is_mature = (current_lap >= (loan.start_lap + loan.length_laps))
+        
+        # Calculate current value of CD
+        current_value = loan.calculate_current_value(current_lap)
+        
+        # Apply early withdrawal penalty if not mature
+        if not is_mature:
+            penalty_rate = 0.10  # 10% penalty
+            penalty_amount = int(current_value * penalty_rate)
+            withdrawal_amount = current_value - penalty_amount
+            penalty_desc = f" with 10% early withdrawal penalty (${penalty_amount})"
+        else:
+            penalty_amount = 0
+            withdrawal_amount = current_value
+            penalty_desc = " at maturity"
+            
+        # Update the player's cash balance
+        player.money += withdrawal_amount
+        
+        # Mark the CD as withdrawn
+        loan.is_active = False
+        
+        # Record the transaction
+        transaction = Transaction(
+            from_player_id=None,  # Bank
+            to_player_id=player.id,
+            amount=withdrawal_amount,
+            transaction_type="cd_withdrawal",
+            description=f"CD #{loan.id} withdrawn{penalty_desc}"
+        )
+        
+        # Save changes to database
+        db.session.add(loan)
+        db.session.add(player)
+        db.session.add(transaction)
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"CD #{loan.id} withdrawn successfully",
+            "cd_id": loan.id,
+            "player_id": player.id,
+            "player_name": player.username,
+            "withdrawal_amount": withdrawal_amount,
+            "is_mature": is_mature,
+            "penalty_amount": penalty_amount if not is_mature else 0,
+            "transaction_id": transaction.id
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error withdrawing CD {loan_id}: {e}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": str(e)
         }), 500 
