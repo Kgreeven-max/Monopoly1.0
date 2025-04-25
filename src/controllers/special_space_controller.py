@@ -2356,29 +2356,55 @@ class SpecialSpaceController:
             dict: Result of the action, including success status and card details
         """
         logging.info(f"Processing chance card for player {player_id} in game {game_id}")
-        result = self.handle_chance_space(game_id, player_id)
+        
+        # First try to find game state by the game_id attribute (UUID)
+        game_state = None
+        if isinstance(game_id, str) and '-' in game_id:
+            logging.info(f"Looking up GameState by UUID field: {game_id}")
+            game_state = GameState.query.filter_by(game_id=game_id).first()
+        
+        # If not found or ID is numeric, try by primary key
+        if not game_state:
+            try:
+                # Convert to int only if it's numeric
+                if isinstance(game_id, int) or (isinstance(game_id, str) and game_id.isdigit()):
+                    pk_id = int(game_id)
+                    logging.info(f"Looking up GameState by primary key: {pk_id}")
+                    game_state = GameState.query.get(pk_id)
+            except (ValueError, TypeError):
+                logging.warning(f"Could not convert game_id {game_id} to integer primary key")
+
+        # Final fallback - get the singleton instance
+        if not game_state:
+            logging.warning(f"Could not find game_state for ID {game_id}, falling back to singleton")
+            game_state = GameState.get_instance()
+        
+        if not game_state:
+            logging.error(f"Failed to find game with ID {game_id}")
+            return {"success": False, "error": f"Game not found: {game_id}"}
+        
+        # Now use correct game_id for the handle_chance_space
+        result = self.handle_chance_space(game_state.id, player_id)
         
         # Update expected actions to end turn after processing card
         if result.get("success"):
             try:
-                game_state = GameState.query.get(game_id)
-                if game_state:
-                    # Set expected action to end turn
-                    # Check if expected_actions attribute exists, otherwise use expected_action_type
-                    if hasattr(game_state, 'expected_actions'):
-                        game_state.expected_actions = [{
-                            "player_id": player_id,
-                            "action": "end_turn"
-                        }]
-                    else:
-                        # Use the expected_action_type attribute instead
-                        game_state.expected_action_type = "end_turn"
-                        game_state.expected_action_details = {
-                            "player_id": player_id
-                        }
-                    
-                    db.session.commit()
-                    logging.info(f"Updated expected actions to end_turn for player {player_id}")
+                # Set expected action to end turn
+                # Check if expected_actions attribute exists, otherwise use expected_action_type
+                if hasattr(game_state, 'expected_actions'):
+                    game_state.expected_actions = [{
+                        "player_id": player_id,
+                        "action": "end_turn"
+                    }]
+                else:
+                    # Use the expected_action_type attribute instead
+                    game_state.expected_action_type = "end_turn"
+                    game_state.expected_action_details = {
+                        "player_id": player_id
+                    }
+                
+                db.session.commit()
+                logging.info(f"Updated expected actions to end_turn for player {player_id}")
             except Exception as e:
                 logging.error(f"Error updating expected actions after chance card: {str(e)}")
         
@@ -2838,29 +2864,55 @@ class SpecialSpaceController:
             dict: Result of the action, including success status and card details
         """
         logging.info(f"Processing community chest card for player {player_id} in game {game_id}")
-        result = self.handle_community_chest_space(game_id, player_id)
+        
+        # First try to find game state by the game_id attribute (UUID)
+        game_state = None
+        if isinstance(game_id, str) and '-' in game_id:
+            logging.info(f"Looking up GameState by UUID field: {game_id}")
+            game_state = GameState.query.filter_by(game_id=game_id).first()
+        
+        # If not found or ID is numeric, try by primary key
+        if not game_state:
+            try:
+                # Convert to int only if it's numeric
+                if isinstance(game_id, int) or (isinstance(game_id, str) and game_id.isdigit()):
+                    pk_id = int(game_id)
+                    logging.info(f"Looking up GameState by primary key: {pk_id}")
+                    game_state = GameState.query.get(pk_id)
+            except (ValueError, TypeError):
+                logging.warning(f"Could not convert game_id {game_id} to integer primary key")
+
+        # Final fallback - get the singleton instance
+        if not game_state:
+            logging.warning(f"Could not find game_state for ID {game_id}, falling back to singleton")
+            game_state = GameState.get_instance()
+        
+        if not game_state:
+            logging.error(f"Failed to find game with ID {game_id}")
+            return {"success": False, "error": f"Game not found: {game_id}"}
+        
+        # Now use correct game_id for the handle_community_chest_space
+        result = self.handle_community_chest_space(game_state.id, player_id)
         
         # Update expected actions to end turn after processing card
         if result.get("success"):
             try:
-                game_state = GameState.query.get(game_id)
-                if game_state:
-                    # Set expected action to end turn
-                    # Check if expected_actions attribute exists, otherwise use expected_action_type
-                    if hasattr(game_state, 'expected_actions'):
-                        game_state.expected_actions = [{
-                            "player_id": player_id,
-                            "action": "end_turn"
-                        }]
-                    else:
-                        # Use the expected_action_type attribute instead
-                        game_state.expected_action_type = "end_turn"
-                        game_state.expected_action_details = {
-                            "player_id": player_id
-                        }
-                    
-                    db.session.commit()
-                    logging.info(f"Updated expected actions to end_turn for player {player_id}")
+                # Set expected action to end turn
+                # Check if expected_actions attribute exists, otherwise use expected_action_type
+                if hasattr(game_state, 'expected_actions'):
+                    game_state.expected_actions = [{
+                        "player_id": player_id,
+                        "action": "end_turn"
+                    }]
+                else:
+                    # Use the expected_action_type attribute instead
+                    game_state.expected_action_type = "end_turn"
+                    game_state.expected_action_details = {
+                        "player_id": player_id
+                    }
+                
+                db.session.commit()
+                logging.info(f"Updated expected actions to end_turn for player {player_id}")
             except Exception as e:
                 logging.error(f"Error updating expected actions after community chest card: {str(e)}")
         

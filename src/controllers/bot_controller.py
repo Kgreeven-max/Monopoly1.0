@@ -147,24 +147,19 @@ class BotController:
         try:
             # Get game state - handle both numeric and string UUIDs
             game_state = None
-            actual_game_id = None
             
             # Try numeric ID first (used for integers)
             try:
                 if isinstance(game_id, int) or (isinstance(game_id, str) and game_id.isdigit()):
                     game_state = GameState.query.get(int(game_id))
-                    if game_state:
-                        actual_game_id = game_state.id
             except (ValueError, TypeError):
                 pass
-                
+            
             # If not found and it's a string (potentially UUID), try by game_id column
             if not game_state and isinstance(game_id, str):
                 self.logger.info(f"Looking up GameState by UUID in game_id column: {game_id}")
                 game_state = GameState.query.filter_by(game_id=game_id).first()
-                if game_state:
-                    actual_game_id = game_state.id
-                    
+                
             if not game_state or game_state.status != 'active':
                 self.logger.warning(f"Game {game_id} is not active. Bot {player_id} stopping turn.")
                 return
@@ -173,15 +168,13 @@ class BotController:
                 self.logger.warning(f"Bot {player_id} attempted to take turn, but current player is {game_state.current_player_id}. Stopping.")
                 return
 
-            # Save the numeric game_id for internal function calls
-            if actual_game_id is None:
-                self.logger.error(f"Could not determine actual game ID for {game_id}")
-                return
-                
+            # Use the game_state's game_id for all operations (the UUID string)
+            game_id = game_state.game_id
+            
             player = Player.query.get(player_id)
             if not player or player.is_bankrupt or not player.in_game:
                 self.logger.warning(f"Bot player {player_id} is invalid or bankrupt. Ending turn.")
-                self.game_controller._internal_end_turn(player_id, actual_game_id)
+                self.game_controller._internal_end_turn(player_id, game_id)
                 return
 
             # 1. Handle Jail
@@ -193,9 +186,9 @@ class BotController:
                          self.logger.info(f"Bot {player_id} finished jail action, ending turn.")
                          # End turn might have been called by GameLogic already if roll failed
                          # Ensure state is consistent before potentially ending turn again.
-                         current_game_state = GameState.query.get(actual_game_id)
-                         if current_game_state.current_player_id == player_id: 
-                             self.game_controller._internal_end_turn(player_id, actual_game_id)
+                         current_game_state = GameState.query.filter_by(game_id=game_id).first()
+                         if current_game_state and current_game_state.current_player_id == player_id: 
+                             self.game_controller._internal_end_turn(player_id, game_id)
                          return # End processing for this turn
                 # If jail_action_taken is False, it means bot got out and needs to proceed with roll
                 
@@ -216,7 +209,7 @@ class BotController:
                 time.sleep(random.uniform(0.5, 1.0))
                 
                 # Check game state again before rolling
-                game_state = GameState.query.get(actual_game_id)
+                game_state = GameState.query.filter_by(game_id=game_id).first()
                 if not game_state or game_state.status != 'active' or game_state.current_player_id != player_id:
                      self.logger.warning(f"Game state changed mid-turn for bot {player_id}. Stopping.")
                      turn_active = False; break
@@ -226,7 +219,7 @@ class BotController:
                      self.logger.warning(f"Bot {player_id} expected action is '{game_state.expected_action_type}', cannot roll. Handling action first.")
                      self._handle_pending_action(player, game_state)
                      # Re-check state after handling pending action
-                     game_state = GameState.query.get(actual_game_id)
+                     game_state = GameState.query.filter_by(game_id=game_id).first()
                      if not game_state or game_state.status != 'active' or game_state.current_player_id != player_id:
                           self.logger.warning(f"Game state changed after handling pending action for bot {player_id}. Stopping.")
                           turn_active = False; break
@@ -242,7 +235,7 @@ class BotController:
                 if not roll_result or not roll_result.get("success"):
                      self.logger.warning(f"Bot {player_id} roll failed: {roll_result.get('error') if roll_result else 'Unknown error'}")
                      # End turn if roll fails
-                     self.game_controller._internal_end_turn(player_id, actual_game_id)
+                     self.game_controller._internal_end_turn(player_id, game_id)
                      return
                 
                 # Check if we rolled doubles (to continue turn)
@@ -260,7 +253,7 @@ class BotController:
                         break
                 
                 # Get updated game state for potential actions
-                game_state = GameState.query.get(actual_game_id)
+                game_state = GameState.query.filter_by(game_id=game_id).first()
                 
                 # Process any landing actions
                 if game_state and game_state.current_player_id == player_id and game_state.expected_action_type:
@@ -272,7 +265,7 @@ class BotController:
                      action_result = self._handle_pending_action(player, game_state)
                      
                      # Re-check state
-                     game_state = GameState.query.get(actual_game_id)
+                     game_state = GameState.query.filter_by(game_id=game_id).first()
                      if not game_state or game_state.status != 'active' or game_state.current_player_id != player_id:
                           self.logger.warning(f"Game state changed after handling landing action for bot {player_id}. Stopping.")
                           turn_active = False; break
@@ -294,7 +287,7 @@ class BotController:
             self.logger.info(f"Bot {player_id} turn loop finished. Explicitly ending turn.")
             
             # Recheck current player
-            game_state = GameState.query.get(game_id)
+            game_state = GameState.query.filter_by(game_id=game_id).first()
             if game_state and game_state.current_player_id == player_id:
                 self.game_controller._internal_end_turn(player_id, game_id)
             
@@ -303,7 +296,7 @@ class BotController:
             
             # Attempt recovery - end turn if we're the current player
             try:
-                current_game_state = GameState.query.get(game_id)
+                current_game_state = GameState.query.filter_by(game_id=game_id).first()
                 if current_game_state and current_game_state.current_player_id == player_id:
                      self.game_controller._internal_end_turn(player_id, game_id)
             except Exception as inner_e:
@@ -316,18 +309,21 @@ class BotController:
          """Handles actions that were pending at the start of the bot's turn decision."""
          action_type = game_state.expected_action_type
          details = game_state.expected_action_details
-         self.logger.info(f"Bot {player.id} handling pending action: {action_type}")
+         player_id = player.id
+         game_id = game_state.game_id
+         
+         self.logger.info(f"Bot {player_id} handling pending action: {action_type}")
          
          # Enhanced error handling for pending actions
          try:
              # Check if action type is valid 
              if not action_type:
-                 self.logger.warning(f"Bot {player.id} has no pending action (expected_action_type is None)")
+                 self.logger.warning(f"Bot {player_id} has no pending action (expected_action_type is None)")
                  return False
              
              # Special handling for roll_dice action - bot should just roll the dice
              if action_type == "roll_dice":
-                 self.logger.info(f"Bot {player.id} handling roll_dice action directly")
+                 self.logger.info(f"Bot {player_id} handling roll_dice action directly")
                  # Clear the expected action first to avoid recursion
                  game_state.expected_action_type = None
                  game_state.expected_action_details = None
@@ -335,67 +331,33 @@ class BotController:
                  
                  # Let the game_logic handle the dice roll
                  if self.game_logic:
-                     roll_result = self.game_logic.roll_dice_and_move(player.id)
+                     roll_result = self.game_logic.roll_dice_and_move(player_id)
                      if roll_result and roll_result.get('success'):
-                         self.logger.info(f"Bot {player.id} successfully rolled dice: {roll_result.get('dice', [])}")
                          return True
-                     else:
-                         error = roll_result.get('error', 'Unknown error') if roll_result else 'Roll failed'
-                         self.logger.warning(f"Bot {player.id} roll_dice failed: {error}")
-                 else:
-                     self.logger.error(f"Bot {player.id} cannot roll dice: game_logic not available")
-                 return True
+                 return False
              
-             # Special handling for actions that shouldn't be repeated
-             if action_type == "end_turn":
-                 self.logger.info(f"Bot {player.id} clearing 'end_turn' action without processing")
+             # Convert expected_action_type into a structured landing action
+             landing_action = {
+                 'action': action_type,
+                 'game_id': game_id  # Use UUID instead of numeric ID
+             }
+             
+             # Add details if available
+             if details:
+                 landing_action.update(details)
+                 
+             # Use the landing action handler with this structured action
+             return self._handle_landing_action(player, landing_action, game_state)
+             
+         except Exception as e:
+             self.logger.error(f"Error handling pending action for bot {player_id}: {str(e)}", exc_info=True)
+             
+             # Attempt to clear the action to prevent stuck state
+             try:
                  game_state.expected_action_type = None
                  game_state.expected_action_details = None
                  db.session.commit()
-                 return True # No need to process further
-                 
-             # Create a synthetic landing action from the expected action details
-             landing_action = {"action": action_type}
-             
-             # Add details to the landing action if available
-             if details and isinstance(details, dict):
-                 landing_action.update(details)
-             else:
-                 self.logger.warning(f"Bot {player.id} has action type '{action_type}' but no valid details")
-                 # Special handling for community chest and chance cards when details are missing
-                 if action_type in ['draw_community_chest_card', 'draw_chance_card']:
-                     self.logger.info(f"Adding default details for {action_type} action")
-                     landing_action["player_id"] = player.id
-                     landing_action["game_id"] = game_state.game_id
-             
-             # Handle the action with dedicated action handler  
-             self._handle_landing_action(player, landing_action, game_state)
-             
-             # Check if action was handled successfully
-             # Re-query game state to check current expected action
-             updated_game_state = GameState.query.get(game_state.id)
-             
-             if updated_game_state.expected_action_type == action_type:
-                 # Action wasn't cleared, might need manual clearing or recovery
-                 self.logger.warning(f"Bot {player.id} action '{action_type}' wasn't cleared by handler. Clearing manually.")
-                 updated_game_state.expected_action_type = None
-                 updated_game_state.expected_action_details = None
-                 db.session.commit()
-             
-             return True # Action was handled
-                 
-         except Exception as e:
-             self.logger.error(f"Error handling pending action '{action_type}' for bot {player.id}: {str(e)}", exc_info=True)
-             
-             # Attempt recovery from error state
-             try:
-                 # Clear the expected action to prevent turn loop
-                 game_state = GameState.query.get(game_state.id)
-                 if game_state and game_state.expected_action_type == action_type:
-                     self.logger.info(f"Clearing error state for action '{action_type}' for bot {player.id}")
-                     game_state.expected_action_type = None
-                     game_state.expected_action_details = None
-                     db.session.commit()
+                 self.logger.warning(f"Bot {player_id} action '{action_type}' wasn't cleared by handler. Clearing manually.")
              except Exception as recovery_error:
                  self.logger.error(f"Failed to recover from action error: {str(recovery_error)}")
              
@@ -422,134 +384,185 @@ class BotController:
                 game_state.expected_action_type = None
                 game_state.expected_action_details = None
                 db.session.commit()
-                return False
+                return True  # Return true to indicate action was handled
             
-            # If no property_id is provided in the landing action, look up the property at the player's current position
-            if not property_id:
-                # Find the property at the player's current position
-                property_obj = Property.query.filter_by(position=player_position, game_id=game_id).first()
-                if property_obj:
-                    property_id = property_obj.id
-                    self.logger.info(f"Found property {property_obj.name} (ID: {property_id}) at player position {player_position}")
-                else:
-                    self.logger.error(f"No property found at position {player_position} for game {game_id}")
-                    return False
+            # Find the property at the player's current position - ALWAYS use position as source of truth
+            correct_property = Property.query.filter_by(position=player_position, game_id=game_id).first()
             
-            if property_id:
-                property_obj = Property.query.get(property_id)
-                if property_obj:
-                    # Verify the property is at the player's position
-                    if property_obj.position != player_position:
-                        self.logger.warning(f"Property {property_id} is at position {property_obj.position} but player is at position {player_position}")
-                        # Try to find the correct property at the player's position
-                        correct_property = Property.query.filter_by(position=player_position, game_id=game_id).first()
-                        if correct_property:
-                            property_id = correct_property.id
-                            property_obj = correct_property
-                            self.logger.info(f"Found correct property {correct_property.name} (ID: {property_id}) at player position {player_position}")
-                        else:
-                            # Clear the action since we can't find the correct property
-                            game_state.expected_action_type = None
-                            game_state.expected_action_details = None
-                            db.session.commit()
-                            return False
-                    
-                    # Extract cost from property_obj
-                    cost = property_obj.price if hasattr(property_obj, 'price') else property_obj.current_price
-                    
-                    # Use decision maker to determine whether to buy
-                    decision = self._decide_buy_property(player, property_id, cost)
-                    if decision:  # The method returns True/False, not a dictionary with a "buy" key
-                        # Bot decides to buy the property
-                        self.logger.info(f"Bot {player_id} decided to BUY property {property_id}")
-                        
-                        # Call game controller to purchase
-                        purchase_result = self.game_controller.handle_property_purchase(
-                            {"player_id": player_id, "property_id": property_id, "game_id": game_id, "is_bot": True}
-                        )
-                        return purchase_result.get("success", False)
-                    else:
-                        # Bot decides to trigger auction
-                        self.logger.info(f"Bot {player_id} decided to DECLINE buy for property {property_id}")
-                        
-                        # Send the decline purchase request to the game controller
-                        decline_result = self.game_controller.handle_property_decline(
-                            {"player_id": player_id, "property_id": property_id, "game_id": game_id, "is_bot": True}
-                        )
-                        
-                        # Auction handling if the decline was successful
-                        if decline_result.get("success", False):
-                            self.logger.info(f"Successfully declined purchase, auction should be triggered automatically")
-                            return True
+            if not correct_property:
+                self.logger.error(f"No property found at position {player_position} for game {game_id}")
+                # Clear the action since we can't find the correct property
+                game_state.expected_action_type = None
+                game_state.expected_action_details = None
+                db.session.commit()
+                return True  # Return true to indicate action was handled
+            
+            # Override any property_id from the landing_action with the correct one
+            property_id = correct_property.id
+            self.logger.info(f"Using property {correct_property.name} (ID: {property_id}) at player position {player_position}")
+            
+            # Check if property is already owned
+            if correct_property.owner_id is not None:
+                # If somehow the player has been prompted to buy a property that's already owned, clear the action
+                self.logger.warning(f"Property {property_id} already owned by Player {correct_property.owner_id}")
+                game_state.expected_action_type = None
+                game_state.expected_action_details = None
+                db.session.commit()
+                return True  # Return true to indicate action was handled
+            
+            # Extract cost from property_obj
+            cost = correct_property.price if hasattr(correct_property, 'price') else correct_property.current_price
+            
+            # Use decision maker to determine whether to buy
+            decision = self._decide_buy_property(player, property_id, cost)
+            if decision:  # The method returns True/False, not a dictionary with a "buy" key
+                # Bot decides to buy the property
+                self.logger.info(f"Bot {player_id} decided to BUY property {property_id}")
+                
+                # Call game controller to purchase
+                purchase_result = self.game_controller.handle_property_purchase(
+                    {"player_id": player_id, "property_id": property_id, "game_id": game_id, "is_bot": True}
+                )
+                
+                # Always clear the expected action after handling, regardless of success
+                game_state.expected_action_type = None
+                game_state.expected_action_details = None
+                db.session.commit()
+                
+                return purchase_result.get("success", False)
+            else:
+                # Bot decides to trigger auction
+                self.logger.info(f"Bot {player_id} decided to DECLINE buy for property {property_id}")
+                
+                # Send the decline purchase request to the game controller
+                decline_result = self.game_controller.handle_property_decline(
+                    {"player_id": player_id, "property_id": property_id, "game_id": game_id, "is_bot": True}
+                )
+                
+                # Always clear the expected action after handling, regardless of success
+                game_state.expected_action_type = None
+                game_state.expected_action_details = None
+                db.session.commit()
+                
+                # Auction handling if the decline was successful
+                if decline_result.get("success", False):
+                    self.logger.info(f"Successfully declined purchase, auction should be triggered automatically")
+                    return True
+                
+                return decline_result.get("success", False)
 
         elif action_type == 'draw_chance_card':
             self.logger.info(f"Bot {player_id} drawing Chance card.")
             # Get game_id from landing_action if available, otherwise use from game_state
-            card_game_id = landing_action.get('game_id', game_state.id)
-            self.special_space_controller.process_chance_card(player_id, card_game_id)
+            card_game_id = landing_action.get('game_id', game_state.game_id)
+            result = self.special_space_controller.process_chance_card(player_id, card_game_id)
+            
+            # Clear the expected action after handling
+            game_state.expected_action_type = None
+            game_state.expected_action_details = None
+            db.session.commit()
+            
+            return result.get("success", False)
 
         elif action_type == 'draw_community_chest_card':
             self.logger.info(f"Bot {player_id} drawing Community Chest card.")
             # Get game_id from landing_action if available, otherwise use from game_state
-            card_game_id = landing_action.get('game_id', game_state.id)
-            self.special_space_controller.process_community_chest_card(player_id, card_game_id)
+            card_game_id = landing_action.get('game_id', game_state.game_id)
+            result = self.special_space_controller.process_community_chest_card(player_id, card_game_id)
+            
+            # Clear the expected action after handling
+            game_state.expected_action_type = None
+            game_state.expected_action_details = None
+            db.session.commit()
+            
+            return result.get("success", False)
         
         elif action_type == 'free_parking':
             self.logger.info(f"Bot {player_id} landed on Free Parking.")
-            self.special_space_controller.handle_free_parking_space(game_state.id, player_id)
+            result = self.special_space_controller.handle_free_parking_space(game_state.id, player_id)
+            
+            # Clear the expected action after handling
+            game_state.expected_action_type = None
+            game_state.expected_action_details = None
+            db.session.commit()
+            
+            return result.get("success", False)
         
         elif action_type == 'market_fluctuation':
             self.logger.info(f"Bot {player_id} landed on Market Fluctuation.")
-            self.special_space_controller.handle_market_fluctuation_space(game_state.id, player_id)
+            result = self.special_space_controller.handle_market_fluctuation_space(game_state.id, player_id)
+            
+            # Clear the expected action after handling
+            game_state.expected_action_type = None
+            game_state.expected_action_details = None
+            db.session.commit()
+            
+            return result.get("success", False)
         
         elif action_type == 'pay_tax':
              tax_details = landing_action.get('tax_details', {})
              amount = tax_details.get('amount') # Assuming amount is in details
              self.logger.info(f"Bot {player_id} needs to pay tax: {amount}")
              payment_result = self.banker.player_pays_bank(player_id, amount, f"Tax: {landing_action.get('space_name')}")
+             
+             # Clear expected state regardless of payment success
+             game_state.expected_action_type = None
+             game_state.expected_action_details = None
+             db.session.commit()
+             
              if not payment_result['success']:
                   self.logger.warning(f"Bot {player_id} could not pay tax. Needs asset management.")
-                  self._manage_assets(player, amount)
-             else:
-                  # Tax paid, clear expected state if it was set
-                  current_game_state = GameState.query.get(game_id)
-                  if current_game_state and current_game_state.expected_action_type == 'pay_tax':
-                       current_game_state.expected_action_type = None
-                       current_game_state.expected_action_details = None
-                       db.session.commit()
+                  return self._manage_assets(player, amount)
+             
+             return payment_result.get("success", False)
        
         elif action_type in ['insufficient_funds_for_rent', 'manage_assets_or_bankrupt', 'manage_assets_for_jail_fine']:
              required_amount = landing_action.get('required', landing_action.get('rent_amount', 0))
              self.logger.warning(f"Bot {player_id} needs to manage assets. Required: {required_amount}")
-             self._manage_assets(player, required_amount)
-             # After managing assets, the original action (paying rent/fine) might need re-attempting
-             # This needs more complex state handling - for now, assume manage_assets handles payment if possible.
+             
+             # Clear expected state regardless of asset management success
+             game_state.expected_action_type = None
+             game_state.expected_action_details = None
+             db.session.commit()
+             
+             return self._manage_assets(player, required_amount)
        
         elif action_type == 'jail_action_prompt':
             # Handle jail prompt directly when it comes through as a landing action
             self.logger.info(f"Bot {player_id} handling jail action prompt")
             # Pay the fine to get out rather than rolling for doubles in this case
             fine = 50  # Standard fine
+            
+            # Clear expected action state regardless of what happens next
+            game_state.expected_action_type = None
+            game_state.expected_action_details = None
+            db.session.commit()
+            
             if player.money >= fine:
                 self.logger.info(f"Bot {player_id} paying ${fine} fine to get out of jail.")
                 pay_result = self.banker.player_pays_bank(player_id, fine, "Jail fine")
                 if pay_result['success']:
                     player.in_jail = False
                     player.jail_turns = 0
-                    # Clear expected action state
-                    game_state.expected_action_type = None
-                    game_state.expected_action_details = None
                     db.session.commit()
+                    return True
                 else:
                     self.logger.warning(f"Bot {player_id} failed to pay jail fine: {pay_result.get('error')}. Managing assets.")
-                    self._manage_assets(player, fine)
+                    return self._manage_assets(player, fine)
             else:
                 self.logger.info(f"Bot {player_id} cannot afford jail fine. Managing assets.")
-                self._manage_assets(player, fine)
+                return self._manage_assets(player, fine)
        
         # Actions like 'paid_rent', 'went_to_jail', 'passive_space' require no bot decision.
         else:
              self.logger.debug(f"Bot {player_id} encountered landing action '{action_type}' requiring no specific decision.")
+             
+             # Clear the expected action for any action we don't specifically handle
+             game_state.expected_action_type = None
+             game_state.expected_action_details = None
+             db.session.commit()
+             
+             return True  # Action was handled
 
     def _decline_buy_action(self, player_id, property_id, game_id):
          """Handles the logic after a bot declines to buy."""
@@ -813,14 +826,11 @@ class BotController:
         try:
             # Get game state - handle both numeric and string UUIDs
             game_state = None
-            actual_game_id = None
             
             # Try numeric ID first (used for integers)
             try:
                 if isinstance(game_id, int) or (isinstance(game_id, str) and game_id.isdigit()):
                     game_state = GameState.query.get(int(game_id))
-                    if game_state:
-                        actual_game_id = game_state.id
             except (ValueError, TypeError):
                 pass
                 

@@ -410,6 +410,9 @@ class GameController:
                 self.logger.info("Starting bot action thread from game controller")
                 start_bot_action_thread(self.app_config.get('bot_controller').socketio, self.app_config)
             
+            # Query active players right before emitting events
+            active_players = Player.query.filter_by(in_game=True).all()
+            
             # Emit game started event
             if self.socketio:
                 self.socketio.emit('game_started', {
