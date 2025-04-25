@@ -4,7 +4,6 @@ import json
 from datetime import datetime, timedelta
 from flask_socketio import SocketIO
 from sqlalchemy.exc import SQLAlchemyError
-from flask.globals import _app_ctx_stack
 from flask import current_app
 import traceback
 
@@ -88,6 +87,11 @@ class EconomicCycleController:
     def process_economic_cycle(self, game_id):
         """Process economic cycle changes for a game"""
         try:
+            # Check if game_id is valid
+            if not game_id:
+                self.logger.error("Invalid game_id (None or empty)")
+                return {'success': False, 'error': 'Invalid game_id'}
+                
             # Get the Flask app from the instance
             app = self.app
             if not app:
@@ -96,10 +100,22 @@ class EconomicCycleController:
                 
             # Use the app context for database operations
             with app.app_context():
+                # Check if game exists
                 game_state = GameState.query.filter_by(game_id=game_id).first()
                 if not game_state:
-                    self.logger.error(f"Game state not found for game {game_id}")
-                    return {'success': False, 'error': 'Game state not found'}
+                    # Try to find by ID instead of game_id
+                    try:
+                        game_id_int = int(game_id)
+                        game_state = GameState.query.get(game_id_int)
+                        if game_state:
+                            self.logger.warning(f"Found game state by ID {game_id_int} instead of game_id")
+                        else:
+                            self.logger.error(f"Game state not found for game {game_id}")
+                            return {'success': False, 'error': 'Game state not found'}
+                    except (ValueError, TypeError):
+                        # Not an integer ID or conversion error
+                        self.logger.error(f"Game state not found for game {game_id}")
+                        return {'success': False, 'error': 'Game state not found'}
                 
                 # Get current economic state
                 current_state = game_state.economic_state or 'stable'
@@ -212,7 +228,7 @@ class EconomicCycleController:
             # Get the game state
             game_state = GameState.query.get(game_id)
             if not game_state:
-                logger.error(f"Game {game_id} not found")
+                self.logger.error(f"Game {game_id} not found")
                 return {"success": False, "error": "Game not found"}
             
             # Get the current economic state
@@ -244,7 +260,7 @@ class EconomicCycleController:
             }
             
         except Exception as e:
-            logger.error(f"Error getting economic state: {str(e)}", exc_info=True)
+            self.logger.error(f"Error getting economic state: {str(e)}", exc_info=True)
             return {"success": False, "error": str(e)}
     
     def trigger_market_crash(self, game_id, admin_key=None):
@@ -258,13 +274,13 @@ class EconomicCycleController:
         Returns:
             dict: A dictionary with the results of the market crash.
         """
-        logger.info(f"Triggering market crash for game {game_id}")
+        self.logger.info(f"Triggering market crash for game {game_id}")
         
         try:
             # Get the game state
             game_state = GameState.query.get(game_id)
             if not game_state:
-                logger.error(f"Game {game_id} not found")
+                self.logger.error(f"Game {game_id} not found")
                 return {"success": False, "error": "Game not found"}
             
             # Update economic state to depression
@@ -336,7 +352,7 @@ class EconomicCycleController:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error triggering market crash: {str(e)}", exc_info=True)
+            self.logger.error(f"Error triggering market crash: {str(e)}", exc_info=True)
             return {"success": False, "error": str(e)}
     
     def trigger_economic_boom(self, game_id, admin_key=None):
@@ -350,13 +366,13 @@ class EconomicCycleController:
         Returns:
             dict: A dictionary with the results of the economic boom.
         """
-        logger.info(f"Triggering economic boom for game {game_id}")
+        self.logger.info(f"Triggering economic boom for game {game_id}")
         
         try:
             # Get the game state
             game_state = GameState.query.get(game_id)
             if not game_state:
-                logger.error(f"Game {game_id} not found")
+                self.logger.error(f"Game {game_id} not found")
                 return {"success": False, "error": "Game not found"}
             
             # Update economic state to boom
@@ -430,7 +446,7 @@ class EconomicCycleController:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error triggering economic boom: {str(e)}", exc_info=True)
+            self.logger.error(f"Error triggering economic boom: {str(e)}", exc_info=True)
             return {"success": False, "error": str(e)}
 
     def handle_market_fluctuation_space(self, game_id, player_id):
@@ -580,13 +596,13 @@ class EconomicCycleController:
         Returns:
             dict: A dictionary with the results of the economic event.
         """
-        logger.info(f"Triggering economic event for game {game_id}")
+        self.logger.info(f"Triggering economic event for game {game_id}")
         
         try:
             # Get the game state
             game_state = GameState.query.get(game_id)
             if not game_state:
-                logger.error(f"Game {game_id} not found")
+                self.logger.error(f"Game {game_id} not found")
                 return {"success": False, "error": "Game not found"}
             
             # Get the current economic state
@@ -745,7 +761,7 @@ class EconomicCycleController:
                 # Find the requested event
                 event = next((e for e in all_events if e["name"] == specific_event), None)
                 if not event:
-                    logger.error(f"Requested event '{specific_event}' not found")
+                    self.logger.error(f"Requested event '{specific_event}' not found")
                     return {"success": False, "error": "Requested event not found"}
             else:
                 # Randomly select an event based on the current economic state
@@ -887,7 +903,7 @@ class EconomicCycleController:
                 bot_controller = current_app.config.get('bot_controller')
                 
                 if bot_controller:
-                    logger.info(f"Triggering bot reactions to economic event: {event['name']}")
+                    self.logger.info(f"Triggering bot reactions to economic event: {event['name']}")
                     
                     # Prepare event data for bots
                     event_data = {
@@ -915,13 +931,13 @@ class EconomicCycleController:
                     bot_reaction_result = bot_controller.handle_economic_event(game_id, event_type, event_data)
                     
                     if bot_reaction_result.get('success'):
-                        logger.info(f"Bots successfully reacted to economic event: {len(bot_reaction_result.get('bot_responses', {}))} bot responses")
+                        self.logger.info(f"Bots successfully reacted to economic event: {len(bot_reaction_result.get('bot_responses', {}))} bot responses")
                     else:
-                        logger.warning(f"Error in bot reactions to economic event: {bot_reaction_result.get('error', 'Unknown error')}")
+                        self.logger.warning(f"Error in bot reactions to economic event: {bot_reaction_result.get('error', 'Unknown error')}")
                 else:
-                    logger.warning("Bot controller not found in app config, bot reactions to economic event not triggered")
+                    self.logger.warning("Bot controller not found in app config, bot reactions to economic event not triggered")
             except Exception as e:
-                logger.error(f"Error triggering bot reactions to economic event: {str(e)}", exc_info=True)
+                self.logger.error(f"Error triggering bot reactions to economic event: {str(e)}", exc_info=True)
                 # Continue with the main event even if bot reactions fail
             
             return {
@@ -935,7 +951,7 @@ class EconomicCycleController:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error triggering economic event: {str(e)}", exc_info=True)
+            self.logger.error(f"Error triggering economic event: {str(e)}", exc_info=True)
             return {"success": False, "error": str(e)}
 
 def register_economic_events(socketio, app_config):
@@ -945,6 +961,9 @@ def register_economic_events(socketio, app_config):
     if not economic_controller:
         logger.error("Economic controller not found in app config during event registration.")
         return
+    
+    # Get the logger from the controller instance
+    controller_logger = getattr(economic_controller, 'logger', logger)
     
     @socketio.on('get_economic_state')
     def handle_get_economic_state(data):
@@ -1026,4 +1045,4 @@ def register_economic_events(socketio, app_config):
         else:
             socketio.emit('economic_error', {'error': result.get('error')}, room=request.sid)
     
-    logger.info("Economic cycle event handlers registered.") 
+    controller_logger.info("Economic cycle event handlers registered.") 

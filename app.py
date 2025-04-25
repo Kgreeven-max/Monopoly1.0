@@ -85,6 +85,7 @@ from src.migrations.add_game_id_to_loan import run_migration as run_add_game_id_
 from src.migrations.add_fields_to_cd import run_migration as run_add_fields_to_cd_migration
 from src.migrations.add_history_to_loan import run_migration as run_add_history_to_loan_migration
 from src.migrations.add_times_passed_go import run_migration as run_add_times_passed_go_migration
+from src.migrations.add_economic_cycle_columns import run_migration as run_add_economic_cycle_columns_migration
 from src.controllers.trade_controller import TradeController # Import TradeController
 from src.routes.trade_routes import trade_routes # Import trade routes
 
@@ -250,6 +251,21 @@ with app.app_context(): # Use app context to access db/config safely
             logging.warning('Failed to run add_times_passed_go migration.')
     except Exception as e:
         logging.error(f'Error running add_times_passed_go migration: {str(e)}', exc_info=True)
+        # Add a direct SQL migration as fallback for times_passed_go
+        try:
+            logging.info('Attempting direct SQL migration for times_passed_go column')
+            from sqlalchemy import text
+            # Check if column exists
+            result = db.session.execute(text("SELECT 1 FROM pragma_table_info('players') WHERE name='times_passed_go'")).fetchone()
+            if not result:
+                # Add the column if it doesn't exist
+                db.session.execute(text("ALTER TABLE players ADD COLUMN times_passed_go INTEGER DEFAULT 0"))
+                db.session.commit()
+                logging.info('Successfully added times_passed_go column using direct SQL')
+            else:
+                logging.info('times_passed_go column already exists')
+        except Exception as fallback_error:
+            logging.error(f'Fallback migration for times_passed_go also failed: {str(fallback_error)}', exc_info=True)
     
     # Ensure GameState instance exists and has a game_id
     # Use a direct SQL query instead of ORM to avoid issues with missing columns
@@ -304,12 +320,53 @@ with app.app_context(): # Use app context to access db/config safely
             db.session.add(game_state)
             db.session.commit()
         
+    # Add economic_state to GameState if it's missing
+    try:
+        logging.info('Checking for economic_state column in game_state table')
+        from sqlalchemy import text
+        
+        # Check if economic_state column exists
+        result = db.session.execute(text("SELECT 1 FROM pragma_table_info('game_state') WHERE name='economic_state'")).fetchone()
+        if not result:
+            # Add the column if it doesn't exist
+            db.session.execute(text("ALTER TABLE game_state ADD COLUMN economic_state VARCHAR(20) DEFAULT 'stable'"))
+            db.session.commit()
+            logging.info('Successfully added economic_state column to game_state table')
+        else:
+            logging.info('economic_state column already exists in game_state table')
+            
+        # Update the game_state instance if it exists
+        if 'game_state' in locals():
+            # Get the current economic_state value
+            result = db.session.execute(text("SELECT economic_state FROM game_state WHERE id = :id"), 
+                                       {"id": game_state.id}).fetchone()
+            if result and hasattr(result, '_mapping'):
+                economic_state_value = result._mapping.get('economic_state', 'stable')
+            else:
+                economic_state_value = 'stable'
+                
+            # Set the value on the instance for use in this session
+            setattr(game_state, 'economic_state', economic_state_value)
+            logging.info(f'Set economic_state={economic_state_value} on GameState instance')
+    except Exception as e:
+        logging.error(f'Error checking or adding economic_state column: {str(e)}', exc_info=True)
+        
+    # Run economic cycle columns migration
+    try:
+        economic_cycle_columns_result = run_add_economic_cycle_columns_migration()
+        if economic_cycle_columns_result:
+            logging.info('Successfully ran economic cycle columns migration.')
+        else:
+            logging.warning('Failed to run economic cycle columns migration.')
+    except Exception as e:
+        logging.error(f'Error running economic cycle columns migration: {str(e)}', exc_info=True)
+        
     # ---- Stage 1: Initialize basic services and controllers ----
     banker = Banker(socketio)
     community_fund = CommunityFund(socketio, game_state)
     event_system = EventSystem(socketio, banker, community_fund)
     auction_system = AuctionSystem(socketio, banker)
-    economic_controller = EconomicCycleController(socketio, app=app) # Pass the app instance
+    economic_controller = EconomicCycleController(socketio=socketio, app=app)
     special_space_controller = SpecialSpaceController(socketio=socketio, game_controller=None, economic_controller=economic_controller, app_config=app.config)
     social_controller = SocialController(socketio, app.config) 
     remote_controller = RemoteController(app) # Needs app instance
@@ -746,16 +803,18 @@ def setup_scheduled_tasks():
                 eventlet.sleep(app.config['ADAPTIVE_DIFFICULTY_INTERVAL'] * 60)
                 
                 try:
-                    # Assess game balance
-                    assessment = difficulty_controller.assess_game_balance()
-                    
-                    # If adjustment needed, apply it
-                    if assessment.get('needs_adjustment'):
-                        adjustment_direction = assessment.get('adjustment_direction')
-                        difficulty_controller.adjust_difficulty(adjustment_direction)
+                    # Create an application context
+                    with app.app_context():
+                        # Assess game balance
+                        assessment = difficulty_controller.assess_game_balance()
                         
-                        # Log the auto-adjustment
-                        logging.info(f"Auto-adjusted bot difficulty: {adjustment_direction}")
+                        # If adjustment needed, apply it
+                        if assessment.get('needs_adjustment'):
+                            adjustment_direction = assessment.get('adjustment_direction')
+                            difficulty_controller.adjust_difficulty(adjustment_direction)
+                            
+                            # Log the auto-adjustment
+                            logging.info(f"Auto-adjusted bot difficulty: {adjustment_direction}")
                 except Exception as e:
                     logging.error(f"Error in scheduled difficulty assessment: {str(e)}")
         
@@ -775,12 +834,14 @@ def setup_scheduled_tasks():
                 eventlet.sleep(app.config['POLICE_PATROL_INTERVAL'] * 60)
                 
                 try:
-                    # Run police patrol
-                    patrol_result = crime_controller.check_for_police_patrol()
-                    
-                    # Log the patrol results
-                    if patrol_result.get('success'):
-                        logging.info(f"Police patrol completed: {patrol_result.get('message')}")
+                    # Create an application context
+                    with app.app_context():
+                        # Run police patrol
+                        patrol_result = crime_controller.check_for_police_patrol()
+                        
+                        # Log the patrol results
+                        if patrol_result.get('success'):
+                            logging.info(f"Police patrol completed: {patrol_result.get('message')}")
                 except Exception as e:
                     logging.error(f"Error in scheduled police patrol: {str(e)}")
         
@@ -822,17 +883,42 @@ def setup_scheduled_tasks():
             if app.config['ECONOMIC_CYCLE_ENABLED']:
                 logging.info("Running scheduled economic cycle update")
                 try:
-                    # Use the EconomicCycleController instead of the EconomicCycleManager
-                    game_state = app.config.get('game_state_instance')
-                    
-                    if game_state:
-                        result = economic_controller.process_economic_cycle(game_state.game_id)
-                        if result.get('success'):
-                            logging.info(f"Economic cycle updated: {result.get('previous_state')} -> {result.get('new_state')}")
-                        else:
-                            logging.warning(f"Economic cycle update failed: {result.get('error')}")
-                    else:
-                        logging.error("Game state not found in app config")
+                    # Create an application context
+                    with app.app_context():
+                        # Find active games instead of using the one from app.config
+                        active_games = GameState.query.filter_by(game_active=True).all()
+                        
+                        if not active_games:
+                            logging.info("No active games found for economic cycle update")
+                            return
+                        
+                        # Update each active game's economic cycle
+                        for game in active_games:
+                            try:
+                                # Make sure the game has a valid game_id
+                                if not game.game_id:
+                                    logging.warning(f"Game with ID {game.id} has no game_id, skipping economic cycle update")
+                                    continue
+                                    
+                                logging.info(f"Processing economic cycle for game {game.game_id} (ID: {game.id})")
+                                result = economic_controller.process_economic_cycle(game.game_id)
+                                if result.get('success'):
+                                    logging.info(f"Economic cycle updated for game {game.game_id}: {result.get('previous_state')} -> {result.get('new_state')}")
+                                else:
+                                    logging.warning(f"Economic cycle update failed for game {game.game_id}: {result.get('error')}")
+                                    
+                                    # If the game state wasn't found, try updating using the numeric ID instead
+                                    if result.get('error') == 'Game state not found':
+                                        logging.info(f"Trying to update economic cycle using numeric ID {game.id} instead of UUID")
+                                        result = economic_controller.process_economic_cycle(str(game.id))
+                                        if result.get('success'):
+                                            logging.info(f"Economic cycle updated for game ID {game.id}: {result.get('previous_state')} -> {result.get('new_state')}")
+                                        else:
+                                            logging.warning(f"Economic cycle update still failed for game ID {game.id}: {result.get('error')}")
+                                            
+                            except Exception as game_error:
+                                logging.error(f"Error updating economic cycle for game {game.game_id}: {str(game_error)}", exc_info=True)
+                
                 except Exception as e:
                     logging.error(f"Error in economic cycle update: {str(e)}", exc_info=True)
                     
@@ -853,24 +939,26 @@ def setup_scheduled_tasks():
                 """Trigger random economic events in active games."""
                 logging.info("Running scheduled random economic event")
                 try:
-                    # Get all active games
-                    active_games = GameState.query.filter_by(game_active=True).all()
-                    
-                    if not active_games:
-                        logging.info("No active games found for random economic event")
-                        return
-                    
-                    # Select a random game to affect
-                    game = random.choice(active_games)
-                    
-                    # Trigger a random economic event for this game
-                    admin_key = app.config.get('ADMIN_KEY')
-                    result = economic_controller.trigger_economic_event(game.game_id, admin_key)
-                    
-                    if result.get('success'):
-                        logging.info(f"Random economic event triggered for game {game.game_id}: {result.get('event_type')}")
-                    else:
-                        logging.warning(f"Failed to trigger random economic event: {result.get('error')}")
+                    # Create an application context
+                    with app.app_context():
+                        # Get all active games
+                        active_games = GameState.query.filter_by(game_active=True).all()
+                        
+                        if not active_games:
+                            logging.info("No active games found for random economic event")
+                            return
+                        
+                        # Select a random game to affect
+                        game = random.choice(active_games)
+                        
+                        # Trigger a random economic event for this game
+                        admin_key = app.config.get('ADMIN_KEY')
+                        result = economic_controller.trigger_economic_event(game.game_id, admin_key)
+                        
+                        if result.get('success'):
+                            logging.info(f"Random economic event triggered for game {game.game_id}: {result.get('event_type')}")
+                        else:
+                            logging.warning(f"Failed to trigger random economic event: {result.get('error')}")
                 except Exception as e:
                     logging.error(f"Error triggering random economic event: {str(e)}", exc_info=True)
                 

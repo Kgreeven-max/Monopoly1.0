@@ -36,6 +36,8 @@ class AuctionController:
         self.socketio = socketio
         self.active_timers = {} # auction_id -> timer info dictionary
         self.app = current_app._get_current_object()  # Store Flask app for context management
+        self.logger = logger  # Store the logger as an instance attribute
+        self.app_config = self.app.config if hasattr(self.app, 'config') else {}  # Store app_config
         logger.info("AuctionController initialized (DB Persistence Mode).")
         
         # Start the background auction monitoring task
@@ -309,14 +311,8 @@ class AuctionController:
     def _end_auction_logic(self, auction_id):
         """Internal logic for ending an auction"""
         try:
-            # Get the Flask app from the config
-            app = self.app_config.get('app')
-            if not app:
-                self.logger.error("Flask app not found in app_config")
-                return False
-                
-            # Use the app context for database operations
-            with app.app_context():
+            # Use the Flask app context directly
+            with self.app.app_context():
                 auction = Auction.query.get(auction_id)
                 if not auction:
                     self.logger.error(f"Auction {auction_id} not found")
@@ -410,7 +406,7 @@ class AuctionController:
         try:
             auction = Auction.query.get(auction_id)
             if not auction:
-                logger.error(f"Cannot start timer for non-existent auction {auction_id}")
+                self.logger.error(f"Cannot start timer for non-existent auction {auction_id}")
                 return False
                 
             # Cancel any existing timer for this auction
@@ -423,16 +419,16 @@ class AuctionController:
             else:
                 remaining_seconds = AUCTION_TIMER_DEFAULT
                 
-            logger.info(f"Starting auction timer for {auction_id} with {remaining_seconds:.1f} seconds duration")
+            self.logger.info(f"Starting auction timer for {auction_id} with {remaining_seconds:.1f} seconds duration")
             
             def timer_callback():
                 """Called when the timer expires to end the auction."""
                 try:
                     # Directly call the end auction logic with this auction ID
-                    logger.info(f"Auction timer expired for auction {auction_id}")
+                    self.logger.info(f"Auction timer expired for auction {auction_id}")
                     self._timer_auction_end_callback(auction_id)
                 except Exception as e:
-                    logger.error(f"Error in auction timer callback for auction {auction_id}: {str(e)}", exc_info=True)
+                    self.logger.error(f"Error in auction timer callback for auction {auction_id}: {str(e)}", exc_info=True)
             
             # Use socketio background task for timer which works with Flask's async mode
             timer = self.socketio.start_background_task(
@@ -450,7 +446,7 @@ class AuctionController:
             return True
             
         except Exception as e:
-            logger.error(f"Error starting auction timer for {auction_id}: {str(e)}", exc_info=True)
+            self.logger.error(f"Error starting auction timer for {auction_id}: {str(e)}", exc_info=True)
             return False
             
     def _delayed_execution(self, callback_function, delay_seconds):
@@ -460,17 +456,17 @@ class AuctionController:
             eventlet.sleep(delay_seconds)
             callback_function()
         except Exception as e:
-            logger.error(f"Error in delayed execution: {str(e)}", exc_info=True)
+            self.logger.error(f"Error in delayed execution: {str(e)}", exc_info=True)
             
     def _reset_auction_timer(self, auction_id, extension_seconds=AUCTION_TIMER_EXTENSION):
         """Reset the auction timer when a new bid is placed, extending the duration."""
         try:
             auction = Auction.query.get(auction_id)
             if not auction:
-                logger.error(f"Cannot reset timer for non-existent auction {auction_id}")
+                self.logger.error(f"Cannot reset timer for non-existent auction {auction_id}")
                 return False
                 
-            logger.info(f"Extending auction timer for {auction_id} by {extension_seconds} seconds")
+            self.logger.info(f"Extending auction timer for {auction_id} by {extension_seconds} seconds")
             
             # Cancel existing timer for this auction
             self._cancel_timer(auction_id)
@@ -486,10 +482,10 @@ class AuctionController:
             def timer_callback():
                 """Called when the timer expires to end the auction."""
                 try:
-                    logger.info(f"Extended auction timer expired for auction {auction_id}")
+                    self.logger.info(f"Extended auction timer expired for auction {auction_id}")
                     self._timer_auction_end_callback(auction_id)
                 except Exception as e:
-                    logger.error(f"Error in extended auction timer callback for auction {auction_id}: {str(e)}", exc_info=True)
+                    self.logger.error(f"Error in extended auction timer callback for auction {auction_id}: {str(e)}", exc_info=True)
             
             # Use socketio background task for timer which works with Flask's async mode
             timer = self.socketio.start_background_task(
@@ -514,7 +510,7 @@ class AuctionController:
             return True
             
         except Exception as e:
-            logger.error(f"Error resetting auction timer for {auction_id}: {str(e)}", exc_info=True)
+            self.logger.error(f"Error resetting auction timer for {auction_id}: {str(e)}", exc_info=True)
             return False
             
     def _cancel_timer(self, auction_id):
@@ -566,7 +562,7 @@ class AuctionController:
 
     def _check_active_auctions(self):
         """Periodically check all active auctions to ensure timers are working correctly."""
-        logger.debug("Checking active auctions")
+        self.logger.debug("Checking active auctions")
         
         try:
             with self.app.app_context():
@@ -578,14 +574,14 @@ class AuctionController:
                     # Check if this auction should have ended already
                     if auction.end_time and auction.end_time < now:
                         # If the auction should have ended but didn't, end it now
-                        logger.warning(f"Auction {auction.id} should have ended at {auction.end_time} but is still active. Ending now.")
+                        self.logger.warning(f"Auction {auction.id} should have ended at {auction.end_time} but is still active. Ending now.")
                         self._end_auction_logic(auction.id)
                     elif auction.id not in self.active_timers:
                         # If the auction is still running but doesn't have an active timer, start one
-                        logger.warning(f"Active auction {auction.id} has no timer. Starting a new timer.")
+                        self.logger.warning(f"Active auction {auction.id} has no timer. Starting a new timer.")
                         self._start_auction_timer(auction.id)
         except Exception as e:
-            logger.error(f"Error checking active auctions: {str(e)}", exc_info=True)
+            self.logger.error(f"Error checking active auctions: {str(e)}", exc_info=True)
             
     def start_check_active_auctions_task(self):
         """Start a background task to periodically check active auctions."""
@@ -599,14 +595,14 @@ class AuctionController:
                         eventlet.sleep(60)  # Check every minute
                         self._check_active_auctions()
                     except Exception as e:
-                        logger.error(f"Error in check active auctions loop: {str(e)}", exc_info=True)
+                        self.logger.error(f"Error in check active auctions loop: {str(e)}", exc_info=True)
             
             # Start the background task
             self.socketio.start_background_task(check_active_auctions_loop)
-            logger.info("Started background task to check active auctions")
+            self.logger.info("Started background task to check active auctions")
             return True
         except Exception as e:
-            logger.error(f"Failed to start check active auctions task: {str(e)}", exc_info=True)
+            self.logger.error(f"Failed to start check active auctions task: {str(e)}", exc_info=True)
             return False
 
     # --- Placeholder/Passthrough Methods (Controller logic moved here) ---
@@ -624,24 +620,24 @@ class AuctionController:
         Returns:
             dict: A dictionary with the auction details or error.
         """
-        logger.info(f"Starting auction for property {property_id} in game {game_id}")
+        self.logger.info(f"Starting auction for property {property_id} in game {game_id}")
         
         try:
             # Get the game state
             game_state = GameState.query.filter_by(game_id=game_id).first()
             if not game_state:
-                logger.error(f"Game {game_id} not found")
+                self.logger.error(f"Game {game_id} not found")
                 return {"success": False, "error": "Game not found"}
             
             # Get the property
             property_obj = Property.query.get(property_id)
             if not property_obj:
-                logger.error(f"Property {property_id} not found")
+                self.logger.error(f"Property {property_id} not found")
                 return {"success": False, "error": "Property not found"}
             
             # Check if property is already owned
             if property_obj.owner_id:
-                logger.error(f"Property {property_id} already owned by player {property_obj.owner_id}")
+                self.logger.error(f"Property {property_id} already owned by player {property_obj.owner_id}")
                 return {"success": False, "error": "Property already owned"}
             
             # Determine starting bid
@@ -668,7 +664,7 @@ class AuctionController:
                 try:
                     current_log = json.loads(game_state.game_log)
                 except json.JSONDecodeError:
-                    logger.warning(f"Could not parse game log for game {game_id}, creating new log")
+                    self.logger.warning(f"Could not parse game log for game {game_id}, creating new log")
                     current_log = []
             else:
                 current_log = []
@@ -718,12 +714,12 @@ class AuctionController:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error starting auction: {str(e)}", exc_info=True)
+            self.logger.error(f"Error starting auction: {str(e)}", exc_info=True)
             return {"success": False, "error": str(e)}
 
     def start_foreclosure_auction(self, property_id, owner_id, minimum_bid=None):
          """Public method to initiate starting a foreclosure auction."""
-         logger.info(f"Request received to start foreclosure auction for property {property_id}, owner {owner_id}")
+         self.logger.info(f"Request received to start foreclosure auction for property {property_id}, owner {owner_id}")
          return self._start_auction_logic(property_id, is_foreclosure=True, owner_id=owner_id, minimum_bid=minimum_bid)
 
     def place_bid(self, auction_id, player_id, bid_amount):
@@ -738,44 +734,44 @@ class AuctionController:
         Returns:
             dict: A dictionary with the results of the bid placement.
         """
-        logger.info(f"Player {player_id} placing bid of {bid_amount} in auction {auction_id}")
+        self.logger.info(f"Player {player_id} placing bid of {bid_amount} in auction {auction_id}")
         
         try:
             # Get the auction
             auction = Auction.query.get(auction_id)
             if not auction:
-                logger.error(f"Auction {auction_id} not found")
+                self.logger.error(f"Auction {auction_id} not found")
                 return {"success": False, "error": "Auction not found"}
             
             # Check if auction is still active
             if auction.status != "active":
-                logger.error(f"Auction {auction_id} is not active (status: {auction.status})")
+                self.logger.error(f"Auction {auction_id} is not active (status: {auction.status})")
                 return {"success": False, "error": f"Auction is not active, current status: {auction.status}"}
             
             # Check if auction has ended
             if auction.end_time < datetime.utcnow():
-                logger.error(f"Auction {auction_id} has already ended")
+                self.logger.error(f"Auction {auction_id} has already ended")
                 return {"success": False, "error": "Auction has already ended"}
             
             # Get the player
             player = Player.query.get(player_id)
             if not player:
-                logger.error(f"Player {player_id} not found")
+                self.logger.error(f"Player {player_id} not found")
                 return {"success": False, "error": "Player not found"}
             
             # Check if player is active in the game
             if player.status != "active":
-                logger.error(f"Player {player_id} is not active (status: {player.status})")
+                self.logger.error(f"Player {player_id} is not active (status: {player.status})")
                 return {"success": False, "error": "Player is not active in the game"}
             
             # Check if bid is higher than current bid
             if bid_amount <= auction.current_bid:
-                logger.error(f"Bid amount {bid_amount} is not higher than current bid {auction.current_bid}")
+                self.logger.error(f"Bid amount {bid_amount} is not higher than current bid {auction.current_bid}")
                 return {"success": False, "error": f"Bid must be higher than current bid of {auction.current_bid}"}
             
             # Check if player has enough money
             if player.balance < bid_amount:
-                logger.error(f"Player {player_id} has insufficient funds for bid of {bid_amount}")
+                self.logger.error(f"Player {player_id} has insufficient funds for bid of {bid_amount}")
                 return {"success": False, "error": "Insufficient funds for this bid"}
             
             # Record the previous winner (for notification)
@@ -788,7 +784,7 @@ class AuctionController:
             # Get the game state
             game_state = GameState.query.filter_by(game_id=auction.game_id).first()
             if not game_state:
-                logger.error(f"Game {auction.game_id} not found")
+                self.logger.error(f"Game {auction.game_id} not found")
                 return {"success": False, "error": "Game not found"}
             
             # Update game log
@@ -796,7 +792,7 @@ class AuctionController:
                 try:
                     current_log = json.loads(game_state.game_log)
                 except json.JSONDecodeError:
-                    logger.warning(f"Could not parse game log for game {auction.game_id}, creating new log")
+                    self.logger.warning(f"Could not parse game log for game {auction.game_id}, creating new log")
                     current_log = []
             else:
                 current_log = []
@@ -817,7 +813,7 @@ class AuctionController:
             time_remaining = (auction.end_time - datetime.utcnow()).total_seconds()
             if time_remaining < 30:
                 auction.end_time = datetime.utcnow() + timedelta(seconds=30)
-                logger.info(f"Extended auction {auction_id} by 30 seconds due to last-minute bid")
+                self.logger.info(f"Extended auction {auction_id} by 30 seconds due to last-minute bid")
                 # Reschedule the end timer
                 self._schedule_auction_end(auction_id, 30)
             
@@ -842,7 +838,7 @@ class AuctionController:
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error placing bid: {str(e)}", exc_info=True)
+            self.logger.error(f"Error placing bid: {str(e)}", exc_info=True)
             return {"success": False, "error": str(e)}
 
     def pass_auction(self, auction_id, player_id):
@@ -1125,7 +1121,7 @@ class AuctionController:
 
     def start_auction_monitoring_task(self):
         """Start a background task to periodically check active auctions."""
-        logger.info("Starting background auction monitoring task")
+        self.logger.info("Starting background auction monitoring task")
         
         def check_active_auctions_loop():
             """Background loop that periodically checks active auctions."""
@@ -1138,11 +1134,11 @@ class AuctionController:
                     # Then check auctions
                     self._check_active_auctions()
                 except Exception as e:
-                    logger.error(f"Error in auction monitoring loop: {str(e)}", exc_info=True)
+                    self.logger.error(f"Error in auction monitoring loop: {str(e)}", exc_info=True)
         
         # Start the background task
         self.socketio.start_background_task(check_active_auctions_loop)
-        logger.info("Auction monitoring task started successfully")
+        self.logger.info("Auction monitoring task started successfully")
 
     def get_schedule_auction_check(self, interval_seconds=60):
         """
@@ -1157,7 +1153,7 @@ class AuctionController:
         Returns:
             bool: True if the task was scheduled successfully, False otherwise.
         """
-        logger.info(f"Scheduling auction check task to run every {interval_seconds} seconds")
+        self.logger.info(f"Scheduling auction check task to run every {interval_seconds} seconds")
         
         try:
             def auction_check_task():
@@ -1170,18 +1166,18 @@ class AuctionController:
                         
                         # Check all active auctions
                         with self.app.app_context():
-                            logger.debug("Performing scheduled check of active auctions")
+                            self.logger.debug("Performing scheduled check of active auctions")
                             self._check_active_auctions()
                     except Exception as e:
-                        logger.error(f"Error in scheduled auction check: {str(e)}", exc_info=True)
+                        self.logger.error(f"Error in scheduled auction check: {str(e)}", exc_info=True)
             
             # Start the background task
             self.socketio.start_background_task(auction_check_task)
-            logger.info("Auction check task scheduled successfully")
+            self.logger.info("Auction check task scheduled successfully")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to schedule auction check task: {str(e)}", exc_info=True)
+            self.logger.error(f"Failed to schedule auction check task: {str(e)}", exc_info=True)
             return False
 
     def get_auction_status(self, auction_id):

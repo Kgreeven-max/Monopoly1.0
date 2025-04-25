@@ -18,9 +18,13 @@ class GameState(db.Model):
     community_fund = db.Column(db.Integer, default=0)
     community_fund_enabled = db.Column(db.Boolean, default=True)  # Enable community fund feature
     inflation_state = db.Column(db.String(20), default='stable')  # stable, inflation, deflation, recession, boom
+    economic_state = db.Column(db.String(20), default='stable')  # stable, recession, growth, boom
     inflation_factor = db.Column(db.Float, default=1.0)
     inflation_rate = db.Column(db.Float, default=0.03)  # Added missing attribute
     base_interest_rate = db.Column(db.Float, default=0.05)  # Added missing attribute
+    economic_cycle_position = db.Column(db.Float, default=0.0)  # Position in the economic cycle (0.0 to 1.0)
+    economic_cycle_period = db.Column(db.Integer, default=5)  # Number of GO passes for a complete cycle
+    last_economic_update = db.Column(db.DateTime, nullable=True)  # When the economic state was last updated
     tax_rate = db.Column(db.Float, default=0.1)  # 10% default
     start_time = db.Column(db.DateTime, default=datetime.utcnow)
     started_at = db.Column(db.DateTime, nullable=True)  # When the game actually started (not just created)
@@ -139,9 +143,13 @@ class GameState(db.Model):
             'community_fund': self.community_fund,
             'community_fund_enabled': self.community_fund_enabled,
             'inflation_state': self.inflation_state,
+            'economic_state': self.economic_state,
             'inflation_factor': self.inflation_factor,
             'inflation_rate': self.inflation_rate,
             'base_interest_rate': self.base_interest_rate,
+            'economic_cycle_position': self.economic_cycle_position,
+            'economic_cycle_period': self.economic_cycle_period,
+            'last_economic_update': self.last_economic_update.isoformat() if self.last_economic_update else None,
             'tax_rate': self.tax_rate,
             'difficulty': self.difficulty,
             'game_duration_minutes': self.calculate_duration_minutes(),
@@ -315,17 +323,19 @@ class GameState(db.Model):
         self.community_fund = 0
         self.community_fund_enabled = True  # Make sure this is enabled by default
         self.inflation_state = 'stable'
+        self.economic_state = 'stable'
         self.inflation_factor = 1.0
         self.inflation_rate = 0.03
         self.base_interest_rate = 0.05
+        self.economic_cycle_position = 0.0
+        self.economic_cycle_period = 5
+        self.last_economic_update = None
         self.tax_rate = 0.1
         self.start_time = datetime.utcnow()
         self.started_at = None  # Reset the started_at timestamp
         self.end_time = None
         self.ended_at = None  # Also reset the ended_at timestamp for consistency
         self.status = 'setup'
-        # Keep the difficulty setting
-        # self.difficulty = 'normal'
         self._temporary_effects = '[]'
         self._community_chest_cards_json = None
         self.game_log = None
@@ -333,8 +343,6 @@ class GameState(db.Model):
         self.police_activity = 1.0
         self.turn_timer = None
         self.turn_number = 0
-        # Keep the mode setting
-        # self.mode = 'classic'
         self._settings = None
         self.expected_action_type = None
         self._expected_action_details_json = None

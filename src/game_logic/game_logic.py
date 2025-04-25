@@ -109,22 +109,36 @@ class GameLogic:
     def get_game_state(self, game_id=1):
         """Retrieves the current game state using the model's to_dict method."""
         with self.app.app_context():
-            game_state = GameState.query.get(game_id)
+            # Try multiple ways to find the game state
+            game_state = None
+            
+            # First try to find game state by the game_id attribute (UUID)
+            if isinstance(game_id, str) and '-' in game_id:
+                logger.info(f"Looking up GameState by UUID field: {game_id}")
+                game_state = GameState.query.filter_by(game_id=game_id).first()
+            
+            # If not found or ID is numeric, try by primary key
+            if not game_state:
+                try:
+                    # Convert to int only if it's numeric
+                    if isinstance(game_id, int) or (isinstance(game_id, str) and game_id.isdigit()):
+                        pk_id = int(game_id)
+                        logger.info(f"Looking up GameState by primary key: {pk_id}")
+                        game_state = GameState.query.get(pk_id)
+                except (ValueError, TypeError):
+                    logger.warning(f"Could not convert game_id {game_id} to integer primary key")
+            
+            # Final fallback - get the singleton instance
+            if not game_state:
+                logger.warning(f"Could not find game_state for ID {game_id}, falling back to singleton")
+                game_state = GameState.query.first()
+            
             if not game_state:
                 logger.error(f"Game state with id {game_id} not found.")
                 return None
             
-            # Ensure Player and Property data is also available if needed by GameState.to_dict()
-            # If GameState.to_dict doesn't handle fetching related objects, fetch them here.
-            # players = Player.query.filter_by(game_id=game_id).all()
-            # properties = Property.query.filter_by(game_id=game_id).all()
-            
             # Use the model's to_dict which now includes expected actions
             state_dict = game_state.to_dict()
-            
-            # Optionally add players and properties if not included in game_state.to_dict
-            # state_dict['players'] = [p.to_dict() for p in players]
-            # state_dict['properties'] = [prop.to_dict() for prop in properties]
             
             return state_dict
 
