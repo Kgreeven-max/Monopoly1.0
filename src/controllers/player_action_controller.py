@@ -164,7 +164,7 @@ def register_player_action_handlers(socketio):
                 if game_state.auction_required:
                      logger.info(f"Player {player_id} declined buy for {property_id}. Starting auction.")
                      # The AuctionController should handle state updates and turn progression after auction
-                     auction_result = auction_controller.start_auction(property_id, game_id)
+                     auction_result = auction_controller.start_auction(game_id, property_id)
                      if not auction_result.get('success'):
                           logger.error(f"Failed to start auction for {property_id}: {auction_result.get('error')}")
                           emit('game_error', {'error': auction_result.get('error', 'Failed to start auction.')}, room=game_id)

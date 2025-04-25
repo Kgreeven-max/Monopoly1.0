@@ -62,7 +62,7 @@ class AuctionController:
                 return {"success": False, "error": "Property not found"}
             
             # Get the game state
-            game_state = GameState.query.get(game_id)
+            game_state = GameState.query.filter_by(game_id=game_id).first()
             if not game_state:
                 logger.error(f"Game {game_id} not found")
                 return {"success": False, "error": "Game not found"}
@@ -205,7 +205,7 @@ class AuctionController:
             auction.current_winner_id = player_id
             
             # Get the game state for logging
-            game_state = GameState.query.get(auction.game_id)
+            game_state = GameState.query.filter_by(game_id=auction.game_id).first()
             if not game_state:
                 logger.error(f"Game {auction.game_id} not found")
                 return {"success": False, "error": "Game not found"}
@@ -326,7 +326,7 @@ class AuctionController:
                 return {"success": False, "error": "Auction not found"}
             
             # Get the game state
-            game_state = GameState.query.get(auction.game_id)
+            game_state = GameState.query.filter_by(game_id=auction.game_id).first()
             if not game_state:
                 logger.error(f"Game {auction.game_id} not found")
                 return {"success": False, "error": "Game not found"}
@@ -672,7 +672,7 @@ class AuctionController:
         
         try:
             # Get the game state
-            game_state = GameState.query.get(game_id)
+            game_state = GameState.query.filter_by(game_id=game_id).first()
             if not game_state:
                 logger.error(f"Game {game_id} not found")
                 return {"success": False, "error": "Game not found"}
@@ -830,7 +830,7 @@ class AuctionController:
             auction.current_winner_id = player_id
             
             # Get the game state
-            game_state = GameState.query.get(auction.game_id)
+            game_state = GameState.query.filter_by(game_id=auction.game_id).first()
             if not game_state:
                 logger.error(f"Game {auction.game_id} not found")
                 return {"success": False, "error": "Game not found"}
@@ -932,7 +932,7 @@ class AuctionController:
             auction.end_time = datetime.utcnow()
             
             # Get the game state
-            game_state = GameState.query.get(auction.game_id)
+            game_state = GameState.query.filter_by(game_id=auction.game_id).first()
             if not game_state:
                 logger.error(f"Game {auction.game_id} not found")
                 return {"success": False, "error": "Game not found"}
@@ -1086,7 +1086,7 @@ class AuctionController:
                     }
                 
             # Get game details
-            game = GameState.query.get(auction.game_id)
+            game = GameState.query.filter_by(game_id=auction.game_id).first()
             game_data = None
             if game:
                 game_data = {
@@ -1459,7 +1459,7 @@ class AuctionController:
             return {"success": False, "error": "No properties provided for auction"}
         
         # Validate game exists
-        game_state = GameState.query.get(game_id)
+        game_state = GameState.query.filter_by(game_id=game_id).first()
         if not game_state:
             logger.error(f"Game {game_id} not found for sequential auctions")
             return {"success": False, "error": "Game not found"}
@@ -1565,7 +1565,7 @@ class AuctionController:
         
         try:
             # Get the game state
-            game_state = GameState.query.get(game_id)
+            game_state = GameState.query.filter_by(game_id=game_id).first()
             if not game_state or not game_state.auction_data:
                 logger.error(f"Game {game_id} not found or has no auction data")
                 return {"success": False, "error": "Game not found or no auction data"}
@@ -1878,7 +1878,7 @@ class AuctionController:
         
         try:
             # Validate game
-            game_state = GameState.query.get(game_id)
+            game_state = GameState.query.filter_by(game_id=game_id).first()
             if not game_state:
                 logger.error(f"Game {game_id} not found")
                 return {"success": False, "error": "Game not found"}
@@ -2351,7 +2351,7 @@ class AuctionController:
             logger.info(f"Getting auction schedule for game {game_id}")
             
             # Get game from database
-            game = GameState.query.filter_by(id=game_id).first()
+            game = GameState.query.filter_by(game_id=game_id).first()
             if not game:
                 return {
                     "success": False,
@@ -3073,7 +3073,7 @@ def handle_property_declined(self, game_id, player_id, property_id):
     
     try:
         # Get the game state and validate it exists
-        game_state = GameState.query.get(game_id)
+        game_state = GameState.query.filter_by(game_id=game_id).first()
         if not game_state:
             logger.error(f"Game {game_id} not found")
             return {"success": False, "error": "Game not found"}
