@@ -1157,7 +1157,8 @@ class GameController:
                 return {'success': False, 'error': 'Property already owned'}
             
             # Verify property is purchasable (not a special square)
-            if property_obj.type not in ['property', 'railroad', 'utility']:
+            purchasable_types = [PropertyType.STREET, PropertyType.RAILROAD, PropertyType.UTILITY]
+            if property_obj.type not in purchasable_types:
                 self.logger.warning(f"Property {property_id} of type {property_obj.type} is not purchasable")
                 return {'success': False, 'error': 'Property not purchasable'}
             
@@ -1237,13 +1238,13 @@ class GameController:
 
     def _update_property_group_stats(self, player_id, purchased_property):
         """Update property group ownership stats for monopoly calculations."""
-        if not purchased_property.group:
+        if not purchased_property.color_group:
             return
         
         # Find all properties in this group
         group_properties = Property.query.filter_by(
             game_id=purchased_property.game_id,
-            group=purchased_property.group
+            color_group=purchased_property.color_group
         ).all()
         
         # Count how many the player now owns in this group
@@ -1259,11 +1260,11 @@ class GameController:
         has_monopoly = (player_owned_count == total_in_group)
         
         if has_monopoly:
-            self.logger.info(f"Player {player_id} now has a monopoly on group {purchased_property.group}")
+            self.logger.info(f"Player {player_id} now has a monopoly on group {purchased_property.color_group}")
             
             # Update all properties in the group to enable improvements
             for prop in group_properties:
-                if prop.owner_id == player_id and prop.type == 'property':
+                if prop.owner_id == player_id and prop.type == PropertyType.STREET:
                     prop.can_improve = True
                     db.session.add(prop)
             
@@ -1273,7 +1274,7 @@ class GameController:
                 self.socketio.emit('monopoly_acquired', {
                     'player_id': player_id,
                     'player_name': player.username if player else 'Unknown',
-                    'property_group': purchased_property.group,
+                    'property_group': purchased_property.color_group,
                     'group_properties': [p.name for p in group_properties],
                     'timestamp': datetime.now().isoformat()
                 }, room=purchased_property.game_id)

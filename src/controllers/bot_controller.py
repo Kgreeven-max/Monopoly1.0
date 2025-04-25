@@ -426,6 +426,11 @@ class BotController:
                 if property_obj:
                     # Extract cost from property_obj
                     cost = property_obj.price if hasattr(property_obj, 'price') else property_obj.current_price
+                    
+                    # Refresh player position from database to ensure it's current
+                    db.session.refresh(player)
+                    self.logger.info(f"Refreshed player position: {player.position}")
+                    
                     # Verify the property is at the player's position
                     if property_obj.position != player.position:
                         self.logger.warning(f"Property {property_id} is at position {property_obj.position} but player is at position {player.position}")
@@ -437,6 +442,10 @@ class BotController:
                             property_obj = correct_property
                             cost = property_obj.price if hasattr(property_obj, 'price') else property_obj.current_price
                         else:
+                            # Check if player position is 0 (Go) or another non-property space
+                            if player.position in [0, 2, 4, 7, 10, 17, 20, 22, 30, 33, 36, 38]:
+                                self.logger.info(f"Player is on a non-property space at position {player.position}")
+                                return False
                             self.logger.error(f"Cannot find property at player position {player.position}")
                             return False
                     
