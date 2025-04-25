@@ -502,8 +502,9 @@ class BotController:
         elif action_type == 'pay_tax':
              tax_details = landing_action.get('tax_details', {})
              amount = tax_details.get('amount') # Assuming amount is in details
+             space_name = landing_action.get('space_name', 'Tax Space')
              self.logger.info(f"Bot {player_id} needs to pay tax: {amount}")
-             payment_result = self.banker.player_pays_bank(player_id, amount, f"Tax: {landing_action.get('space_name')}")
+             payment_result = self.banker.player_pays_community_fund(player_id, amount, f"Tax: {space_name}")
              
              # Clear expected state regardless of payment success
              game_state.expected_action_type = None

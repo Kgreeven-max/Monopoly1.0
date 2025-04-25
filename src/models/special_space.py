@@ -575,10 +575,16 @@ class TaxSpace:
             destination = tax_data.get("destination", "community_fund")
             description = f"Tax payment: {tax_space.name}"
             
-            if destination == "community_fund" and self.community_fund:
-                transaction = self.banker.transfer(player.id, "community_fund", tax_amount, description)
+            if destination == "community_fund":
+                transaction_result = self.banker.player_pays_community_fund(player_id, tax_amount, description)
             else:
-                transaction = self.banker.transfer(player.id, "bank", tax_amount, description)
+                transaction_result = self.banker.player_pays_bank(player_id, tax_amount, description)
+            
+            if not transaction_result.get("success", False):
+                return {
+                    "success": False,
+                    "error": transaction_result.get("error", "Payment failed")
+                }
             
             result = {
                 "success": True,
@@ -587,7 +593,6 @@ class TaxSpace:
                 "tax_space_id": tax_space.id,
                 "tax_space_name": tax_space.name,
                 "tax_amount": tax_amount,
-                "transaction_id": transaction.id if transaction else None,
                 "destination": destination
             }
             

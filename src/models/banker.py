@@ -206,6 +206,71 @@ class Banker:
                 "error": f"Error updating loan rates: {str(e)}"
             }
 
+    def player_pays_community_fund(self, player_id: int, amount: int, description: str) -> dict:
+        """Process a payment from a player to the community fund."""
+        if amount <= 0:
+            self.logger.warning(f"Attempted payment of non-positive amount ({amount}) from player {player_id} to community fund.")
+            return {"success": False, "error": "Payment amount must be positive."}
+            
+        player = Player.query.get(player_id)
+        if not player:
+            self.logger.error(f"Payment failed: Player {player_id} not found.")
+            return {"success": False, "error": "Player not found."}
+            
+        if player.money < amount:
+            self.logger.info(f"Payment failed: Player {player.username} (ID: {player_id}) has insufficient funds. Required: {amount}, Available: {player.money}.")
+            return {"success": False, "error": "Insufficient funds.", "required": amount, "available": player.money}
+            
+        try:
+            player.money -= amount
+            db.session.add(player)
+            
+            # Create transaction record
+            from .transaction import Transaction
+            transaction = Transaction(
+                from_player_id=player_id,
+                to_player_id=None,  # Community Fund, not a player
+                amount=amount,
+                transaction_type="payment_to_community_fund",
+                description=description
+            )
+            db.session.add(transaction)
+            
+            # Update community fund in game state
+            from .game_state import GameState
+            game_state = GameState.query.first()
+            if game_state:
+                # Check if we have a dedicated community_fund field
+                if hasattr(game_state, 'community_fund'):
+                    game_state.community_fund = (game_state.community_fund or 0) + amount
+                else:
+                    # Use settings dict if no dedicated field
+                    settings = game_state.settings if hasattr(game_state, 'settings') and game_state.settings else {}
+                    settings['community_fund'] = settings.get('community_fund', 0) + amount
+                    game_state.settings = settings
+                
+                db.session.add(game_state)
+            
+            db.session.commit()
+            self.logger.info(f"Player {player_id} paid ${amount} to the community fund for '{description}'. Player's new balance: ${player.money}")
+            
+            # Emit event if socketio available
+            if self.socketio:
+                self.socketio.emit('community_fund_update', {
+                    'action': 'add',
+                    'amount': amount,
+                    'reason': description,
+                    'source': 'player',
+                    'player_id': player_id,
+                    'player_name': player.username
+                })
+                
+            return {"success": True, "player_id": player_id, "new_balance": player.money}
+        except Exception as e:
+            db.session.rollback()
+            self.logger.error(f"Database error during player_pays_community_fund for player {player_id}, amount {amount}: {e}", exc_info=True)
+            return {"success": False, "error": "Database error during payment processing."}
+
     # --- Deprecated Methods --- 
     # These methods were overly specific and included logic (like property updates, 
     # transaction creation, notifications) that belongs in the calling controllers.

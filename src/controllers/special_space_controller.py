@@ -1325,7 +1325,7 @@ class SpecialSpaceController:
                 
                 # Process payment through banker if available
                 if banker:
-                    payment_result = banker.player_pays_bank(player_id, tax_amount, f"Tax: {tax_name}")
+                    payment_result = banker.player_pays_community_fund(player_id, tax_amount, f"Tax: {tax_name}")
                     
                     if not payment_result["success"]:
                         # Handle insufficient funds
@@ -1340,6 +1340,17 @@ class SpecialSpaceController:
                     # Direct payment if banker not available
                     player.money -= tax_amount
                     db.session.add(player)
+                    
+                    # Update community fund in game state directly
+                    if hasattr(game_state, 'community_fund'):
+                        game_state.community_fund = (game_state.community_fund or 0) + tax_amount
+                    else:
+                        # Use settings dict if no dedicated field
+                        settings = game_state.settings if hasattr(game_state, 'settings') and game_state.settings else {}
+                        settings['community_fund'] = settings.get('community_fund', 0) + tax_amount
+                        game_state.settings = settings
+                    
+                    db.session.add(game_state)
                     db.session.commit()
                     payment_result = {"success": True, "player_id": player_id, "new_balance": player.money}
                 

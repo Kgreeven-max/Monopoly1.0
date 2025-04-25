@@ -615,19 +615,54 @@ class BotActionHandler:
         
         # Check if player has enough money
         if player.money >= tax_amount:
-            # Pay tax
-            player.money -= tax_amount
-            db.session.add(player)
-            db.session.commit()
+            # Get the banker to process the payment to community fund
+            from flask import current_app
+            banker = current_app.config.get('banker')
             
-            self.logger.info(f"Player {player.id} paid ${tax_amount} in {tax_type} tax")
-            
-            return {
-                "success": True,
-                "tax_type": tax_type,
-                "tax_amount": tax_amount,
-                "new_balance": player.money
-            }
+            if banker:
+                # Use banker's method to pay to community fund
+                payment_result = banker.player_pays_community_fund(player.id, tax_amount, f"{tax_type.capitalize()} tax")
+                
+                if payment_result["success"]:
+                    self.logger.info(f"Player {player.id} paid ${tax_amount} in {tax_type} tax to community fund")
+                    return {
+                        "success": True,
+                        "tax_type": tax_type,
+                        "tax_amount": tax_amount,
+                        "new_balance": payment_result["new_balance"]
+                    }
+                else:
+                    return payment_result
+            else:
+                # Direct payment if banker not available
+                player.money -= tax_amount
+                db.session.add(player)
+                
+                # Update community fund in game state
+                from src.models.game_state import GameState
+                game_state = GameState.query.first()
+                if game_state:
+                    # Check if we have a dedicated community_fund field
+                    if hasattr(game_state, 'community_fund'):
+                        game_state.community_fund = (game_state.community_fund or 0) + tax_amount
+                    else:
+                        # Use settings dict if no dedicated field
+                        settings = game_state.settings if hasattr(game_state, 'settings') and game_state.settings else {}
+                        settings['community_fund'] = settings.get('community_fund', 0) + tax_amount
+                        game_state.settings = settings
+                    
+                    db.session.add(game_state)
+                
+                db.session.commit()
+                
+                self.logger.info(f"Player {player.id} paid ${tax_amount} in {tax_type} tax to community fund")
+                
+                return {
+                    "success": True,
+                    "tax_type": tax_type,
+                    "tax_amount": tax_amount,
+                    "new_balance": player.money
+                }
         else:
             self.logger.warning(f"Player {player.id} cannot afford ${tax_amount} {tax_type} tax")
             
