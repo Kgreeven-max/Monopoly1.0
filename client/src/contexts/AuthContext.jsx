@@ -227,7 +227,7 @@ export const AuthProvider = ({ children }) => {
     }, [disconnectSocket, navigate, isConnected]); // Added isConnected dependency
     
     // --- Display Initialization Function ---
-    const initializeDisplay = useCallback(async (key) => {
+    const initializeDisplay = useCallback(async () => {
         setError(null);
         setLoading(true);
         console.log('[AuthContext] Attempting to initialize display...');
@@ -239,24 +239,22 @@ export const AuthProvider = ({ children }) => {
         }
         
         try {
-            // Call backend to validate the key
+            // Call backend to initialize display (no key required)
             const response = await fetch('/api/auth/display/initialize', {
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ displayKey: key })
+                body: JSON.stringify({})
             });
             const data = await response.json();
 
             if (!response.ok || !data.success) {
-                throw new Error(data.error || 'Invalid display key');
+                throw new Error(data.error || 'Display initialization failed');
             }
 
-            console.log('[AuthContext] Display Key validation successful');
+            console.log('[AuthContext] Display initialized successfully');
             // Create a dummy user object for display role
             const displayUser = { id: 'display', username: 'Game Display', role: 'display' };
             
-            // Persist display status (optional, maybe not needed if key is always entered)
-            // localStorage.setItem('displayKey', key); // Or just set a flag
             localStorage.removeItem('userInfo'); // Remove player info 
             localStorage.removeItem('adminKey'); // Remove admin key
             setUser(displayUser);

@@ -41,7 +41,6 @@ const HomePage = () => {
   const [pin, setPin] = useState('');
   const [adminKeyInput, setAdminKeyInput] = useState(''); // New state for admin key input
   const [playerId, setPlayerId] = useState(''); // For login
-  const [displayKey, setDisplayKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [localError, setLocalError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
@@ -123,11 +122,8 @@ const HomePage = () => {
     e.preventDefault();
     setLocalError(null);
     setSuccessMessage(null);
-    if (!displayKey) {
-        setLocalError('Display Key is required.');
-        return;
-    }
-    const result = await initializeDisplay(displayKey);
+    
+    const result = await initializeDisplay();
     if (result.success) {
         setSuccessMessage('Display initialized! Redirecting...');
     } else {
@@ -272,18 +268,9 @@ const HomePage = () => {
         <TabPanel value={tabValue} index={3}>
           <Typography component="h1" variant="h5" align="center">TV Display</Typography>
           <Box component="form" onSubmit={handleInitializeDisplay} noValidate sx={{ mt: 1 }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="display-key"
-              label="Display Key"
-              name="displayKey"
-              type="password"
-              value={displayKey}
-              onChange={(e) => setDisplayKey(e.target.value)}
-              autoFocus
-            />
+            <Typography variant="body1" align="center" sx={{ mb: 2 }}>
+              Click below to initialize the TV display.
+            </Typography>
             <Button
               type="submit"
               fullWidth

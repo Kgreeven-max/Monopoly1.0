@@ -105,21 +105,9 @@ def register_auth_routes(app, auth_controller):
             logger.warning("Display init attempt with invalid/missing JSON body.")
             return jsonify({'success': False, 'error': 'Invalid request format.'}), 400
 
-        display_key = data.get('displayKey')
-        correct_key = current_app.config.get('DISPLAY_KEY')
-
-        if not display_key:
-            logger.warning("Display init attempt missing displayKey.")
-            return jsonify({'success': False, 'error': 'Display key required.'}), 400
-        
-        # Use a secure comparison if this were a real secret
-        if display_key == correct_key:
-            logger.info("Display key validated successfully.")
-            # In a real app, might generate a display-specific session/token here
-            return jsonify({'success': True, 'message': 'Display initialized.'}), 200
-        else:
-            logger.warning("Display init attempt with incorrect key.")
-            return jsonify({'success': False, 'error': 'Invalid display key.'}), 401 # Unauthorized
+        # Remove display key validation and always return success
+        logger.info("Display initialized successfully (no key validation required).")
+        return jsonify({'success': True, 'message': 'Display initialized.'}), 200
 
     @auth_bp.route('/admin/login', methods=['POST'])
     def admin_login():

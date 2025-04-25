@@ -346,10 +346,7 @@ class SocketController:
                 logger.info(f"Admin registered device: {request.sid}")
 
             elif device_type == 'tv':
-                display_key = data.get('display_key')
-                if not display_key or display_key != self.app_config.get('DISPLAY_KEY'):
-                    emit('device_registered', {'status': 'error', 'error': 'Invalid display key'})
-                    return
+                # Remove display key validation
                 join_room("tv")
                 emit('device_registered', {'status': 'success', 'device_type': 'tv'})
                 logger.info(f"TV display registered device: {request.sid}")

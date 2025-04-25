@@ -27,16 +27,12 @@ def admin_required(f):
 def display_required(f):
     """Decorator to ensure the request is authenticated with a valid display key.
     
-    Checks the 'display_key' query parameter against the DISPLAY_KEY in app config.
-    Returns 401 Unauthorized if the key is missing or invalid.
+    Previously checked the 'display_key' query parameter against the DISPLAY_KEY in app config.
+    Now bypasses authentication to allow open access to displays.
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        display_key = request.args.get('display_key')
-        # Strict check against configured key, no fallback
-        if not display_key or display_key != current_app.config.get('DISPLAY_KEY'): 
-            logger.warning(f"Unauthorized display access attempt to {request.path}")
-            return jsonify({"success": False, "error": "Unauthorized: Missing or invalid display key"}), 401
+        # Bypass authentication for display access
         return f(*args, **kwargs)
     return decorated_function
 # --- End Decorator ---

@@ -9,12 +9,13 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5000',
+        target: 'http://localhost:5000',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        rewrite: (path) => path
       },
       '/ws': {
-        target: 'ws://127.0.0.1:5000',
+        target: 'ws://localhost:5000',
         ws: true,
         changeOrigin: true,
         secure: false
