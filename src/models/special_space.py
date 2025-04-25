@@ -572,19 +572,25 @@ class TaxSpace:
         
         # Process tax payment
         if self.banker:
-            destination = tax_data.get("destination", "community_fund")
+            # Always send tax to community fund regardless of what might be in tax_data
             description = f"Tax payment: {tax_space.name}"
-            
-            if destination == "community_fund":
-                transaction_result = self.banker.player_pays_community_fund(player_id, tax_amount, description)
-            else:
-                transaction_result = self.banker.player_pays_bank(player_id, tax_amount, description)
+            transaction_result = self.banker.player_pays_community_fund(player_id, tax_amount, description)
             
             if not transaction_result.get("success", False):
                 return {
                     "success": False,
                     "error": transaction_result.get("error", "Payment failed")
                 }
+            
+            # Ensure the game_state community_fund is updated directly as well
+            if hasattr(game_state, 'community_fund'):
+                game_state.community_fund = (game_state.community_fund or 0) + tax_amount
+                db.session.add(game_state)
+                db.session.commit()
+            
+            # Update community fund object if available
+            if self.community_fund:
+                self.community_fund.add_funds(tax_amount, description)
             
             result = {
                 "success": True,
@@ -593,7 +599,7 @@ class TaxSpace:
                 "tax_space_id": tax_space.id,
                 "tax_space_name": tax_space.name,
                 "tax_amount": tax_amount,
-                "destination": destination
+                "destination": "community_fund"
             }
             
             # Broadcast tax payment

@@ -2067,7 +2067,7 @@
         function loadCommunityFundBalance() {
             console.log('Loading community fund balance...');
             
-            fetch('/api/admin/finance/community-fund', {
+            fetch('/api/community-fund/refresh', {
                 method: 'GET',
                 headers: {
                     'X-Admin-Key': window.adminKey
@@ -2082,15 +2082,33 @@
             .then(data => {
                 if (data.success) {
                     document.getElementById('community-fund-balance').textContent = `$${data.balance}`;
+                    console.log('Successfully updated community fund balance to:', data.balance);
                 } else {
                     console.error('Failed to fetch community fund balance:', data.error);
-                    document.getElementById('community-fund-balance').textContent = '$0';
+                    // Try the original endpoint as fallback
+                    fetch('/api/admin/finance/community-fund', {
+                        method: 'GET',
+                        headers: {
+                            'X-Admin-Key': window.adminKey
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(fallbackData => {
+                        if (fallbackData.success) {
+                            document.getElementById('community-fund-balance').textContent = `$${fallbackData.balance}`;
+                        } else {
+                            document.getElementById('community-fund-balance').textContent = '$0';
+                        }
+                    })
+                    .catch(fallbackError => {
+                        console.error('Error with fallback community fund fetch:', fallbackError);
+                        document.getElementById('community-fund-balance').textContent = '$0';
+                    });
                 }
             })
             .catch(error => {
                 console.error('Error fetching community fund balance:', error);
-                // Fallback to demo value
-                document.getElementById('community-fund-balance').textContent = '$500';
+                document.getElementById('community-fund-balance').textContent = '$0';
             });
             
             // Hide the adjustment form when modal first opens
@@ -2792,6 +2810,31 @@
         $('#properties-tab').on('show.bs.tab', function (e) {
             loadPropertyData();
         });
+
+        // Function to initialize the finance tab
+        function initializeFinanceTab() {
+            console.log('Initializing finance tab...');
+            
+            // Initial load of finance data
+            refreshFinancialOverview();
+            refreshLoans();
+            refreshTransactions();
+            loadEconomicState();
+            loadCommunityFundBalance();
+            
+            // Set up automatic refresh every 30 seconds
+            const financeRefreshInterval = 30000; // 30 seconds
+            
+            // Set recurring timers for financial data refresh
+            setInterval(refreshFinancialOverview, financeRefreshInterval);
+            setInterval(refreshLoans, financeRefreshInterval);
+            setInterval(loadCommunityFundBalance, financeRefreshInterval);
+            
+            // Less frequent refresh for larger data sets
+            setInterval(refreshTransactions, financeRefreshInterval * 2);
+            
+            console.log('Finance tab initialized with auto-refresh every', financeRefreshInterval/1000, 'seconds');
+        }
     </script>
     
     <!-- Finance Admin Script -->

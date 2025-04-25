@@ -149,22 +149,16 @@ function refreshLoans() {
                 `;
                 
                 loans.forEach(loan => {
-                    // Format due date or calculate from creation date and length
-                    const dueDate = loan.due_lap ? `Lap ${loan.due_lap}` : 'N/A';
-                    // Get loan status with a fallback
-                    const status = loan.status || (loan.is_active ? 'Active' : 'Paid');
-                    
                     loansHtml += `
                         <tr>
                             <td>${loan.id}</td>
                             <td>${loan.player_name || 'Unknown'}</td>
-                            <td>$${loan.amount}</td>
+                            <td>$${loan.outstanding_balance}</td>
                             <td>${((loan.interest_rate || 0) * 100).toFixed(2)}%</td>
-                            <td>${status}</td>
+                            <td>${loan.is_active ? 'Active' : 'Paid'}</td>
                             <td>
                                 <button class="btn btn-sm btn-primary" onclick="viewLoanDetails(${loan.id})">View</button>
-                                <button class="btn btn-sm btn-warning" onclick="extendLoan(${loan.id})">Extend</button>
-                                <button class="btn btn-sm btn-success" onclick="payoffLoan(${loan.id})">Payoff</button>
+                                <button class="btn btn-sm btn-success" onclick="repayLoan(${loan.id})">Repay</button>
                             </td>
                         </tr>
                     `;
@@ -183,10 +177,10 @@ function refreshLoans() {
             const cdsElement = document.getElementById('active-cds');
             if (cdsElement) {
                 // Filter to only CDs
-                const cds = (data.loans || []).filter(loan => loan.loan_type === 'cd');
+                const cds = (data.loans || []).filter(loan => loan.loan_type === 'cd' && loan.is_active);
                 
                 if (cds.length === 0) {
-                    cdsElement.innerHTML = '<p class="text-center">No active CDs found.</p>';
+                    cdsElement.innerHTML = '<p class="text-center">No active certificates of deposit found.</p>';
                     return;
                 }
                 
@@ -240,10 +234,10 @@ function refreshLoans() {
             const helocsElement = document.getElementById('active-helocs');
             if (helocsElement) {
                 // Filter to only HELOCs
-                const helocs = (data.loans || []).filter(loan => loan.loan_type === 'heloc');
+                const helocs = (data.loans || []).filter(loan => loan.loan_type === 'heloc' && loan.is_active);
                 
                 if (helocs.length === 0) {
-                    helocsElement.innerHTML = '<p class="text-center">No active HELOCs found.</p>';
+                    helocsElement.innerHTML = '<p class="text-center">No active home equity lines of credit found.</p>';
                     return;
                 }
                 
@@ -254,9 +248,9 @@ function refreshLoans() {
                                 <tr>
                                     <th>ID</th>
                                     <th>Player</th>
-                                    <th>Amount</th>
-                                    <th>Interest</th>
                                     <th>Property</th>
+                                    <th>Balance</th>
+                                    <th>Interest</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -268,12 +262,12 @@ function refreshLoans() {
                         <tr>
                             <td>${heloc.id}</td>
                             <td>${heloc.player_name || 'Unknown'}</td>
-                            <td>$${heloc.amount}</td>
+                            <td>${heloc.property_name || 'Unknown'}</td>
+                            <td>$${heloc.outstanding_balance}</td>
                             <td>${((heloc.interest_rate || 0) * 100).toFixed(2)}%</td>
-                            <td>${heloc.property_id || 'N/A'}</td>
                             <td>
                                 <button class="btn btn-sm btn-primary" onclick="viewLoanDetails(${heloc.id})">View</button>
-                                <button class="btn btn-sm btn-success" onclick="payoffLoan(${heloc.id})">Payoff</button>
+                                <button class="btn btn-sm btn-success" onclick="repayLoan(${heloc.id})">Repay</button>
                             </td>
                         </tr>
                     `;
@@ -288,22 +282,7 @@ function refreshLoans() {
                 helocsElement.innerHTML = helocsHtml;
             }
         } else {
-            console.error('Failed to refresh loans:', data.error);
-            // Provide fallback content when there's an error
-            const loansElement = document.getElementById('active-loans');
-            if (loansElement) {
-                loansElement.innerHTML = '<p class="text-center">Error loading loans data. Please check the console for details.</p>';
-            }
-            
-            const cdsElement = document.getElementById('active-cds');
-            if (cdsElement) {
-                cdsElement.innerHTML = '<p class="text-center">Error loading CDs data. Please check the console for details.</p>';
-            }
-            
-            const helocsElement = document.getElementById('active-helocs');
-            if (helocsElement) {
-                helocsElement.innerHTML = '<p class="text-center">Error loading HELOCs data. Please check the console for details.</p>';
-            }
+            console.error("Failed to load loans:", data.error);
         }
     })
     .catch(error => {
@@ -690,6 +669,25 @@ function formatDate(isoString) {
         return isoString; // Return the original string if parsing fails
     }
 }
+
+// Add a function to refresh all financial panels independently
+function refreshAllFinancialPanels() {
+    console.log('Refreshing all financial panels...');
+    refreshFinancialOverview();
+    refreshLoans();
+    refreshTransactions();
+}
+
+// Update document.ready to use the new function
+$(document).ready(function() {
+    // Initial load of financial data
+    refreshAllFinancialPanels();
+    
+    // Set up refresh buttons
+    $('#refresh-finance-btn').click(function() {
+        refreshAllFinancialPanels();
+    });
+});
 
 // Export for module use
 if (typeof module !== 'undefined' && module.exports) {

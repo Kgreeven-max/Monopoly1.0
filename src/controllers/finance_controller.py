@@ -588,16 +588,16 @@ class FinanceController:
         return rates
     
     def get_player_loans(self, player_id: int, pin: str = None) -> Dict:
-        """Get all loans for a player
+        """Get loans for a player
         
         Args:
             player_id: ID of the player
-            pin: Player's PIN for authentication (optional if using player_required decorator)
+            pin: Player's PIN for authentication
             
         Returns:
-            Dictionary with player's loans
+            Dictionary with loans
         """
-        # Validate player if PIN is provided
+        # If pin is provided, validate player
         if pin:
             player = Player.query.get(player_id)
             if not player or player.pin != pin:
@@ -606,8 +606,19 @@ class FinanceController:
                     "error": "Invalid player credentials"
                 }
         
-        # Get all loans for this player
-        loans = Loan.query.filter_by(player_id=player_id, loan_type="loan").all()
+        # Get all loans for the player
+        loans = Loan.query.filter_by(player_id=player_id).all()
+        
+        # Ensure each loan has its proper type identification
+        for loan in loans:
+            # Make sure loan_type field is correctly set
+            if not hasattr(loan, 'loan_type') or not loan.loan_type:
+                # Determine type by checking related field
+                if hasattr(loan, 'property_id') and loan.property_id:
+                    loan.loan_type = 'heloc'
+                else:
+                    # Default to standard loan if can't determine
+                    loan.loan_type = 'loan'
         
         return {
             "success": True,
@@ -615,16 +626,16 @@ class FinanceController:
         }
     
     def get_player_cds(self, player_id: int, pin: str = None) -> Dict:
-        """Get all certificates of deposit for a player
+        """Get certificates of deposit for a player
         
         Args:
             player_id: ID of the player
-            pin: Player's PIN for authentication (optional if using player_required decorator)
+            pin: Player's PIN for authentication
             
         Returns:
-            Dictionary with player's CDs
+            Dictionary with CDs
         """
-        # Validate player if PIN is provided
+        # If pin is provided, validate player
         if pin:
             player = Player.query.get(player_id)
             if not player or player.pin != pin:
@@ -633,7 +644,7 @@ class FinanceController:
                     "error": "Invalid player credentials"
                 }
         
-        # Get all CDs for this player
+        # Get all CDs for the player
         cds = Loan.query.filter_by(player_id=player_id, loan_type="cd").all()
         
         return {
@@ -642,16 +653,16 @@ class FinanceController:
         }
     
     def get_player_helocs(self, player_id: int, pin: str = None) -> Dict:
-        """Get all home equity lines of credit for a player
+        """Get HELOCs for a player
         
         Args:
             player_id: ID of the player
-            pin: Player's PIN for authentication (optional if using player_required decorator)
+            pin: Player's PIN for authentication
             
         Returns:
-            Dictionary with player's HELOCs
+            Dictionary with HELOCs
         """
-        # Validate player if PIN is provided
+        # If pin is provided, validate player
         if pin:
             player = Player.query.get(player_id)
             if not player or player.pin != pin:
@@ -660,8 +671,18 @@ class FinanceController:
                     "error": "Invalid player credentials"
                 }
         
-        # Get all HELOCs for this player
+        # Get all HELOCs for the player
         helocs = Loan.query.filter_by(player_id=player_id, loan_type="heloc").all()
+        
+        # Add property information to HELOCs
+        for heloc in helocs:
+            if heloc.property_id:
+                property_obj = Property.query.get(heloc.property_id)
+                if property_obj:
+                    heloc.property = {
+                        'id': property_obj.id,
+                        'name': property_obj.name
+                    }
         
         return {
             "success": True,
@@ -669,69 +690,70 @@ class FinanceController:
         }
     
     def get_player_financial_summary(self, player_id: int, pin: str = None) -> Dict:
-        """Get a comprehensive financial summary for a player
+        """Get financial summary for a player including loans, CDs, and HELOCs
         
         Args:
-            player_id: Player ID
-            pin: Optional PIN for verification
+            player_id: ID of the player
+            pin: Player's PIN for authentication
             
         Returns:
-            Dictionary with player's financial summary
+            Dictionary with financial summary
         """
-        # Validate player if PIN provided
+        # If pin is provided, validate player
+        if pin:
+            player = Player.query.get(player_id)
+            if not player or player.pin != pin:
+                return {
+                    "success": False,
+                    "error": "Invalid player credentials"
+                }
+        
+        # Get player
         player = Player.query.get(player_id)
         if not player:
             return {
                 "success": False,
                 "error": "Player not found"
             }
-            
-        if pin and player.pin != pin:
-            return {
-                "success": False,
-                "error": "Invalid PIN"
-            }
-            
-        # Get player properties
-        properties = Property.query.filter_by(owner_id=player_id).all()
-        property_value = sum(prop.current_price for prop in properties)
         
-        # Get player loans
+        # Get all financial instruments for the player
         loans = Loan.query.filter_by(player_id=player_id, loan_type="loan").all()
-        
-        # Get current game state for current lap
-        game_state = GameState.query.first()
-        current_lap = game_state.current_lap if game_state else 0
-        
-        loan_debt = sum(loan.calculate_current_value(current_lap) for loan in loans)
-        
-        # Get player CDs
         cds = Loan.query.filter_by(player_id=player_id, loan_type="cd").all()
-        cd_value = sum(cd.calculate_current_value(current_lap) for cd in cds)
-        
-        # Get player HELOCs
         helocs = Loan.query.filter_by(player_id=player_id, loan_type="heloc").all()
-        heloc_debt = sum(heloc.calculate_current_value(current_lap) for heloc in helocs)
         
-        # Calculate net worth
-        net_worth = player.money + property_value + cd_value - loan_debt - heloc_debt
+        # Add property information to HELOCs
+        for heloc in helocs:
+            if heloc.property_id:
+                property_obj = Property.query.get(heloc.property_id)
+                if property_obj:
+                    heloc.property = {
+                        'id': property_obj.id,
+                        'name': property_obj.name
+                    }
+        
+        # Combine all financial instruments for the response
+        all_items = loans + cds + helocs
+        
+        # Calculate totals
+        total_debt = sum(loan.outstanding_balance for loan in loans if loan.is_active)
+        total_debt += sum(heloc.outstanding_balance for heloc in helocs if heloc.is_active)
+        total_investments = sum(cd.calculate_current_value(cd.current_lap) for cd in cds if cd.is_active)
         
         return {
             "success": True,
-            "summary": {
-                "player_id": player_id,
-                "player_name": player.username,
-                "cash": player.money,
-                "property_value": property_value,
-                "property_count": len(properties),
-                "loan_debt": loan_debt,
-                "loan_count": len(loans),
-                "cd_value": cd_value,
-                "cd_count": len(cds),
-                "heloc_debt": heloc_debt,
-                "heloc_count": len(helocs),
-                "net_worth": net_worth
-            }
+            "player": {
+                "id": player.id,
+                "name": player.username,
+                "money": player.money,
+                "credit_score": player.credit_score
+            },
+            "loans": [loan.to_dict() for loan in all_items],  # Keep for backward compatibility
+            "active_loans": [loan.to_dict() for loan in loans if loan.is_active],
+            "active_cds": [cd.to_dict() for cd in cds if cd.is_active],
+            "active_helocs": [heloc.to_dict() for heloc in helocs if heloc.is_active],
+            "total_debt": total_debt,
+            "total_investments": total_investments,
+            "net_worth": player.money + total_investments - total_debt
         }
     
     def declare_bankruptcy(self, player_id: int, pin: str) -> Dict:
@@ -995,31 +1017,177 @@ class FinanceController:
         return max_heloc
 
     def get_financial_stats(self) -> Dict[str, Any]:
+        """Get financial statistics for the game
+        
+        Returns:
+            Dictionary with financial statistics
         """
-        Get overall financial statistics for the game.
+        try:
+            # Get all players
+            players = Player.query.all()
+            
+            # Calculate total money held by players
+            player_holdings = sum(player.money for player in players)
+            
+            # Get banker balance
+            bank_reserves = 0
+            if self.banker:
+                bank_reserves = self.banker.balance
+            
+            # Get community fund - try multiple approaches to ensure we get a value
+            community_fund_balance = 0
+            
+            # Try from community_fund instance
+            if hasattr(self, 'community_fund') and self.community_fund:
+                community_fund_balance = self.community_fund.balance or 0
+                
+            # If still 0, try from game_state directly
+            if community_fund_balance == 0 and self.game_state:
+                # First try the community_fund column
+                if hasattr(self.game_state, 'community_fund'):
+                    community_fund_balance = self.game_state.community_fund or 0
+                    
+                # If still 0, try the settings dict
+                if community_fund_balance == 0 and hasattr(self.game_state, 'settings'):
+                    settings = self.game_state.settings or {}
+                    community_fund_balance = settings.get('community_fund', 0)
+                    
+            # Refresh the community fund value in case it's outdated
+            self.refresh_community_fund_value()
+            
+            # Get all loans (any type)
+            from src.models.finance.loan import Loan
+            all_loans = Loan.query.filter_by(is_active=True).all()
+            
+            # Calculate loan totals, separating by type
+            loans_total = sum(loan.outstanding_balance for loan in all_loans 
+                            if loan.loan_type == 'loan')
+            
+            heloc_total = sum(loan.outstanding_balance for loan in all_loans 
+                            if loan.loan_type == 'heloc')
+            
+            cd_total = sum(loan.calculate_current_value(loan.current_lap) for loan in all_loans 
+                         if loan.loan_type == 'cd' and loan.is_active)
+            
+            # Calculate total money in game
+            total_money = player_holdings + bank_reserves + community_fund_balance
+            
+            return {
+                "success": True,
+                "stats": {
+                    "total_money": total_money,
+                    "bank_reserves": bank_reserves,
+                    "player_holdings": player_holdings,
+                    "community_fund": community_fund_balance,
+                    "loans_total": loans_total,
+                    "heloc_total": heloc_total,
+                    "cd_total": cd_total,
+                    "total_loans": loans_total + heloc_total,
+                    "active_loan_count": sum(1 for loan in all_loans if loan.loan_type == 'loan'),
+                    "active_cd_count": sum(1 for loan in all_loans if loan.loan_type == 'cd' and loan.is_active),
+                    "active_heloc_count": sum(1 for loan in all_loans if loan.loan_type == 'heloc'),
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error getting financial stats: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    def get_community_fund_balance(self) -> Dict[str, Any]:
+        """Get the current community fund balance
+        
+        Returns:
+            Dictionary with community fund balance
         """
-        # Calculate total money in the game
-        bank_reserves = self.game_state.bank.money
+        try:
+            # Refresh the value first to ensure it's current
+            balance = self.refresh_community_fund_value()
+            
+            return {
+                "success": True,
+                "balance": balance,
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error getting community fund balance: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "balance": 0
+            }
+            
+    def refresh_community_fund_value(self) -> int:
+        """Refresh and reconcile the community fund value
         
-        # Calculate total player holdings
-        player_holdings = sum(player.money for player in self.game_state.players.values())
+        This method attempts to ensure consistency between the community_fund
+        instance, game_state.community_fund, and game_state.settings['community_fund']
         
-        # Calculate total community fund
-        community_fund = self.game_state.community_chest_fund
-        
-        # Calculate total active loans
-        loans_total = sum(loan.amount for loan in self.game_state.loans.values())
-        
-        # Calculate total money in the game system
-        total_money = bank_reserves + player_holdings + community_fund
-        
-        return {
-            "total_money": total_money,
-            "bank_reserves": bank_reserves,
-            "player_holdings": player_holdings,
-            "community_fund": community_fund,
-            "loans_total": loans_total
-        }
+        Returns:
+            Current balance of the community fund
+        """
+        try:
+            # Initialize with 0
+            community_fund_balance = 0
+            
+            # Try from community_fund instance first
+            if hasattr(self, 'community_fund') and self.community_fund:
+                community_fund_balance = self.community_fund.balance or 0
+                
+            # If we have a game_state, update/sync the values
+            if self.game_state:
+                # Value from column (if column exists)
+                if hasattr(self.game_state, 'community_fund'):
+                    # If column value is higher, use it
+                    if self.game_state.community_fund > community_fund_balance:
+                        community_fund_balance = self.game_state.community_fund
+                    else:
+                        # Update column with our better value
+                        self.game_state.community_fund = community_fund_balance
+                        
+                # Value from settings (if settings exists)
+                if hasattr(self.game_state, 'settings'):
+                    settings = self.game_state.settings or {}
+                    settings_value = settings.get('community_fund', 0)
+                    
+                    # If settings value is higher, use it
+                    if settings_value > community_fund_balance:
+                        community_fund_balance = settings_value
+                        # Update column if exists
+                        if hasattr(self.game_state, 'community_fund'):
+                            self.game_state.community_fund = community_fund_balance
+                    else:
+                        # Update settings with our better value
+                        settings['community_fund'] = community_fund_balance
+                        self.game_state.settings = settings
+                
+                # Commit the changes if we updated anything
+                db.session.add(self.game_state)
+                db.session.commit()
+                
+            # Update the community_fund instance if we have it
+            if hasattr(self, 'community_fund') and self.community_fund:
+                # Only update if our value is higher
+                if community_fund_balance > self.community_fund.balance:
+                    # Update the community fund instance using its internal methods
+                    self.community_fund._funds = community_fund_balance
+            
+            # Calculate total from tax transactions as a verification
+            from src.models.transaction import Transaction
+            tax_payments = Transaction.query.filter_by(transaction_type="payment_to_community_fund").all()
+            tax_total = sum(tx.amount for tx in tax_payments)
+            
+            # If tax total is higher than our current value, log a discrepancy
+            if tax_total > community_fund_balance:
+                logger.warning(f"Community fund discrepancy: Tax transactions total {tax_total} but fund reports {community_fund_balance}")
+                # We could auto-correct here, but for now just log it
+            
+            return community_fund_balance
+            
+        except Exception as e:
+            logger.error(f"Error refreshing community fund value: {str(e)}")
+            return 0
     
     def update_bank_settings(self, interest_rate: float, max_loan_amount: int, 
                             enable_automatic_fees: bool) -> Dict[str, Any]:

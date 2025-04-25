@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request, current_app
+from datetime import datetime
 
 def register_community_fund_routes(app):
     """Register community fund routes
@@ -7,10 +8,24 @@ def register_community_fund_routes(app):
         app: Flask application
     """
     community_fund = app.config.get('community_fund')
+    finance_controller = app.config.get('finance_controller')
     
     @app.route('/api/community-fund', methods=['GET'])
     def get_community_fund():
         """Get community fund information"""
+        # Use finance controller first if available for more accurate information
+        if finance_controller:
+            result = finance_controller.get_community_fund_balance()
+            if result.get("success", False):
+                return jsonify({
+                    "success": True,
+                    "fund": {
+                        "balance": result.get("balance", 0),
+                        "updated_at": result.get("timestamp", "")
+                    }
+                })
+        
+        # Fall back to regular community fund if finance controller failed or is unavailable
         if not community_fund:
             return jsonify({
                 "success": False,
@@ -22,6 +37,35 @@ def register_community_fund_routes(app):
             "success": True,
             "fund": info
         })
+    
+    @app.route('/api/community-fund/refresh', methods=['GET'])
+    def refresh_community_fund():
+        """Refresh and get the current community fund balance"""
+        # Use finance controller if available
+        if finance_controller:
+            # Call the refresh method to sync all community fund data
+            balance = finance_controller.refresh_community_fund_value()
+            
+            return jsonify({
+                "success": True,
+                "balance": balance,
+                "timestamp": datetime.now().isoformat()
+            })
+        
+        # Fall back to community fund if finance controller not available
+        if community_fund:
+            # Just return the current info without refreshing
+            info = community_fund.get_info()
+            return jsonify({
+                "success": True,
+                "balance": info.get("balance", 0),
+                "timestamp": info.get("updated_at", "")
+            })
+            
+        return jsonify({
+            "success": False,
+            "error": "Community fund not initialized"
+        }), 500
     
     @app.route('/api/admin/community-fund/add', methods=['POST'])
     def admin_add_funds():
@@ -53,6 +97,10 @@ def register_community_fund_routes(app):
             }), 500
             
         new_balance = community_fund.add_funds(amount, reason)
+        
+        # If finance controller exists, refresh the value to ensure all systems have the same value
+        if finance_controller:
+            finance_controller.refresh_community_fund_value()
         
         return jsonify({
             "success": True,

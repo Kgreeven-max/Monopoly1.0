@@ -337,45 +337,54 @@ def audit_economic_system():
 
 @finance_admin_bp.route('/loans', methods=['GET'])
 @admin_required
-def get_all_loans():
-    """
-    Get all loans in the system with filtering options.
-    
-    Query parameters:
-    - player_id: Filter by player ID
-    - status: Filter by loan status ('active' or 'paid')
-    - loan_type: Filter by loan type ('loan', 'heloc', etc.)
-    - limit: Maximum number of loans to return (default: 100)
-    - offset: Offset for pagination (default: 0)
-    """
+def get_admin_loans():
+    """Get all active loans, CDs, and HELOCs for the admin dashboard."""
     try:
-        # Get filters from query parameters
-        filters = {}
+        # Query all financial instruments
+        loans_query = Loan.query.filter(Loan.is_active == True).all()
         
-        if 'player_id' in request.args:
-            filters['player_id'] = int(request.args.get('player_id'))
+        # Prepare response data
+        loans_data = []
+        for loan in loans_query:
+            loan_dict = {
+                "id": loan.id,
+                "player_id": loan.player_id,
+                "player_name": Player.query.get(loan.player_id).username if Player.query.get(loan.player_id) else "Unknown",
+                "loan_type": loan.loan_type,
+                "amount": loan.amount,
+                "outstanding_balance": loan.outstanding_balance,
+                "interest_rate": loan.interest_rate,
+                "is_active": loan.is_active,
+                "start_lap": loan.start_lap,
+                "due_lap": loan.start_lap + loan.length_laps if hasattr(loan, 'length_laps') else None,
+            }
+            
+            # Add property details for HELOCs
+            if loan.loan_type == 'heloc' and hasattr(loan, 'property_id') and loan.property_id:
+                from src.models.property import Property
+                property_obj = Property.query.get(loan.property_id)
+                if property_obj:
+                    loan_dict["property_id"] = property_obj.id
+                    loan_dict["property_name"] = property_obj.name
+            
+            loans_data.append(loan_dict)
         
-        if 'status' in request.args:
-            filters['status'] = request.args.get('status')
+        return jsonify({
+            "success": True,
+            "loans": loans_data,
+            "counts": {
+                "loans": sum(1 for loan in loans_data if loan["loan_type"] == "loan"),
+                "cds": sum(1 for loan in loans_data if loan["loan_type"] == "cd"),
+                "helocs": sum(1 for loan in loans_data if loan["loan_type"] == "heloc")
+            }
+        })
         
-        if 'loan_type' in request.args:
-            filters['loan_type'] = request.args.get('loan_type')
-        
-        limit = int(request.args.get('limit', 100))
-        offset = int(request.args.get('offset', 0))
-        
-        # Call the controller method
-        admin_controller = get_admin_controller()
-        result = admin_controller.get_all_loans(filters)
-        
-        if result.get('success'):
-            return jsonify(result), 200
-        else:
-            return jsonify(result), 500
-    
     except Exception as e:
-        logger.error(f"Error getting all loans: {e}", exc_info=True)
-        return jsonify({"success": False, "error": str(e)}), 500
+        logger.error(f"Error getting loans: {str(e)}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 @finance_admin_bp.route('/loans/<int:loan_id>', methods=['PUT'])
 @admin_required
@@ -590,17 +599,23 @@ def get_financial_overview():
                 community_fund_balance = community_fund.fund_balance
             elif hasattr(community_fund, 'amount'):
                 community_fund_balance = community_fund.amount
-            # Add fallback for free_parking_fund in game_state
-            elif game_state and hasattr(game_state, 'free_parking_fund'):
-                community_fund_balance = game_state.free_parking_fund
         
-        # Fallback to game state settings
-        if community_fund_balance == 0 and game_state and hasattr(game_state, 'settings'):
-            community_fund_balance = game_state.settings.get("community_fund", 0)
+        # Fallback to game state settings or community_fund property
+        if community_fund_balance == 0:
+            if game_state and hasattr(game_state, 'community_fund'):
+                community_fund_balance = game_state.community_fund or 0
+            elif game_state and hasattr(game_state, 'settings'):
+                community_fund_balance = game_state.settings.get("community_fund", 0)
 
-        # Count active loans
-        active_loans = Loan.query.filter_by(is_active=True).count()
-        loan_total = db.session.query(func.sum(Loan.outstanding_balance)).filter_by(is_active=True).scalar() or 0
+        # Count active loans, CDs, and HELOCs separately
+        active_loans = Loan.query.filter_by(is_active=True, loan_type='loan').count()
+        active_cds = Loan.query.filter_by(is_active=True, loan_type='cd').count()
+        active_helocs = Loan.query.filter_by(is_active=True, loan_type='heloc').count()
+        
+        # Calculate totals for each type of financial instrument
+        loan_total = db.session.query(func.sum(Loan.outstanding_balance)).filter_by(is_active=True, loan_type='loan').scalar() or 0
+        cd_total = db.session.query(func.sum(Loan.outstanding_balance)).filter_by(is_active=True, loan_type='cd').scalar() or 0
+        heloc_total = db.session.query(func.sum(Loan.outstanding_balance)).filter_by(is_active=True, loan_type='heloc').scalar() or 0
 
         # Calculate bank reserves (if banker has balance property)
         banker = current_app.config.get('banker')
@@ -626,6 +641,11 @@ def get_financial_overview():
             "community_fund": community_fund_balance,
             "loans_count": active_loans,
             "loans_total": loan_total,
+            "cd_count": active_cds,
+            "cd_total": cd_total,
+            "heloc_count": active_helocs,
+            "heloc_total": heloc_total,
+            "total_active_loans": active_loans,  # For backward compatibility
             "player_count": financial_data.get('total_players', 0)
         }
 

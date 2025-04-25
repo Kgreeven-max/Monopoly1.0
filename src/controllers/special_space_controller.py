@@ -1325,6 +1325,7 @@ class SpecialSpaceController:
                 
                 # Process payment through banker if available
                 if banker:
+                    # Always use player_pays_community_fund for all tax payments
                     payment_result = banker.player_pays_community_fund(player_id, tax_amount, f"Tax: {tax_name}")
                     
                     if not payment_result["success"]:
@@ -1336,6 +1337,13 @@ class SpecialSpaceController:
                             "trigger_bankruptcy": True,
                             "tax_amount": tax_amount
                         }
+                    
+                    # Ensure community fund is updated in game state
+                    if hasattr(game_state, 'community_fund'):
+                        game_state.community_fund = (game_state.community_fund or 0) + tax_amount
+                        db.session.add(game_state)
+                        db.session.commit()
+                        logging.info(f"Updated game_state.community_fund to {game_state.community_fund}")
                 else:
                     # Direct payment if banker not available
                     player.money -= tax_amount
@@ -1361,10 +1369,10 @@ class SpecialSpaceController:
                     logging.info(f"Added ${tax_amount} to community fund from tax payment")
                 else:
                     # Update game_state directly if no community fund instance
-                    if hasattr(game_state, 'free_parking_fund'):
-                        game_state.free_parking_fund = (game_state.free_parking_fund or 0) + tax_amount
-                    elif hasattr(game_state, 'community_fund'):
+                    if hasattr(game_state, 'community_fund'):
                         game_state.community_fund = (game_state.community_fund or 0) + tax_amount
+                    elif hasattr(game_state, 'free_parking_fund'):
+                        game_state.free_parking_fund = (game_state.free_parking_fund or 0) + tax_amount
                     else:
                         # Fallback - update settings
                         settings = game_state.settings if hasattr(game_state, 'settings') and game_state.settings else {}
@@ -1390,7 +1398,8 @@ class SpecialSpaceController:
                         'player_name': player.username,
                         'tax_type': tax_type,
                         'tax_amount': tax_amount,
-                        'message': message
+                        'message': message,
+                        'destination': 'community_fund'  # Always specify community fund as destination
                     }, room=game_id)
                 
                 return {
@@ -1398,7 +1407,8 @@ class SpecialSpaceController:
                     "action": "tax_paid",
                     "tax_type": tax_type,
                     "amount": tax_amount,
-                    "message": message
+                    "message": message,
+                    "destination": "community_fund"  # Always specify community fund as destination
                 }
             else:
                 return {
