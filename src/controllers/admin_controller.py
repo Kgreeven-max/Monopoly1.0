@@ -897,20 +897,20 @@ class AdminController:
             try:
                 game_state = GameState.query.first()
                 if game_state:
-                    if not hasattr(game_state, 'economic_cycle_state') or not game_state.economic_cycle_state:
+                    if not hasattr(game_state, 'inflation_state') or not game_state.inflation_state:
                         issue = {
                             "type": "missing_economic_state",
                             "severity": "medium",
                             "entity": "game_state",
-                            "description": "Game state is missing economic_cycle_state"
+                            "description": "Game state is missing inflation_state"
                         }
                         
                         if fix_issues:
-                            game_state.economic_cycle_state = "normal"
+                            game_state.inflation_state = "normal"
                             db.session.add(game_state)
                             audit_results["issues_fixed"] += 1
                             issue["fixed"] = True
-                            issue["fix_description"] = "Set economic_cycle_state to 'normal'"
+                            issue["fix_description"] = "Set inflation_state to 'normal'"
                         
                         audit_results["issues_found"] += 1
                         audit_results["reports"].append(issue)

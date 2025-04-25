@@ -16,9 +16,17 @@ class CD(db.Model):
     is_matured = db.Column(db.Boolean, default=False)
     is_cashed_out = db.Column(db.Boolean, default=False)
     penalty_percentage = db.Column(db.Float, default=0.1)  # 10% penalty for early withdrawal
+    is_variable_rate = db.Column(db.Boolean, default=False)  # Whether interest rate can change with economy
+    history = db.Column(db.Text, nullable=True)  # JSON string for rate change history
     
     # Relationships
     player = db.relationship('Player', backref='certificates_of_deposit')
+    
+    # Add active property for compatibility with economic cycle controller
+    @property
+    def active(self):
+        """Return True if the CD is active (not cashed out)"""
+        return not self.is_cashed_out
     
     def __init__(self, player_id, game_id, amount, interest_rate, term_months, 
                  start_date=None, penalty_percentage=0.1):

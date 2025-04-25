@@ -14,6 +14,8 @@ from src.models.bots import (
     SharkBot, InvestorBot
 )
 from src.controllers.bot_event_controller import handle_bot_event, handle_scheduled_event
+from datetime import datetime
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -143,19 +145,43 @@ class BotController:
         time.sleep(random.uniform(0.5, 1.5)) # Simulate thinking time
 
         try:
-            # Continuously check game state in case something changed (e.g., game ended)
-            game_state = GameState.query.get(game_id)
+            # Get game state - handle both numeric and string UUIDs
+            game_state = None
+            actual_game_id = None
+            
+            # Try numeric ID first (used for integers)
+            try:
+                if isinstance(game_id, int) or (isinstance(game_id, str) and game_id.isdigit()):
+                    game_state = GameState.query.get(int(game_id))
+                    if game_state:
+                        actual_game_id = game_state.id
+            except (ValueError, TypeError):
+                pass
+                
+            # If not found and it's a string (potentially UUID), try by game_id column
+            if not game_state and isinstance(game_id, str):
+                self.logger.info(f"Looking up GameState by UUID in game_id column: {game_id}")
+                game_state = GameState.query.filter_by(game_id=game_id).first()
+                if game_state:
+                    actual_game_id = game_state.id
+                    
             if not game_state or game_state.status != 'active':
                 self.logger.warning(f"Game {game_id} is not active. Bot {player_id} stopping turn.")
                 return
+                
             if game_state.current_player_id != player_id:
                 self.logger.warning(f"Bot {player_id} attempted to take turn, but current player is {game_state.current_player_id}. Stopping.")
                 return
 
+            # Save the numeric game_id for internal function calls
+            if actual_game_id is None:
+                self.logger.error(f"Could not determine actual game ID for {game_id}")
+                return
+                
             player = Player.query.get(player_id)
             if not player or player.is_bankrupt or not player.in_game:
                 self.logger.warning(f"Bot player {player_id} is invalid or bankrupt. Ending turn.")
-                self.game_controller._internal_end_turn(player_id, game_id)
+                self.game_controller._internal_end_turn(player_id, actual_game_id)
                 return
 
             # 1. Handle Jail
@@ -167,24 +193,30 @@ class BotController:
                          self.logger.info(f"Bot {player_id} finished jail action, ending turn.")
                          # End turn might have been called by GameLogic already if roll failed
                          # Ensure state is consistent before potentially ending turn again.
-                         current_game_state = GameState.query.get(game_id)
+                         current_game_state = GameState.query.get(actual_game_id)
                          if current_game_state.current_player_id == player_id: 
-                             self.game_controller._internal_end_turn(player_id, game_id)
+                             self.game_controller._internal_end_turn(player_id, actual_game_id)
                          return # End processing for this turn
                 # If jail_action_taken is False, it means bot got out and needs to proceed with roll
                 
             # 2. Main Turn Loop (Handles doubles)
             turn_active = True
             roll_count = 0
-            max_rolls = 3 # Prevent infinite loop in case of unexpected state
+            max_rolls = 3 # Prevent infinite loop - 3 doubles sends to jail
 
             while turn_active and roll_count < max_rolls:
                 roll_count += 1
                 self.logger.info(f"Bot {player_id} performing roll #{roll_count}")
+                
+                # Safety check for too many rolls - shouldn't happen but protect against infinite loop
+                if roll_count > 3:
+                    self.logger.warning(f"Bot {player_id} has rolled too many times ({roll_count}). Forcing end of turn.")
+                    break
+                
                 time.sleep(random.uniform(0.5, 1.0))
                 
                 # Check game state again before rolling
-                game_state = GameState.query.get(game_id)
+                game_state = GameState.query.get(actual_game_id)
                 if not game_state or game_state.status != 'active' or game_state.current_player_id != player_id:
                      self.logger.warning(f"Game state changed mid-turn for bot {player_id}. Stopping.")
                      turn_active = False; break
@@ -194,61 +226,86 @@ class BotController:
                      self.logger.warning(f"Bot {player_id} expected action is '{game_state.expected_action_type}', cannot roll. Handling action first.")
                      self._handle_pending_action(player, game_state)
                      # Re-check state after handling pending action
-                     game_state = GameState.query.get(game_id)
+                     game_state = GameState.query.get(actual_game_id)
                      if not game_state or game_state.status != 'active' or game_state.current_player_id != player_id:
                           self.logger.warning(f"Game state changed after handling pending action for bot {player_id}. Stopping.")
                           turn_active = False; break
-                     # If action resolved and turn didn't end, loop might continue if doubles occurred before pending action
-                     if game_state.expected_action_type == 'roll_again': continue # Proceed to roll
-                     else: turn_active = False; break # Turn ended or another action is now pending
-
-                # Perform Roll
-                roll_result = self.game_logic.roll_dice_and_move(player_id, game_id)
-                if not roll_result or not roll_result.get('success'):
-                    self.logger.error(f"Bot {player_id} failed to roll dice or move: {roll_result.get('error')}")
-                    turn_active = False; break # End turn on critical roll error
-
-                # Process Landing Action
-                landing_action = roll_result.get('landing_action', {})
-                self._handle_landing_action(player, landing_action, game_state)
-
-                # Check if turn ended by landing action (e.g., go to jail, bankruptcy potential)
-                # Re-fetch game state as handlers might modify it
-                game_state = GameState.query.get(game_id)
-                if not game_state or game_state.status != 'active' or game_state.current_player_id != player_id:
-                    self.logger.info(f"Turn ended for bot {player_id} after handling landing action.")
-                    turn_active = False; break 
-                   
-                # Check for doubles
-                if roll_result.get('next_action') != 'roll_again':
-                    self.logger.info(f"Bot {player_id} did not roll doubles or turn ended. Finishing turn sequence.")
-                    turn_active = False # End loop if not rolling again
+                           
+                # Roll the dice
+                if not self.game_logic:
+                     self.logger.error(f"GameLogic not found for bot {player_id}. Cannot roll dice.")
+                     turn_active = False; break
+                      
+                # Roll dice and move the player
+                roll_result = self.game_logic.roll_dice_and_move(player_id)
+                
+                if not roll_result or not roll_result.get("success"):
+                     self.logger.warning(f"Bot {player_id} roll failed: {roll_result.get('error') if roll_result else 'Unknown error'}")
+                     # End turn if roll fails
+                     self.game_controller._internal_end_turn(player_id, actual_game_id)
+                     return
+                
+                # Check if we rolled doubles (to continue turn)
+                rolled_doubles = roll_result.get("rolled_doubles", False)
+                
+                # Handle third doubles case - should send to jail
+                if rolled_doubles and roll_count == 3:
+                    self.logger.info(f"Bot {player_id} rolled doubles for the third time - should be sent to jail")
+                    # The game logic should handle this automatically, but let's check
+                    # Re-fetch player to see if they're in jail
+                    db.session.refresh(player)
+                    if player.in_jail:
+                        self.logger.info(f"Bot {player_id} confirmed in jail after third doubles")
+                        turn_active = False
+                        break
+                
+                # Get updated game state for potential actions
+                game_state = GameState.query.get(actual_game_id)
+                
+                # Process any landing actions
+                if game_state and game_state.current_player_id == player_id and game_state.expected_action_type:
+                     # Sleep to simulate thinking about the action
+                     time.sleep(random.uniform(0.3, 0.8))
+                     
+                     # Handle the action
+                     self.logger.info(f"Bot {player_id} performing landing action: {game_state.expected_action_type}")
+                     action_result = self._handle_pending_action(player, game_state)
+                     
+                     # Re-check state
+                     game_state = GameState.query.get(actual_game_id)
+                     if not game_state or game_state.status != 'active' or game_state.current_player_id != player_id:
+                          self.logger.warning(f"Game state changed after handling landing action for bot {player_id}. Stopping.")
+                          turn_active = False; break
+                
+                # Should we continue the turn?
+                if not rolled_doubles or roll_count >= max_rolls or game_state.expected_action_type == 'end_turn':
+                     self.logger.info(f"Bot {player_id} did not roll doubles or turn ended. Finishing turn sequence.")
+                     turn_active = False
                 else:
                      self.logger.info(f"Bot {player_id} rolled doubles, continuing turn.")
-                     # Update expected state for roll_again if GameLogic didn't
-                     if game_state.expected_action_type != 'roll_again':
-                          game_state.expected_action_type = 'roll_again'
-                          game_state.expected_action_details = None
-                          db.session.add(game_state)
-                          db.session.commit()
 
-            # 3. End Turn (if not already ended)
-            # Check final state after loop
-            final_game_state = GameState.query.get(game_id)
-            if final_game_state and final_game_state.status == 'active' and final_game_state.current_player_id == player_id:
-                 self.logger.info(f"Bot {player_id} turn loop finished. Explicitly ending turn.")
-                 self.game_controller._internal_end_turn(player_id, game_id)
-            else:
-                 self.logger.info(f"Bot {player_id} turn already ended or game state changed.")
-
+            # 3. Consider doing financial management before ending turn
+            # Only do this occasionally to avoid too many financial operations
+            if random.random() < 0.25:  # 25% chance each turn
+                self.logger.info(f"Bot {player_id} considering financial management")
+                self.manage_investments(player_id, game_id)
+                
+            # 4. End Turn Explicitly
+            self.logger.info(f"Bot {player_id} turn loop finished. Explicitly ending turn.")
+            
+            # Recheck current player
+            game_state = GameState.query.get(game_id)
+            if game_state and game_state.current_player_id == player_id:
+                self.game_controller._internal_end_turn(player_id, game_id)
+            
         except Exception as e:
-            db.session.rollback()
-            self.logger.error(f"Exception during bot {player_id} turn: {e}", exc_info=True)
-            # Attempt to end turn gracefully if possible
+            self.logger.error(f"Error in bot {player_id} turn: {str(e)}", exc_info=True)
+            
+            # Attempt recovery - end turn if we're the current player
             try:
-                 current_game_state = GameState.query.get(game_id)
-                 if current_game_state and current_game_state.current_player_id == player_id:
-                      self.game_controller._internal_end_turn(player_id, game_id)
+                current_game_state = GameState.query.get(game_id)
+                if current_game_state and current_game_state.current_player_id == player_id:
+                     self.game_controller._internal_end_turn(player_id, game_id)
             except Exception as inner_e:
                  self.logger.error(f"Failed to gracefully end turn for bot {player_id} after error: {inner_e}")
 
@@ -260,8 +317,84 @@ class BotController:
          action_type = game_state.expected_action_type
          details = game_state.expected_action_details
          self.logger.info(f"Bot {player.id} handling pending action: {action_type}")
-         # This is essentially the same logic as _handle_landing_action but triggered pre-roll
-         self._handle_landing_action(player, {"action": action_type, **(details or {})}, game_state)
+         
+         # Enhanced error handling for pending actions
+         try:
+             # Check if action type is valid 
+             if not action_type:
+                 self.logger.warning(f"Bot {player.id} has no pending action (expected_action_type is None)")
+                 return False
+             
+             # Special handling for roll_dice action - bot should just roll the dice
+             if action_type == "roll_dice":
+                 self.logger.info(f"Bot {player.id} handling roll_dice action directly")
+                 # Clear the expected action first to avoid recursion
+                 game_state.expected_action_type = None
+                 game_state.expected_action_details = None
+                 db.session.commit()
+                 
+                 # Let the game_logic handle the dice roll
+                 if self.game_logic:
+                     roll_result = self.game_logic.roll_dice_and_move(player.id)
+                     if roll_result and roll_result.get('success'):
+                         self.logger.info(f"Bot {player.id} successfully rolled dice: {roll_result.get('dice', [])}")
+                         return True
+                     else:
+                         error = roll_result.get('error', 'Unknown error') if roll_result else 'Roll failed'
+                         self.logger.warning(f"Bot {player.id} roll_dice failed: {error}")
+                 else:
+                     self.logger.error(f"Bot {player.id} cannot roll dice: game_logic not available")
+                 return True
+             
+             # Special handling for actions that shouldn't be repeated
+             if action_type == "end_turn":
+                 self.logger.info(f"Bot {player.id} clearing 'end_turn' action without processing")
+                 game_state.expected_action_type = None
+                 game_state.expected_action_details = None
+                 db.session.commit()
+                 return True # No need to process further
+                 
+             # Create a synthetic landing action from the expected action details
+             landing_action = {"action": action_type}
+             
+             # Add details to the landing action if available
+             if details and isinstance(details, dict):
+                 landing_action.update(details)
+             else:
+                 self.logger.warning(f"Bot {player.id} has action type '{action_type}' but no valid details")
+             
+             # Handle the action with dedicated action handler  
+             self._handle_landing_action(player, landing_action, game_state)
+             
+             # Check if action was handled successfully
+             # Re-query game state to check current expected action
+             updated_game_state = GameState.query.get(game_state.id)
+             
+             if updated_game_state.expected_action_type == action_type:
+                 # Action wasn't cleared, might need manual clearing or recovery
+                 self.logger.warning(f"Bot {player.id} action '{action_type}' wasn't cleared by handler. Clearing manually.")
+                 updated_game_state.expected_action_type = None
+                 updated_game_state.expected_action_details = None
+                 db.session.commit()
+             
+             return True # Action was handled
+                 
+         except Exception as e:
+             self.logger.error(f"Error handling pending action '{action_type}' for bot {player.id}: {str(e)}", exc_info=True)
+             
+             # Attempt recovery from error state
+             try:
+                 # Clear the expected action to prevent turn loop
+                 game_state = GameState.query.get(game_state.id)
+                 if game_state and game_state.expected_action_type == action_type:
+                     self.logger.info(f"Clearing error state for action '{action_type}' for bot {player.id}")
+                     game_state.expected_action_type = None
+                     game_state.expected_action_details = None
+                     db.session.commit()
+             except Exception as recovery_error:
+                 self.logger.error(f"Failed to recover from action error: {str(recovery_error)}")
+             
+             return False # Indicate action handling failed
 
     def _handle_landing_action(self, player, landing_action, game_state):
         """Processes the result of landing on a space."""
@@ -273,24 +406,70 @@ class BotController:
         time.sleep(random.uniform(0.3, 0.8))
 
         if action_type == 'buy_or_auction_prompt':
+            # Handle property purchase decision
             property_id = landing_action.get('property_id')
-            cost = landing_action.get('cost')
             
-            # Refresh player object to ensure we have the latest position
-            db.session.refresh(player)
+            # If no property_id is provided in the landing action, look up the property at the player's current position
+            if not property_id:
+                player_position = player.position
+                # Find the property at the player's current position
+                property_obj = Property.query.filter_by(position=player_position, game_id=game_id).first()
+                if property_obj:
+                    property_id = property_obj.id
+                    self.logger.info(f"Found property {property_obj.name} (ID: {property_id}) at player position {player_position}")
+                else:
+                    self.logger.error(f"No property found at position {player_position} for game {game_id}")
+                    return False
             
-            if self._decide_buy_property(player, property_id, cost):
-                self.logger.info(f"Bot {player_id} decided to BUY property {property_id}")
-                # Call PlayerActionController's logic or a direct controller method
-                # Assuming direct call to property controller for simplicity here
-                buy_result = self.property_controller.buy_property(player_id, player.pin, property_id)
-                if not buy_result.get('success'):
-                     self.logger.error(f"Bot {player_id} failed to buy property {property_id}: {buy_result.get('error')}")
-                     # If buy fails, maybe decline and auction? Or just end turn?
-                     self._decline_buy_action(player_id, property_id, game_id)
-            else:
-                self.logger.info(f"Bot {player_id} decided to DECLINE buy for property {property_id}")
-                self._decline_buy_action(player_id, property_id, game_id)
+            if property_id:
+                property_obj = Property.query.get(property_id)
+                if property_obj:
+                    # Extract cost from property_obj
+                    cost = property_obj.price if hasattr(property_obj, 'price') else property_obj.current_price
+                    # Verify the property is at the player's position
+                    if property_obj.position != player.position:
+                        self.logger.warning(f"Property {property_id} is at position {property_obj.position} but player is at position {player.position}")
+                        # Attempt to find the correct property at the player's position
+                        correct_property = Property.query.filter_by(position=player.position, game_id=game_id).first()
+                        if correct_property:
+                            self.logger.info(f"Found correct property {correct_property.name} (ID: {correct_property.id}) at player position {player.position}")
+                            property_id = correct_property.id
+                            property_obj = correct_property
+                            cost = property_obj.price if hasattr(property_obj, 'price') else property_obj.current_price
+                        else:
+                            self.logger.error(f"Cannot find property at player position {player.position}")
+                            return False
+                    
+                    # Use decision maker to determine whether to buy
+                    decision = self._decide_buy_property(player, property_id, cost)
+                    if decision:  # The method returns True/False, not a dictionary with a "buy" key
+                        # Bot decides to buy the property
+                        self.logger.info(f"Bot {player_id} decided to BUY property {property_id}")
+                        
+                        # Double-check that we're purchasing the correct property (at the player's position)
+                        current_property = Property.query.filter_by(position=player.position, game_id=game_id).first()
+                        if current_property and current_property.id != property_id:
+                            self.logger.warning(f"Property mismatch: Selected property ID {property_id} doesn't match property at position {player.position} (ID: {current_property.id}). Correcting.")
+                            property_id = current_property.id
+                        
+                        # Call game controller to purchase
+                        purchase_result = self.game_controller.handle_property_purchase(
+                            {"player_id": player_id, "property_id": property_id, "game_id": game_id, "is_bot": True}
+                        )
+                        return purchase_result.get("success", False)
+                    else:
+                        # Bot decides to trigger auction
+                        self.logger.info(f"Bot {player_id} decided to DECLINE buy for property {property_id}")
+                        
+                        # Send the decline purchase request to the game controller
+                        decline_result = self.game_controller.handle_property_decline(
+                            {"player_id": player_id, "property_id": property_id, "game_id": game_id, "is_bot": True}
+                        )
+                        
+                        # Auction handling if the decline was successful
+                        if decline_result.get("success", False):
+                            self.logger.info(f"Successfully declined purchase, auction should be triggered automatically")
+                            return True
 
         elif action_type == 'draw_chance_card':
             self.logger.info(f"Bot {player_id} drawing Chance card.")
@@ -299,6 +478,14 @@ class BotController:
         elif action_type == 'draw_community_chest_card':
             self.logger.info(f"Bot {player_id} drawing Community Chest card.")
             self.special_space_controller.process_community_chest_card(player_id, game_state.id)
+        
+        elif action_type == 'free_parking':
+            self.logger.info(f"Bot {player_id} landed on Free Parking.")
+            self.special_space_controller.handle_free_parking_space(game_state.id, player_id)
+        
+        elif action_type == 'market_fluctuation':
+            self.logger.info(f"Bot {player_id} landed on Market Fluctuation.")
+            self.special_space_controller.handle_market_fluctuation_space(game_state.id, player_id)
         
         elif action_type == 'pay_tax':
              tax_details = landing_action.get('tax_details', {})
@@ -323,6 +510,28 @@ class BotController:
              # After managing assets, the original action (paying rent/fine) might need re-attempting
              # This needs more complex state handling - for now, assume manage_assets handles payment if possible.
        
+        elif action_type == 'jail_action_prompt':
+            # Handle jail prompt directly when it comes through as a landing action
+            self.logger.info(f"Bot {player_id} handling jail action prompt")
+            # Pay the fine to get out rather than rolling for doubles in this case
+            fine = 50  # Standard fine
+            if player.money >= fine:
+                self.logger.info(f"Bot {player_id} paying ${fine} fine to get out of jail.")
+                pay_result = self.banker.player_pays_bank(player_id, fine, "Jail fine")
+                if pay_result['success']:
+                    player.in_jail = False
+                    player.jail_turns = 0
+                    # Clear expected action state
+                    game_state.expected_action_type = None
+                    game_state.expected_action_details = None
+                    db.session.commit()
+                else:
+                    self.logger.warning(f"Bot {player_id} failed to pay jail fine: {pay_result.get('error')}. Managing assets.")
+                    self._manage_assets(player, fine)
+            else:
+                self.logger.info(f"Bot {player_id} cannot afford jail fine. Managing assets.")
+                self._manage_assets(player, fine)
+       
         # Actions like 'paid_rent', 'went_to_jail', 'passive_space' require no bot decision.
         else:
              self.logger.debug(f"Bot {player_id} encountered landing action '{action_type}' requiring no specific decision.")
@@ -334,38 +543,54 @@ class BotController:
          game_state = None
          
          try:
-             # Try with the provided game_id first
-             game_state = GameState.query.get(game_id)
-             
-             # If not found and it looks like a UUID, try to find by game_id field instead of primary key
-             if not game_state and isinstance(game_id, str) and '-' in game_id:
+             # First try to find game state by the game_id attribute (UUID)
+             if isinstance(game_id, str) and '-' in game_id:
                  self.logger.info(f"Looking up GameState by UUID field: {game_id}")
                  game_state = GameState.query.filter_by(game_id=game_id).first()
              
+             # If not found or ID is numeric, try by primary key
              if not game_state:
-                 # Final fallback - get main game state
+                 try:
+                     # Convert to int only if it's numeric
+                     if isinstance(game_id, int) or (isinstance(game_id, str) and game_id.isdigit()):
+                         pk_id = int(game_id)
+                         self.logger.info(f"Looking up GameState by primary key: {pk_id}")
+                         game_state = GameState.query.get(pk_id)
+                 except (ValueError, TypeError):
+                     self.logger.warning(f"Could not convert game_id {game_id} to integer primary key")
+             
+             # Final fallback - get main game state
+             if not game_state:
                  self.logger.warning(f"Could not find game_state for game ID {game_id}, falling back to primary game")
                  game_state = GameState.get_instance()
+                 
+                 # Update the instance if its game_id doesn't match
+                 if game_state and game_state.game_id != game_id and isinstance(game_id, str):
+                     self.logger.info(f"Refreshing game state instance to match requested game ID: {game_id}")
+                     success = game_state.refresh_from_db(game_id=game_id)
+                     if not success:
+                         self.logger.error(f"Failed to refresh game state to match requested game ID: {game_id}")
          except Exception as e:
-             self.logger.error(f"Error finding game state: {str(e)}")
+             self.logger.error(f"Error finding game state: {str(e)}", exc_info=True)
              return
          
          if not game_state:
              self.logger.error(f"Could not find game_state for game ID {game_id} in _decline_buy_action")
              return
              
+         # Now handle the auction logic
          if game_state.auction_required:
-              self.logger.info(f"Bot {player_id} triggering auction for property {property_id}")
-              # Auction controller should handle the flow from here
-              self.auction_controller.start_auction(property_id, game_state.id)
+             self.logger.info(f"Bot {player_id} triggering auction for property {property_id}")
+             # Auction controller should handle the flow from here
+             self.auction_controller.start_auction(property_id, game_state.id)
          else:
-              self.logger.info(f"Bot {player_id} declined property {property_id}, no auction required. Turn should end.")
-              # Clear expected state manually if GameController didn't already
-              if game_state.expected_action_type == 'buy_or_auction_prompt':
-                   game_state.expected_action_type = None
-                   game_state.expected_action_details = None
-                   db.session.commit()
-              # Turn progression is handled by the main loop or GameController
+             self.logger.info(f"Bot {player_id} declined property {property_id}, no auction required. Turn should end.")
+             # Clear expected state manually if GameController didn't already
+             if game_state.expected_action_type == 'buy_or_auction_prompt':
+                 game_state.expected_action_type = None
+                 game_state.expected_action_details = None
+                 db.session.commit()
+             # Turn progression is handled by the main loop or GameController
 
     def _handle_jail(self, player, game_state):
         """Decides and performs action for a bot in jail."""
@@ -423,32 +648,122 @@ class BotController:
             return False
 
     def _manage_assets(self, player, amount_needed):
-        """Simple logic to raise funds by mortgaging properties."""
+        """Logic to raise funds by taking loans, HELOCs, and/or mortgaging properties."""
         player_id = player.id
         self.logger.info(f"Bot {player_id} attempting to manage assets to raise ${amount_needed}")
         
-        # Fetch unmortgaged properties, ordered by value (ascending) to mortgage cheapest first
-        # Use joinedload to avoid N+1 queries for owner check
-        properties_to_mortgage = Property.query.options(joinedload(Property.owner))\
-                                    .filter_by(owner_id=player_id, is_mortgaged=False)\
-                                    .order_by(Property.price).all()
-
-        amount_raised = 0
-        for prop in properties_to_mortgage:
-            if player.money + amount_raised >= amount_needed:
-                 break # Raised enough
+        # Get finance controller
+        finance_controller = None
+        if hasattr(self, 'app_config'):
+            finance_controller = self.app_config.get('finance_controller')
+        
+        # First try to get a loan if the amount needed is substantial
+        # and the player's credit score is decent
+        loan_taken = False
+        
+        if amount_needed > 100 and player.credit_score >= 600:
+            # If we have a finance controller, try to take a loan
+            if finance_controller:
+                self.logger.info(f"Bot {player_id} attempting to take a loan for ${amount_needed}")
+                
+                # Bots are conservative with loans - don't borrow way more than needed
+                loan_amount = min(amount_needed * 1.5, 500)  # Maximum $500 loan, or 1.5x needed amount
+                
+                # Get a loan
+                try:
+                    loan_result = finance_controller.create_loan(player_id, player.pin, loan_amount)
+                    if loan_result.get('success'):
+                        self.logger.info(f"Bot {player_id} successfully took a loan of ${loan_amount}")
+                        loan_taken = True
+                        
+                        # Refresh player object to get updated money
+                        db.session.refresh(player)
+                        
+                        # If we have enough money now, we're done
+                        if player.money >= amount_needed:
+                            self.logger.info(f"Bot {player_id} now has enough money (${player.money}) after loan")
+                            return
+                    else:
+                        error = loan_result.get('error', 'Unknown error')
+                        self.logger.warning(f"Bot {player_id} failed to get a loan: {error}")
+                except Exception as e:
+                    self.logger.warning(f"Error while attempting to get loan for Bot {player_id}: {str(e)}")
+        
+        # If we still need money and finance controller is available, try HELOCs
+        if player.money < amount_needed and finance_controller:
+            # Calculate how much more we need
+            amount_still_needed = amount_needed - player.money
+            self.logger.info(f"Bot {player_id} still needs ${amount_still_needed} after loan attempt, trying HELOC")
             
-            self.logger.info(f"Bot {player_id} attempting to mortgage {prop.name} (Value: {prop.mortgage_value})")
-            time.sleep(random.uniform(0.2, 0.5))
-            # Assuming mortgage_property exists and handles cash transfer
-            mortgage_result = self.property_controller.mortgage_property(player_id, player.pin, prop.id)
-            if mortgage_result.get('success'):
-                 amount_raised += prop.mortgage_value # Add mortgage value to potential cash
-                 self.logger.info(f"Bot {player_id} successfully mortgaged {prop.name}. Raised ${amount_raised} so far.")
-            else:
-                 self.logger.warning(f"Bot {player_id} failed to mortgage {prop.name}: {mortgage_result.get('error')}")
+            # Get bot's properties that are not mortgaged
+            properties = Property.query.filter_by(
+                owner_id=player_id, 
+                is_mortgaged=False
+            ).order_by(Property.current_price.desc()).all()
+            
+            # Try to get a HELOC on the most valuable property first
+            heloc_taken = False
+            for prop in properties:
+                if prop.houses > 0 or prop.hotel:
+                    # Skip properties with houses/hotels as they typically have higher value
+                    continue
+                    
+                try:
+                    # Determine a reasonable HELOC amount
+                    heloc_amount = min(amount_still_needed * 1.2, prop.current_price * 0.5)
+                    heloc_amount = max(int(heloc_amount), 50)  # Minimum $50 HELOC
+                    
+                    self.logger.info(f"Bot {player_id} attempting HELOC of ${heloc_amount} on {prop.name}")
+                    
+                    heloc_result = finance_controller.create_heloc(player_id, player.pin, prop.id, heloc_amount)
+                    if heloc_result.get('success'):
+                        self.logger.info(f"Bot {player_id} successfully got HELOC on {prop.name} for ${heloc_amount}")
+                        heloc_taken = True
+                        
+                        # Refresh player object to get updated money
+                        db.session.refresh(player)
+                        
+                        # If we have enough money now, we're done
+                        if player.money >= amount_needed:
+                            self.logger.info(f"Bot {player_id} now has enough money (${player.money}) after HELOC")
+                            return
+                            
+                        # If we still need more, try another property
+                        amount_still_needed = amount_needed - player.money
+                    else:
+                        error = heloc_result.get('error', 'Unknown error')
+                        self.logger.warning(f"Bot {player_id} failed to get HELOC on {prop.name}: {error}")
+                except Exception as e:
+                    self.logger.warning(f"Error attempting HELOC for Bot {player_id} on {prop.name}: {str(e)}")
+        
+        # If we still need money, try mortgaging properties
+        if player.money < amount_needed:
+            # Calculate how much more we need
+            amount_still_needed = amount_needed - player.money
+            self.logger.info(f"Bot {player_id} still needs ${amount_still_needed} after loan/HELOC attempts")
+            
+            # Fetch unmortgaged properties, ordered by value (ascending) to mortgage cheapest first
+            # Use joinedload to avoid N+1 queries for owner check
+            properties_to_mortgage = Property.query.options(joinedload(Property.owner))\
+                                        .filter_by(owner_id=player_id, is_mortgaged=False)\
+                                        .order_by(Property.price).all()
 
-        # Re-check cash after attempting mortgages
+            amount_raised = 0
+            for prop in properties_to_mortgage:
+                if player.money + amount_raised >= amount_needed:
+                     break # Raised enough
+                
+                self.logger.info(f"Bot {player_id} attempting to mortgage {prop.name} (Value: {prop.mortgage_value})")
+                time.sleep(random.uniform(0.2, 0.5))
+                # Assuming mortgage_property exists and handles cash transfer
+                mortgage_result = self.property_controller.mortgage_property(player_id, player.pin, prop.id)
+                if mortgage_result.get('success'):
+                     amount_raised += prop.mortgage_value # Add mortgage value to potential cash
+                     self.logger.info(f"Bot {player_id} successfully mortgaged {prop.name}. Raised ${amount_raised} so far.")
+                else:
+                     self.logger.warning(f"Bot {player_id} failed to mortgage {prop.name}: {mortgage_result.get('error')}")
+
+        # Re-check cash after attempting loans, HELOCs, and mortgages
         db.session.refresh(player) # Refresh player object to get updated cash
         if player.money >= amount_needed:
             self.logger.info(f"Bot {player_id} successfully raised enough funds (${player.money}) after managing assets.")
@@ -465,6 +780,233 @@ class BotController:
             self.logger.warning(f"Bot {player_id} FAILED to raise sufficient funds (${amount_needed} needed, has ${player.money}). Declaring bankruptcy.")
             # Declare bankruptcy
             self.game_controller.declare_bankruptcy(player_id)
+            
+    def manage_investments(self, player_id, game_id=1):
+        """
+        Manage a bot's investments and financial decisions at the end of their turn.
+        Consider CDs, paying off loans, etc. based on the bot's strategy and economic conditions.
+        
+        Args:
+            player_id: The ID of the bot player
+            game_id: The ID of the game
+            
+        Returns:
+            dict: Results of the investment decisions
+        """
+        self.logger.info(f"Bot {player_id} managing investments")
+        
+        try:
+            # Get game state - handle both numeric and string UUIDs
+            game_state = None
+            actual_game_id = None
+            
+            # Try numeric ID first (used for integers)
+            try:
+                if isinstance(game_id, int) or (isinstance(game_id, str) and game_id.isdigit()):
+                    game_state = GameState.query.get(int(game_id))
+                    if game_state:
+                        actual_game_id = game_state.id
+            except (ValueError, TypeError):
+                pass
+                
+            # If not found and it's a string (potentially UUID), try by game_id column
+            if not game_state and isinstance(game_id, str):
+                self.logger.info(f"Looking up GameState by UUID in game_id column: {game_id}")
+                game_state = GameState.query.filter_by(game_id=game_id).first()
+                if game_state:
+                    actual_game_id = game_state.id
+                    
+            if not game_state:
+                self.logger.error(f"Game state {game_id} not found")
+                return {'success': False, 'error': 'Game not found'}
+            
+            player = Player.query.get(player_id)
+            if not player or player.is_bankrupt:
+                return {"success": False, "error": "Player not found or bankrupt"}
+                
+            # Get finance controller
+            finance_controller = None
+            if hasattr(self, 'app_config'):
+                finance_controller = self.app_config.get('finance_controller')
+                
+            if not finance_controller:
+                return {"success": False, "error": "Finance controller not available"}
+            
+            # Get economic conditions from game state
+            economic_state = game_state.economic_state if hasattr(game_state, 'economic_state') else "neutral"
+            inflation_rate = game_state.inflation_rate if hasattr(game_state, 'inflation_rate') else 0.02
+            interest_rate = game_state.base_interest_rate if hasattr(game_state, 'base_interest_rate') else 0.03
+                
+            self.logger.info(f"Bot {player_id} considering investments in {economic_state} economy (inflation: {inflation_rate:.2f}, interest: {interest_rate:.2f})")
+                
+            # Get the bot's financial summary
+            try:
+                financial_summary = finance_controller.get_player_financial_summary(player_id)
+                if not financial_summary.get('success'):
+                    return {"success": False, "error": "Failed to get financial summary"}
+                    
+                loans = financial_summary.get('loans', [])
+                cds = financial_summary.get('cds', [])
+                helocs = financial_summary.get('helocs', [])
+                
+                self.logger.info(f"Bot {player_id} financial status: ${player.money} cash, {len(loans)} loans, {len(cds)} CDs, {len(helocs)} HELOCs")
+                
+                actions_taken = []
+                
+                # Cash threshold for investments - keep this amount as reserve
+                # During recession, keep more cash on hand
+                min_cash_reserve = 200
+                if economic_state == "recession":
+                    min_cash_reserve = 300  # Keep more cash during recession
+                elif economic_state == "boom":
+                    min_cash_reserve = 150  # Can keep less cash during boom
+                    
+                excess_cash = player.money - min_cash_reserve
+                
+                # First, check if we should pay off any high-interest loans or HELOCs
+                if excess_cash > 100:
+                    # Sort loans/HELOCs by interest rate (highest first)
+                    all_debts = []
+                    for loan in loans:
+                        all_debts.append({
+                            'type': 'loan',
+                            'id': loan['id'],
+                            'interest_rate': loan['interest_rate'],
+                            'current_value': loan['current_value'],
+                            'original_amount': loan['amount']
+                        })
+                        
+                    for heloc in helocs:
+                        all_debts.append({
+                            'type': 'heloc',
+                            'id': heloc['id'],
+                            'interest_rate': heloc['interest_rate'],
+                            'current_value': heloc['current_value'],
+                            'original_amount': heloc['amount']
+                        })
+                        
+                    # Sort by interest rate (highest first)
+                    all_debts.sort(key=lambda x: x['interest_rate'], reverse=True)
+                    
+                    # Log the debt situation
+                    if all_debts:
+                        self.logger.info(f"Bot {player_id} has {len(all_debts)} outstanding debts, highest rate: {all_debts[0]['interest_rate']:.2f}")
+                    
+                    # During recession, more aggressive debt payoff
+                    min_interest_to_pay = 0.06  # Default - pay off debts with >6% interest
+                    if economic_state == "recession":
+                        min_interest_to_pay = 0.04  # More aggressive payoff during recession
+                    elif economic_state == "boom":
+                        min_interest_to_pay = 0.08  # Less aggressive during boom (invest instead)
+                    
+                    # Try to pay off high-interest debts
+                    for debt in all_debts:
+                        # Only pay off debts above the threshold
+                        if debt['interest_rate'] < min_interest_to_pay:
+                            continue
+                            
+                        # Determine payment amount - full payoff if possible, otherwise partial
+                        payoff_amount = min(debt['current_value'], excess_cash)
+                        if payoff_amount < 50:
+                            continue  # Too small to bother with
+                            
+                        try:
+                            if debt['type'] == 'loan':
+                                result = finance_controller.repay_loan(player_id, player.pin, debt['id'], payoff_amount)
+                                debt_type = 'loan'
+                            else:  # heloc
+                                # Assuming there's a repay_heloc method
+                                if hasattr(finance_controller, 'repay_heloc'):
+                                    result = finance_controller.repay_heloc(player_id, player.pin, debt['id'], payoff_amount)
+                                else:
+                                    continue
+                                debt_type = 'HELOC'
+                                
+                            if result.get('success'):
+                                self.logger.info(f"Bot {player_id} paid ${payoff_amount} toward {debt_type} #{debt['id']} (rate: {debt['interest_rate']:.2f})")
+                                actions_taken.append(f"Paid ${payoff_amount} toward {debt_type}")
+                                
+                                # Update excess cash
+                                excess_cash -= payoff_amount
+                                if excess_cash <= 100:
+                                    break  # Stop if reserve is getting low
+                            else:
+                                self.logger.warning(f"Bot {player_id} failed to pay {debt_type}: {result.get('error')}")
+                        except Exception as e:
+                            self.logger.warning(f"Error paying debt for Bot {player_id}: {str(e)}")
+                
+                # If we still have excess cash, consider investing in CDs
+                if excess_cash > 200:
+                    # Investment strategy based on economic conditions
+                    invest_percentage = 0.7  # Default - invest 70% of excess
+                    
+                    if economic_state == "recession":
+                        # During recession, be more conservative with investments
+                        invest_percentage = 0.5  # Only invest 50% of excess
+                    elif economic_state == "boom":
+                        # During boom, more aggressive investment
+                        invest_percentage = 0.8  # Invest 80% of excess
+                    
+                    # Amount to invest
+                    invest_amount = int(excess_cash * invest_percentage)
+                    
+                    # Determine CD term length based on bot type, game state, and economy
+                    current_lap = game_state.current_lap if game_state else 0
+                    
+                    # Default to short term (3 laps)
+                    cd_term = 3
+                    
+                    # Adjust based on economic state
+                    if economic_state == "recession":
+                        cd_term -= 1  # Shorter terms during recession
+                    elif economic_state == "boom":
+                        cd_term += 1  # Longer terms during boom (higher rates)
+                    
+                    # Adjust based on bot type
+                    bot = active_bots.get(player_id)
+                    if bot and isinstance(bot, ConservativeBot):
+                        cd_term += 2  # Longer term for conservative bots
+                    elif bot and isinstance(bot, AggressiveBot):
+                        cd_term -= 1  # Shorter term for aggressive bots
+                    
+                    # Ensure term is at least 1 lap
+                    cd_term = max(1, cd_term)
+                    
+                    # Don't create CDs with terms that would extend beyond reasonable game length
+                    max_reasonable_laps = 40  # Assume games don't go much beyond 40 laps
+                    if current_lap + cd_term > max_reasonable_laps:
+                        cd_term = max(1, max_reasonable_laps - current_lap)
+                    
+                    try:
+                        result = finance_controller.create_cd(player_id, player.pin, invest_amount, cd_term)
+                        if result.get('success'):
+                            est_return = result.get('estimated_return', invest_amount * (1 + 0.03 * cd_term))
+                            self.logger.info(f"Bot {player_id} invested ${invest_amount} in a {cd_term}-lap CD (est. return: ${est_return})")
+                            actions_taken.append(f"Invested ${invest_amount} in {cd_term}-lap CD")
+                        else:
+                            self.logger.warning(f"Bot {player_id} failed to create CD: {result.get('error')}")
+                    except Exception as e:
+                        self.logger.warning(f"Error creating CD for Bot {player_id}: {str(e)}")
+                
+                # Log investment summary
+                if actions_taken:
+                    self.logger.info(f"Bot {player_id} completed {len(actions_taken)} financial actions: {', '.join(actions_taken)}")
+                else:
+                    self.logger.info(f"Bot {player_id} made no financial moves this turn")
+                        
+                return {
+                    "success": True,
+                    "player_id": player_id,
+                    "actions": actions_taken,
+                    "economic_state": economic_state,
+                    "game_id": game_id,
+                }
+            except Exception as e:
+                self.logger.error(f"Error managing investments for Bot {player_id}: {str(e)}")
+                return {"success": False, "error": str(e)}
+        except Exception as e:
+            self.logger.error(f"Error in manage_investments for Bot {player_id}: {str(e)}")
+            return {"success": False, "error": str(e)}
 
     def participate_in_auction(self, player_id, property_id, current_bid, current_high_bidder_id):
         """Determine if the bot should bid in an auction and return the bid amount or None."""
@@ -497,6 +1039,165 @@ class BotController:
             else:
                 self.logger.debug(f"Bot {player_id} will not bid on property {property_id} (Current: {current_bid}, Max: {max_willing_bid}, Cash: {player.money})")
                 return None
+    
+    def evaluate_bot_trade(self, trade_offer):
+        """
+        Evaluate a trade offer sent to a bot player.
+        
+        Args:
+            trade_offer (dict): Trade offer details containing:
+                - bot_id: ID of the bot player to evaluate the trade
+                - requesting_player_id: ID of player making the offer
+                - properties_offered: List of property IDs being offered
+                - cash_offered: Cash amount being offered
+                - properties_requested: List of property IDs being requested
+                - cash_requested: Cash amount being requested
+                
+        Returns:
+            dict: Bot's response to the trade offer
+        """
+        bot_id = trade_offer.get('bot_id')
+        
+        with self.app_config.get('app').app_context():
+            # Find the bot in active_bots dictionary
+            if bot_id not in active_bots:
+                self.logger.warning(f"Trade offer evaluation requested for inactive bot {bot_id}")
+                return {
+                    "success": False, 
+                    "error": f"Bot {bot_id} not active",
+                    "bot_id": bot_id
+                }
+                
+            bot = active_bots[bot_id]
+            
+            # Check if the bot exists in the database
+            player = Player.query.get(bot_id)
+            if not player or not player.is_bot or player.is_bankrupt:
+                self.logger.warning(f"Trade offer evaluation requested for invalid bot {bot_id}")
+                return {
+                    "success": False, 
+                    "error": f"Bot {bot_id} is invalid, bankrupt, or not a bot",
+                    "bot_id": bot_id
+                }
+                
+            # Evaluate the trade offer using the bot's logic
+            self.logger.info(f"Evaluating trade offer for bot {bot_id} from player {trade_offer.get('requesting_player_id')}")
+            
+            # Add a small random delay to simulate thinking
+            time.sleep(random.uniform(1.0, 3.0))
+            
+            # Use the bot's evaluate_trade_offer method
+            try:
+                decision = bot.evaluate_trade_offer(trade_offer)
+                
+                # Log the bot's decision
+                if decision.get('accept', False):
+                    self.logger.info(f"Bot {bot_id} accepted trade offer from player {trade_offer.get('requesting_player_id')}")
+                else:
+                    self.logger.info(f"Bot {bot_id} rejected trade offer from player {trade_offer.get('requesting_player_id')}")
+                    if decision.get('counter_offer'):
+                        self.logger.info(f"Bot {bot_id} proposed counter offer")
+                
+                # Return the decision with success indicator
+                return {
+                    "success": True,
+                    "decision": decision,
+                    "bot_id": bot_id
+                }
+                
+            except Exception as e:
+                self.logger.error(f"Error while evaluating trade offer for bot {bot_id}: {str(e)}", exc_info=True)
+                return {
+                    "success": False,
+                    "error": f"Error evaluating trade: {str(e)}",
+                    "bot_id": bot_id
+                }
+
+    def handle_economic_event(self, game_id, event_type, event_data):
+        """
+        Allow bots to respond to economic events in the game.
+        
+        Args:
+            game_id (str): ID of the game where the event occurred
+            event_type (str): Type of economic event (e.g., market_boom, interest_rate_change)
+            event_data (dict): Additional data about the event
+            
+        Returns:
+            dict: Responses from each bot
+        """
+        self.logger.info(f"Processing economic event '{event_type}' for bots in game {game_id}")
+        
+        try:
+            # Get all active bots in this game
+            bot_responses = {}
+            
+            # Find active bots in the specified game
+            for bot_id, bot in active_bots.items():
+                bot_player = Player.query.get(bot_id)
+                
+                # Skip if bot doesn't exist or isn't in this game
+                if not bot_player or bot_player.game_id != game_id:
+                    continue
+                
+                # Skip if bot is not active/in game
+                if not bot_player.in_game or bot_player.is_bankrupt:
+                    continue
+                
+                self.logger.info(f"Bot {bot_id} ({bot_player.username}) responding to {event_type} event")
+                
+                # Call the bot's response_to_economic_event method
+                try:
+                    response = bot.response_to_economic_event(event_type, event_data)
+                    
+                    # Log the response
+                    if response.get('success', False):
+                        actions = response.get('actions', [])
+                        self.logger.info(f"Bot {bot_id} responded with {len(actions)} actions")
+                        
+                        # Record bot response for return
+                        bot_responses[bot_id] = {
+                            'bot_id': bot_id,
+                            'bot_name': bot_player.username,
+                            'actions': actions,
+                            'success': True
+                        }
+                        
+                        # Emit event for each bot response
+                        self.socketio.emit('bot_economic_response', {
+                            'bot_id': bot_id,
+                            'bot_name': bot_player.username,
+                            'event_type': event_type,
+                            'actions': actions
+                        }, room=game_id)
+                    else:
+                        self.logger.warning(f"Bot {bot_id} failed to respond to economic event: {response.get('error', 'Unknown error')}")
+                        bot_responses[bot_id] = {
+                            'bot_id': bot_id,
+                            'bot_name': bot_player.username,
+                            'success': False,
+                            'error': response.get('error', 'Unknown error')
+                        }
+                except Exception as e:
+                    self.logger.error(f"Error in bot {bot_id} economic event response: {str(e)}", exc_info=True)
+                    bot_responses[bot_id] = {
+                        'bot_id': bot_id,
+                        'bot_name': bot_player.username,
+                        'success': False,
+                        'error': str(e)
+                    }
+            
+            return {
+                'success': True,
+                'event_type': event_type,
+                'bot_responses': bot_responses
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error handling economic event for bots: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
 def register_bot_events(socketio, app_config):
     """Register socket event handlers for bot operations"""
@@ -733,6 +1434,93 @@ def register_bot_events(socketio, app_config):
             logger.error(f"Error fetching active bots: {str(e)}")
             emit('event_error', {'error': 'Failed to retrieve bot list.'})
 
+    @socketio.on('evaluate_bot_trade')
+    def handle_evaluate_bot_trade(data):
+        """Handle request to evaluate a trade offer with a bot player."""
+        # Validate player access - either the player making the trade or an admin
+        player_id = data.get('player_id')
+        player_pin = data.get('player_pin')
+        admin_pin = data.get('admin_pin')
+        
+        is_authorized = False
+        
+        # Check if admin PIN is provided and valid
+        if admin_pin and admin_pin == current_app.config.get('ADMIN_KEY'):
+            is_authorized = True
+            
+        # Check if player PIN is provided and valid
+        elif player_id and player_pin:
+            player = Player.query.get(player_id)
+            if player and player.pin == player_pin:
+                is_authorized = True
+                
+        if not is_authorized:
+            emit('auth_error', {'error': 'Invalid credentials for trade evaluation'})
+            return
+            
+        try:
+            # Extract trade details
+            bot_id = data.get('bot_id')
+            trade_offer = {
+                'bot_id': bot_id,
+                'requesting_player_id': player_id,
+                'properties_offered': data.get('properties_offered', []),
+                'cash_offered': data.get('cash_offered', 0),
+                'properties_requested': data.get('properties_requested', []),
+                'cash_requested': data.get('cash_requested', 0)
+            }
+            
+            # Validate required fields
+            if not bot_id:
+                emit('event_error', {'error': 'Missing bot_id in trade offer'})
+                return
+                
+            if (not trade_offer['properties_offered'] and trade_offer['cash_offered'] <= 0) or \
+               (not trade_offer['properties_requested'] and trade_offer['cash_requested'] <= 0):
+                emit('event_error', {'error': 'Trade must include at least one property or cash amount in each direction'})
+                return
+                
+            # Get the bot controller from app config
+            bot_controller = current_app.config.get('bot_controller_instance')
+            if not bot_controller:
+                emit('event_error', {'error': 'Bot controller not available'})
+                return
+                
+            # Evaluate the trade
+            trade_result = bot_controller.evaluate_bot_trade(trade_offer)
+            
+            # Emit result back to requesting client
+            if trade_result.get('success', False):
+                emit('bot_trade_response', {
+                    'success': True,
+                    'bot_id': bot_id,
+                    'decision': trade_result.get('decision', {})
+                })
+                
+                # If the bot accepted, also notify other players in the game
+                bot_decision = trade_result.get('decision', {})
+                if bot_decision.get('accept', False):
+                    # Get game ID to emit to room
+                    bot_player = Player.query.get(bot_id)
+                    if bot_player and bot_player.game_id:
+                        socketio.emit('bot_accepted_trade', {
+                            'bot_id': bot_id,
+                            'bot_name': bot_player.username,
+                            'player_id': player_id,
+                            'trade_details': {
+                                'properties_offered': trade_offer['properties_offered'],
+                                'cash_offered': trade_offer['cash_offered'],
+                                'properties_requested': trade_offer['properties_requested'],
+                                'cash_requested': trade_offer['cash_requested']
+                            }
+                        }, room=bot_player.game_id)
+            else:
+                emit('event_error', {'error': trade_result.get('error', 'Unknown error evaluating trade')})
+                
+        except Exception as e:
+            logger.error(f"Error handling bot trade evaluation: {str(e)}", exc_info=True)
+            emit('event_error', {'error': f'Error processing trade: {str(e)}'})
+
     @socketio.on('trigger_bot_market_timing')
     def handle_trigger_bot_market_timing(data):
         """Handle request to trigger a market timing event for testing"""
@@ -768,6 +1556,47 @@ def register_bot_events(socketio, app_config):
         handle_bot_event(socketio, app_config, event_data)
         
         return {'success': True, 'message': f'Market timing event triggered for bot {bot_player.username}'} 
+
+    @socketio.on('economic_event_reaction')
+    def handle_economic_event_reaction(data):
+        """Handle request to trigger bot reactions to economic events"""
+        logger.info(f"Received economic_event_reaction: {data}")
+        
+        # Extract data
+        game_id = data.get('game_id')
+        event_type = data.get('event_type')
+        event_data = data.get('event_data', {})
+        
+        # Validate data
+        if not game_id or not event_type:
+            emit('event_error', {'error': 'Missing required parameters: game_id and event_type'})
+            return
+        
+        # Get bot controller from app config
+        bot_controller = current_app.config.get('bot_controller')
+        if not bot_controller:
+            logger.error("Bot controller not found in app config")
+            emit('event_error', {'error': 'Internal server error: Bot controller not found'})
+            return
+        
+        # Process the economic event
+        try:
+            result = bot_controller.handle_economic_event(game_id, event_type, event_data)
+            
+            if result.get('success'):
+                # The event already emits individual bot responses in the method
+                # Just confirm the overall process was completed
+                emit('event_success', {
+                    'message': f'Economic event {event_type} processed successfully',
+                    'event_type': event_type,
+                    'bot_count': len(result.get('bot_responses', {}))
+                })
+            else:
+                emit('event_error', {'error': result.get('error', 'Unknown error processing economic event')})
+        
+        except Exception as e:
+            logger.error(f"Error handling economic event reaction: {str(e)}", exc_info=True)
+            emit('event_error', {'error': f'Error processing economic event: {str(e)}'})
 
 # --- Bot Processing Logic (Needs refactoring to use app_config) ---
 

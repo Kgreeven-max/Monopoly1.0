@@ -27,7 +27,7 @@ if 'economic_manager' not in app.config:
 # Initialize economic controller for automated cycles if needed
 from src.controllers.economic_cycle_controller import EconomicCycleController
 if 'economic_controller' not in app.config:
-    app.config['economic_controller'] = EconomicCycleController()
+    app.config['economic_controller'] = EconomicCycleController(socketio=socketio, app=app)
     app.config['economic_controller'].auto_cycle_enabled = True
     app.logger.info("Economic controller initialized")
 

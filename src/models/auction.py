@@ -8,6 +8,7 @@ class Auction(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     property_id = db.Column(db.Integer, db.ForeignKey('properties.id'), nullable=False)
+    game_id = db.Column(db.Integer, db.ForeignKey('games.id'), nullable=True)  # Add game_id field
     status = db.Column(db.String(20), nullable=False, default='active', index=True) # active, completed, cancelled
     minimum_bid = db.Column(db.Integer, nullable=False)
     current_bid = db.Column(db.Integer, nullable=True)
@@ -26,7 +27,21 @@ class Auction(db.Model):
     property = db.relationship('Property')
     current_bidder = db.relationship('Player', foreign_keys=[current_bidder_id])
     original_owner = db.relationship('Player', foreign_keys=[original_owner_id])
+    # Add relationship to Game
+    game = db.relationship('Game', foreign_keys=[game_id])
     # Consider adding a relationship to a Bid model later for detailed history
+
+    def __init__(self, **kwargs):
+        """Initialize an auction, handling backward compatibility with different parameter names"""
+        # Handle starting_bid parameter by mapping it to minimum_bid
+        if 'starting_bid' in kwargs and 'minimum_bid' not in kwargs:
+            kwargs['minimum_bid'] = kwargs.pop('starting_bid')
+            
+        # Handle current_winner_id parameter (used in some places instead of current_bidder_id)
+        if 'current_winner_id' in kwargs and 'current_bidder_id' not in kwargs:
+            kwargs['current_bidder_id'] = kwargs.pop('current_winner_id')
+            
+        super(Auction, self).__init__(**kwargs)
 
     def __repr__(self):
         return f'<Auction {self.id} for Property {self.property_id}, Status: {self.status}>'
@@ -51,6 +66,7 @@ class Auction(db.Model):
         return {
             'id': self.id,
             'property_id': self.property_id,
+            'game_id': self.game_id,  # Add game_id
             'property_name': self.property.name if self.property else None,
             'status': self.status,
             'minimum_bid': self.minimum_bid,

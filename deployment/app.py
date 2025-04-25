@@ -210,7 +210,7 @@ with app.app_context(): # Use app context to access db/config safely
     community_fund = CommunityFund(socketio, game_state)
     event_system = EventSystem(socketio, banker, community_fund)
     auction_system = AuctionSystem(socketio, banker)
-    economic_controller = EconomicCycleController(socketio) # Initialize EconomicCycleController first
+    economic_controller = EconomicCycleController(socketio, app=app) # Pass the app instance
     special_space_controller = SpecialSpaceController(socketio=socketio, game_controller=None, economic_controller=economic_controller)
     social_controller = SocialController(socketio, app.config) 
     remote_controller = RemoteController(app) # Needs app instance

@@ -121,7 +121,7 @@ class FinanceController:
             player_id: ID of the player repaying the loan
             pin: Player's PIN for authentication
             loan_id: ID of the loan to repay
-            amount: Amount to repay (None for full repayment)
+            amount: Optional amount to repay, if None, repay full loan
             
         Returns:
             Dictionary with loan repayment results
@@ -149,38 +149,25 @@ class FinanceController:
                 "error": "This loan does not belong to this player"
             }
             
-        # Get current value of loan
-        current_value = loan.calculate_current_value()
-        
         # Determine repayment amount
         if amount is None:
-            amount = current_value
+            amount = loan.calculate_current_value(loan.current_lap)
             
         # Check if player has enough cash
-        if player.cash < amount:
+        if player.money < amount:
             return {
                 "success": False,
-                "error": "Not enough cash to make this payment",
+                "error": "Not enough cash to repay this loan",
                 "required": amount,
-                "available": player.cash
+                "available": player.money
             }
             
-        # Process repayment
+        # Process the repayment
         repayment_result = loan.repay(amount)
         
         if repayment_result["success"]:
-            # Deduct from player's cash
-            player.cash -= amount
-            
-            # Update player's credit score
-            if repayment_result["loan_status"] == "paid":
-                # Full repayment is better for credit
-                player.update_credit_score('loan_payment', amount, True)
-            else:
-                # Partial payment still helps credit
-                player.update_credit_score('partial_payment', amount, True)
-                
-            db.session.add(player)
+            # Deduct cash from player
+            player.money -= repayment_result["amount_paid"]
             
             # Get current game state
             game_state = GameState.query.first()
@@ -190,18 +177,27 @@ class FinanceController:
             transaction = Transaction(
                 from_player_id=player_id,
                 to_player_id=None,  # To bank
-                amount=amount,
+                amount=repayment_result["amount_paid"],
                 transaction_type="loan_repayment",
                 loan_id=loan_id,
-                description=f"Loan repayment of ${amount}",
+                description=f"Loan repayment of ${repayment_result['amount_paid']}",
                 lap_number=current_lap
             )
             db.session.add(transaction)
             db.session.commit()
             
+            # Update credit score for timely repayment
+            if not repayment_result["is_late"]:
+                player.update_credit_score("loan_repayment", repayment_result["amount_paid"], True)
+            else:
+                player.update_credit_score("late_repayment", repayment_result["amount_paid"], False)
+                
+            db.session.add(player)
+            db.session.commit()
+            
             # Return change to player if applicable
             if repayment_result["overpayment"] > 0:
-                player.cash += repayment_result["overpayment"]
+                player.money += repayment_result["overpayment"]
                 db.session.add(player)
                 db.session.commit()
             
@@ -242,12 +238,12 @@ class FinanceController:
             }
             
         # Check if player has enough cash
-        if player.cash < amount:
+        if player.money < amount:
             return {
                 "success": False,
                 "error": "Not enough cash to create this CD",
                 "required": amount,
-                "available": player.cash
+                "available": player.money
             }
             
         # Validate term length
@@ -276,7 +272,7 @@ class FinanceController:
         )
         
         # Deduct cash from player
-        player.cash -= amount
+        player.money -= amount
         db.session.add(player)
         db.session.commit()
         
@@ -363,7 +359,7 @@ class FinanceController:
         
         if withdrawal_result["success"]:
             # Add funds to player's cash
-            player.cash += withdrawal_result["withdrawal_amount"]
+            player.money += withdrawal_result["withdrawal_amount"]
             db.session.add(player)
             
             # Create transaction record
@@ -400,7 +396,7 @@ class FinanceController:
         Args:
             player_id: ID of the player creating the HELOC
             pin: Player's PIN for authentication
-            property_id: ID of the property to take the HELOC on
+            property_id: ID of the property to use as collateral
             amount: HELOC amount
             
         Returns:
@@ -448,7 +444,7 @@ class FinanceController:
             
         # Check existing HELOCs on this property
         existing_helocs = Loan.get_active_loans_for_property(property_id)
-        existing_total = sum(loan.calculate_current_value() for loan in existing_helocs)
+        existing_total = sum(loan.calculate_current_value(loan.current_lap) for loan in existing_helocs)
         
         if existing_total + amount > max_heloc:
             remaining = max_heloc - existing_total
@@ -479,8 +475,8 @@ class FinanceController:
             property_id=property_id
         )
         
-        # Give cash to player
-        player.cash += amount
+        # Add funds to player
+        player.money += amount
         db.session.add(player)
         db.session.commit()
         
@@ -553,7 +549,7 @@ class FinanceController:
         
         # Get base rate from game state
         base_rate = getattr(game_state, 'base_interest_rate', 0.05)
-        economic_state = getattr(game_state, 'economic_cycle_state', "normal")
+        economic_state = getattr(game_state, 'inflation_state', "normal")
         
         # Apply economic state modifier to rates
         state_modifiers = {
@@ -676,53 +672,56 @@ class FinanceController:
         """Get a comprehensive financial summary for a player
         
         Args:
-            player_id: ID of the player
-            pin: Player's PIN for authentication (optional if using player_required decorator)
+            player_id: Player ID
+            pin: Optional PIN for verification
             
         Returns:
             Dictionary with player's financial summary
         """
-        # Validate player if PIN is provided
-        if pin:
-            player = Player.query.get(player_id)
-            if not player or player.pin != pin:
-                return {
-                    "success": False,
-                    "error": "Invalid player credentials"
-                }
-        else:
-            player = Player.query.get(player_id)
-            if not player:
-                return {
-                    "success": False,
-                    "error": "Player not found"
-                }
-        
+        # Validate player if PIN provided
+        player = Player.query.get(player_id)
+        if not player:
+            return {
+                "success": False,
+                "error": "Player not found"
+            }
+            
+        if pin and player.pin != pin:
+            return {
+                "success": False,
+                "error": "Invalid PIN"
+            }
+            
         # Get player properties
         properties = Property.query.filter_by(owner_id=player_id).all()
-        property_value = sum(prop.price for prop in properties)
+        property_value = sum(prop.current_price for prop in properties)
         
         # Get player loans
         loans = Loan.query.filter_by(player_id=player_id, loan_type="loan").all()
-        loan_debt = sum(loan.calculate_current_value() for loan in loans)
+        
+        # Get current game state for current lap
+        game_state = GameState.query.first()
+        current_lap = game_state.current_lap if game_state else 0
+        
+        loan_debt = sum(loan.calculate_current_value(current_lap) for loan in loans)
         
         # Get player CDs
         cds = Loan.query.filter_by(player_id=player_id, loan_type="cd").all()
-        cd_value = sum(cd.calculate_current_value() for cd in cds)
+        cd_value = sum(cd.calculate_current_value(current_lap) for cd in cds)
         
         # Get player HELOCs
         helocs = Loan.query.filter_by(player_id=player_id, loan_type="heloc").all()
-        heloc_debt = sum(heloc.calculate_current_value() for heloc in helocs)
+        heloc_debt = sum(heloc.calculate_current_value(current_lap) for heloc in helocs)
         
         # Calculate net worth
-        net_worth = player.cash + property_value + cd_value - loan_debt - heloc_debt
+        net_worth = player.money + property_value + cd_value - loan_debt - heloc_debt
         
         return {
             "success": True,
             "summary": {
                 "player_id": player_id,
                 "player_name": player.username,
-                "cash": player.cash,
+                "cash": player.money,
                 "property_value": property_value,
                 "property_count": len(properties),
                 "loan_debt": loan_debt,
@@ -759,9 +758,9 @@ class FinanceController:
         cds = Loan.get_active_cds_for_player(player_id)
         
         # Calculate total debt
-        loan_total = sum(loan.calculate_current_value() for loan in loans)
-        heloc_total = sum(heloc.calculate_current_value() for heloc in helocs)
-        cd_total = sum(cd.calculate_current_value() for cd in cds)
+        loan_total = sum(loan.calculate_current_value(loan.current_lap) for loan in loans)
+        heloc_total = sum(heloc.calculate_current_value(heloc.current_lap) for heloc in helocs)
+        cd_total = sum(cd.calculate_current_value(cd.current_lap) for cd in cds)
         
         total_debt = loan_total + heloc_total
         
@@ -770,7 +769,7 @@ class FinanceController:
         properties = Property.query.filter_by(owner_id=player_id).all()
         property_value = sum(prop.current_price for prop in properties)
         
-        if player.cash + property_value >= total_debt:
+        if player.money + property_value >= total_debt:
             return {
                 "success": False,
                 "error": "You have sufficient assets to pay your debts. Liquidate properties to avoid bankruptcy."
@@ -795,7 +794,7 @@ class FinanceController:
             
         # 4. Reset player cash
         starting_cash = getattr(GameState.query.first(), 'settings', {}).get("starting_cash", 1500)
-        player.cash = starting_cash
+        player.money = starting_cash
         player.bankruptcy_count += 1
         
         # 5. Severely damage credit score
@@ -858,7 +857,7 @@ class FinanceController:
         properties = Property.query.filter_by(owner_id=player.id).all()
         property_value = sum(prop.current_price for prop in properties)
         
-        net_worth = player.cash + property_value
+        net_worth = player.money + property_value
         
         # Maximum loan is 80% of net worth
         max_loan = int(net_worth * 0.8)
@@ -867,7 +866,11 @@ class FinanceController:
         loans = Loan.get_active_loans_for_player(player.id)
         helocs = Loan.get_active_helocs_for_player(player.id)
         
-        current_debt = sum(loan.calculate_current_value() for loan in loans + helocs)
+        # Get current game state for current lap
+        game_state = GameState.query.first()
+        current_lap = game_state.current_lap if game_state else 0
+        
+        current_debt = sum(loan.calculate_current_value(current_lap) for loan in loans + helocs)
         
         # Check if new loan would exceed maximum
         return current_debt + amount <= max_loan

@@ -3,6 +3,7 @@ import logging
 from src.models.game_state import GameState
 from src.routes.decorators import admin_required
 from src.models.economic_cycle_manager import EconomicCycleManager
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 economic_admin_bp = Blueprint('economic_admin', __name__, url_prefix='/economic')
@@ -34,11 +35,11 @@ def get_economic_state():
             
         # Get economic state data
         economic_state = {
-            "current_state": game_state.economic_cycle_state if hasattr(game_state, 'economic_cycle_state') else "normal",
+            "current_state": game_state.inflation_state if hasattr(game_state, 'inflation_state') else "normal",
             "inflation_rate": game_state.inflation_rate if hasattr(game_state, 'inflation_rate') else 0.0,
             "base_interest_rate": game_state.base_interest_rate if hasattr(game_state, 'base_interest_rate') else 0.05,
-            "cycle_position": game_state.economic_cycle_position if hasattr(game_state, 'economic_cycle_position') else 0,
-            "last_cycle_update": game_state.economic_cycle_updated if hasattr(game_state, 'economic_cycle_updated') else None
+            "cycle_position": 0.5,  # Default to middle position
+            "last_cycle_update": datetime.utcnow().isoformat()  # Current time as placeholder
         }
         
         # Add descriptions for economic states

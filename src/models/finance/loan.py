@@ -16,6 +16,7 @@ class Loan(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     player_id = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False)
+    game_id = db.Column(db.String(36), nullable=True)  # Add game_id field for tracking loans per game
     amount = db.Column(db.Integer, nullable=False)
     interest_rate = db.Column(db.Float, nullable=False)
     start_lap = db.Column(db.Integer, nullable=False)
@@ -26,9 +27,12 @@ class Loan(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     original_interest_rate = db.Column(db.Float, nullable=True)  # Store original rate for tracking changes
     outstanding_balance = db.Column(db.Integer, nullable=False)  # Current balance with interest
+    fixed_rate = db.Column(db.Boolean, default=False)  # Whether this loan has a fixed interest rate
+    rate_premium = db.Column(db.Float, default=0.0)  # Premium over base rate for variable rate loans
+    history = db.Column(db.Text, nullable=True)  # JSON string to store loan history events
     
     # Relationships
-    property = db.relationship('Property', backref='loans', lazy=True)
+    property_obj = db.relationship('Property', backref='loans', lazy=True)
     
     def __repr__(self):
         return f'<{self.loan_type.capitalize()} {self.id}: ${self.amount} for Player {self.player_id}>'
@@ -38,6 +42,7 @@ class Loan(db.Model):
         return {
             'id': self.id,
             'player_id': self.player_id,
+            'game_id': self.game_id,
             'amount': self.amount,
             'interest_rate': self.interest_rate,
             'start_lap': self.start_lap,
@@ -47,7 +52,10 @@ class Loan(db.Model):
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat(),
             'original_interest_rate': self.original_interest_rate or self.interest_rate,
-            'outstanding_balance': self.outstanding_balance
+            'outstanding_balance': self.outstanding_balance,
+            'fixed_rate': self.fixed_rate,
+            'rate_premium': self.rate_premium,
+            'history': json.loads(self.history) if self.history else []
         }
     
     def calculate_remaining_laps(self, current_lap: int):
@@ -85,6 +93,12 @@ class Loan(db.Model):
         self.outstanding_balance = int(self.outstanding_balance + interest_amount)
         logger.info(f"Accrued interest {int(interest_amount)} for {self.loan_type} {self.id}. New balance: {self.outstanding_balance}")
         
+        # Add to history
+        self.add_history_event("interest_accrual", {
+            "interest_amount": int(interest_amount),
+            "new_balance": self.outstanding_balance
+        })
+        
         # Note: db.session.commit() should be handled by the calling process
         # after iterating through all loans for the lap.
         db.session.add(self)
@@ -103,11 +117,21 @@ class Loan(db.Model):
         if self.original_interest_rate is None:
             self.original_interest_rate = self.interest_rate
             
+        old_rate = self.interest_rate
+            
         # Calculate new rate
         new_rate = max(0.01, self.interest_rate + change_amount)  # Ensure minimum 1% rate
         
         # Apply the new rate
         self.interest_rate = new_rate
+        
+        # Add to history
+        self.add_history_event("interest_rate_change", {
+            "old_rate": old_rate,
+            "new_rate": new_rate,
+            "change_amount": change_amount
+        })
+        
         db.session.add(self)
         
         # Log the change
@@ -148,6 +172,13 @@ class Loan(db.Model):
             overpayment = amount - current_balance
             self.outstanding_balance = 0
             self.is_active = False
+            
+            # Add to history
+            self.add_history_event("full_repayment", {
+                "amount_paid": repaid_amount,
+                "overpayment": overpayment
+            })
+            
             db.session.add(self)
             
             return {
@@ -161,6 +192,13 @@ class Loan(db.Model):
             
         # Handle partial repayment
         self.outstanding_balance = current_balance - amount
+        
+        # Add to history
+        self.add_history_event("partial_repayment", {
+            "amount_paid": amount,
+            "remaining_balance": self.outstanding_balance
+        })
+        
         db.session.add(self)
         
         return {
@@ -210,6 +248,14 @@ class Loan(db.Model):
             
         # Complete withdrawal
         self.is_active = False
+        
+        # Add to history
+        self.add_history_event("cd_withdrawal", {
+            "withdrawal_amount": withdrawal_amount,
+            "penalty_amount": penalty_amount,
+            "was_mature": is_mature
+        })
+        
         db.session.add(self)
         
         return {
@@ -220,9 +266,34 @@ class Loan(db.Model):
             "cd_status": "withdrawn",
             "was_mature": is_mature
         }
+    
+    def add_history_event(self, event_type, details):
+        """
+        Add an event to the loan history
+        
+        Args:
+            event_type: Type of event (e.g., 'interest_rate_change', 'repayment')
+            details: Dictionary with event details
+        """
+        try:
+            # Parse existing history or create a new one
+            history = json.loads(self.history) if self.history else []
+        except (json.JSONDecodeError, TypeError):
+            history = []
+            
+        # Create the event entry
+        event = {
+            "type": event_type,
+            "timestamp": datetime.utcnow().isoformat(),
+            **details
+        }
+        
+        # Add to history and save
+        history.append(event)
+        self.history = json.dumps(history)
         
     @classmethod
-    def create_loan(cls, player_id, amount, interest_rate, length_laps, current_lap, loan_type="loan", property_id=None):
+    def create_loan(cls, player_id, amount, interest_rate, length_laps, current_lap, loan_type="loan", property_id=None, game_id=None):
         """Create a new loan, CD, or HELOC"""
         loan = cls(
             player_id=player_id,
@@ -233,9 +304,17 @@ class Loan(db.Model):
             length_laps=length_laps,
             loan_type=loan_type,
             property_id=property_id,
+            game_id=game_id,
             is_active=True,
             outstanding_balance=amount
         )
+        
+        # Initialize history with creation event
+        loan.add_history_event("creation", {
+            "amount": amount,
+            "interest_rate": interest_rate,
+            "length_laps": length_laps
+        })
         
         db.session.add(loan)
         return loan
@@ -274,4 +353,23 @@ class Loan(db.Model):
             property_id=property_id,
             is_active=True,
             loan_type="heloc"
-        ).all() 
+        ).all()
+    
+    def is_variable_rate(self):
+        """Return whether this loan/CD has a variable interest rate"""
+        return not self.fixed_rate
+        
+    @property
+    def is_loan(self):
+        """Return whether this is a standard loan"""
+        return self.loan_type == "loan"
+        
+    @property
+    def is_cd(self):
+        """Return whether this is a Certificate of Deposit"""
+        return self.loan_type == "cd"
+        
+    @property
+    def is_heloc(self):
+        """Return whether this is a Home Equity Line of Credit"""
+        return self.loan_type == "heloc" 

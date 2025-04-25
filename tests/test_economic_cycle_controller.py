@@ -14,7 +14,8 @@ class TestEconomicCycleController(unittest.TestCase):
     def setUp(self):
         """Set up test environment."""
         self.socketio = MagicMock()
-        self.economic_controller = EconomicCycleController(self.socketio)
+        self.mock_app = MagicMock()
+        self.economic_controller = EconomicCycleController(self.socketio, app=self.mock_app)
         
     @patch('src.controllers.economic_cycle_controller.GameState')
     @patch('src.controllers.economic_cycle_controller.Property')

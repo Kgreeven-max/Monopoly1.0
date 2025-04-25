@@ -2,6 +2,9 @@ import random
 import logging
 from ..models.property import Property
 from ..models.player import Player
+from ..models.finance.loan import Loan
+from ..models.game_state import GameState
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -277,13 +280,318 @@ class BotDecisionMaker:
             "reason": reason
         }
 
+    def decide_repay_loan(self, loan_id):
+        """
+        Decide whether to repay a specific loan and how much to repay.
+        
+        Args:
+            loan_id (int): The ID of the loan to consider repaying
+            
+        Returns:
+            dict: Decision information including:
+                - repay (bool): Whether to repay the loan
+                - loan_id (int): ID of the loan to repay
+                - amount (int): Amount to repay (partial or full)
+                - reason (str): Reasoning behind the decision
+        """
+        try:
+            # Get the specific loan
+            loan = Loan.query.get(loan_id)
+            if not loan:
+                logger.error(f"Cannot make loan repayment decision: Loan {loan_id} not found")
+                return {"repay": False, "loan_id": loan_id, "reason": "Loan not found"}
+            
+            # Get game state to check economic conditions
+            game_state = GameState.query.first()
+            economic_state = game_state.economic_state if hasattr(game_state, 'economic_state') else 'stable'
+            
+            # Calculate base probability for repayment
+            base_probability = 0.5  # Default 50% chance
+            
+            # Factor 1: Loan urgency (due date, interest rate)
+            urgency_factor = 0.0
+            
+            # Check if loan has a due date and is approaching
+            if hasattr(loan, 'due_date') and loan.due_date:
+                days_until_due = (loan.due_date - datetime.utcnow()).days
+                if days_until_due <= 1:  # Due tomorrow or today
+                    urgency_factor = 0.9
+                elif days_until_due <= 3:  # Due in 2-3 days
+                    urgency_factor = 0.7
+                elif days_until_due <= 7:  # Due within a week
+                    urgency_factor = 0.5
+                elif days_until_due <= 14:  # Due within two weeks
+                    urgency_factor = 0.3
+            
+            # High interest rates increase urgency
+            interest_urgency = min(loan.interest_rate / 20.0, 0.5)  # 10% interest = 0.5 factor
+            urgency_factor = max(urgency_factor, interest_urgency)
+            
+            # Factor 2: Economic conditions
+            economic_factor = 0.0
+            if economic_state == 'boom':
+                economic_factor = 0.3  # Good time to repay during boom
+            elif economic_state == 'growth' or economic_state == 'stable':
+                economic_factor = 0.2  # Also good during growth/stable economy
+            elif economic_state == 'recession':
+                economic_factor = -0.1  # May want to hold cash during recession
+            elif economic_state == 'depression':
+                economic_factor = -0.2  # Definitely hold cash during depression
+            
+            # Factor 3: Cash availability
+            cash_factor = 0.0
+            loan_to_cash_ratio = loan.amount / self.player.cash if self.player.cash > 0 else float('inf')
+            
+            if loan_to_cash_ratio < 0.3:
+                cash_factor = 0.4  # Can easily afford to repay
+            elif loan_to_cash_ratio < 0.5:
+                cash_factor = 0.3  # Can comfortably repay
+            elif loan_to_cash_ratio < 0.7:
+                cash_factor = 0.1  # Can repay but it's a significant portion of cash
+            else:
+                cash_factor = -0.3  # Too expensive to repay now
+            
+            # Calculate final probability
+            repayment_probability = base_probability + urgency_factor + economic_factor + cash_factor
+            repayment_probability = max(0.1, min(0.9, repayment_probability))  # Bound between 10% and 90%
+            
+            # Apply bot's difficulty level to adjust decision making
+            # Higher difficulty = better financial decisions
+            if self.difficulty == 'easy':
+                decision_accuracy = 0.7
+            elif self.difficulty == 'medium' or self.difficulty == 'normal':
+                decision_accuracy = 0.85
+            else:  # hard
+                decision_accuracy = 0.95
+            
+            # Reason for decision
+            reason = ""
+            
+            # Occasionally override the calculated probability based on bot difficulty
+            if random.random() > decision_accuracy:
+                # Bot makes a sub-optimal decision
+                repayment_probability = random.random()
+                reason = "Strategic decision (influenced by randomness)"
+            else:
+                # Normal reason based on factors
+                reasons = []
+                if urgency_factor > 0.3:
+                    reasons.append("urgent repayment needed")
+                if economic_factor > 0.1:
+                    reasons.append("favorable economic conditions")
+                elif economic_factor < -0.1:
+                    reasons.append(f"preserving cash during {economic_state}")
+                if cash_factor > 0.2:
+                    reasons.append("sufficient cash available")
+                
+                if not reasons:
+                    reasons.append("strategic financial planning")
+                    
+                reason = ", ".join(reasons)
+            
+            # Decide whether to repay
+            will_repay = random.random() < repayment_probability
+            
+            if will_repay:
+                # Decide how much to repay
+                if self.player.cash >= loan.amount * 1.2:  # Can afford full repayment with buffer
+                    repay_amount = loan.amount
+                    repay_reason = f"Full repayment: {reason}"
+                else:
+                    # Partial repayment - between 20% and 70% of loan or available cash
+                    min_payment = max(int(loan.amount * 0.2), 100)  # At least 20% or $100
+                    max_payment = min(int(loan.amount * 0.7), int(self.player.cash * 0.7))  # Up to 70% of loan or cash
+                    
+                    if max_payment < min_payment:  # Can't afford minimum payment
+                        return {"repay": False, "loan_id": loan_id, "reason": "Insufficient funds for meaningful payment"}
+                    
+                    repay_amount = random.randint(min_payment, max_payment)
+                    repay_reason = f"Partial repayment (${repay_amount}): {reason}"
+                
+                return {
+                    "repay": True,
+                    "loan_id": loan_id,
+                    "amount": repay_amount,
+                    "reason": repay_reason
+                }
+            else:
+                # Decision not to repay
+                if loan_to_cash_ratio > 0.8:
+                    no_repay_reason = "Preserving cash reserves"
+                elif economic_state in ['recession', 'depression']:
+                    no_repay_reason = f"Holding cash during {economic_state}"
+                else:
+                    no_repay_reason = "Strategic decision to maintain liquidity"
+                
+                return {
+                    "repay": False,
+                    "loan_id": loan_id,
+                    "reason": no_repay_reason
+                }
+                
+        except Exception as e:
+            logger.error(f"Error in decide_repay_loan for player {self.player.id}: {str(e)}", exc_info=True)
+            return {
+                "repay": False,
+                "loan_id": loan_id,
+                "reason": f"Error in decision making: {str(e)}"
+            }
+
+    def decide_trade_offer(self, trade_offer):
+        """
+        Decide whether to accept a trade offer from another player.
+        
+        Args:
+            trade_offer (dict): The trade offer with details like:
+                - requesting_player_id: ID of player making the offer
+                - properties_offered: List of properties being offered
+                - cash_offered: Cash amount being offered
+                - properties_requested: List of properties being requested
+                - cash_requested: Cash amount being requested
+                
+        Returns:
+            dict: Decision details with:
+                - accept (bool): Whether to accept the trade
+                - counter_offer (dict, optional): Counter offer if not accepting
+                - reason (str): Reason for the decision
+        """
+        logger.debug(f"Evaluating trade offer for player {self.player.id}: {trade_offer}")
+        
+        # Extract offer details
+        requesting_player_id = trade_offer.get('requesting_player_id')
+        properties_offered = trade_offer.get('properties_offered', [])
+        cash_offered = trade_offer.get('cash_offered', 0)
+        properties_requested = trade_offer.get('properties_requested', [])
+        cash_requested = trade_offer.get('cash_requested', 0)
+        
+        # Validate basic offer structure
+        if not requesting_player_id or (not properties_offered and cash_offered <= 0) or (not properties_requested and cash_requested <= 0):
+            return {
+                "accept": False,
+                "reason": "Invalid trade offer structure"
+            }
+        
+        # 1. Calculate value of what we're getting
+        value_getting = cash_offered
+        for prop_id in properties_offered:
+            prop = Property.query.get(prop_id)
+            if prop:
+                # Evaluate the property value (using our evaluation method)
+                prop_value = self._evaluate_property_value(prop)
+                value_getting += prop_value
+        
+        # 2. Calculate value of what we're giving up
+        value_giving = cash_requested
+        for prop_id in properties_requested:
+            prop = Property.query.get(prop_id)
+            if prop:
+                # Check if we own the property
+                if prop.owner_id != self.player.id:
+                    return {
+                        "accept": False,
+                        "reason": f"Don't own requested property {prop.name}"
+                    }
+                
+                # Evaluate the property value with a premium for our owned properties
+                prop_value = self._evaluate_property_value(prop) * 1.2  # 20% premium on properties we own
+                
+                # Check if this would break a monopoly
+                monopoly_group = prop.monopoly_group
+                if monopoly_group not in ["Railroad", "Utility"]:
+                    all_in_group = Property.query.filter_by(monopoly_group=monopoly_group).all()
+                    owned_in_group = [p for p in all_in_group if p.owner_id == self.player.id]
+                    
+                    # If we own all properties in this group, add a monopoly premium
+                    if len(owned_in_group) == len(all_in_group):
+                        prop_value *= 2.0  # Double value for monopoly properties
+                
+                value_giving += prop_value
+        
+        # 3. Check if we can afford the cash part
+        if cash_requested > self.player.cash:
+            return {
+                "accept": False,
+                "reason": "Insufficient funds for trade"
+            }
+        
+        # 4. Evaluate strategic value of the trade
+        # Check if offered properties would complete a monopoly for us
+        monopoly_bonus = 0
+        properties_by_group = {}
+        
+        # Group our existing properties by monopoly group
+        my_properties = Property.query.filter_by(owner_id=self.player.id).all()
+        for prop in my_properties:
+            group = prop.monopoly_group
+            if group not in properties_by_group:
+                properties_by_group[group] = []
+            properties_by_group[group].append(prop)
+        
+        # Check if offered properties would complete a monopoly
+        for prop_id in properties_offered:
+            prop = Property.query.get(prop_id)
+            if prop and prop.monopoly_group not in ["Railroad", "Utility"]:
+                group = prop.monopoly_group
+                all_in_group = Property.query.filter_by(monopoly_group=group).all()
+                
+                # Count how many we would own after the trade
+                would_own = 0
+                for group_prop in all_in_group:
+                    if group_prop.owner_id == self.player.id or group_prop.id == prop.id:
+                        would_own += 1
+                
+                # If we would own all properties in the group, add a big bonus
+                if would_own == len(all_in_group):
+                    monopoly_bonus += 500  # Arbitrary high value for completing a monopoly
+        
+        # 5. Make the decision
+        # Basic formula: accept if what we're getting + strategic value > what we're giving up
+        adjusted_value_getting = value_getting + monopoly_bonus
+        
+        # Apply risk tolerance: more risk-tolerant bots will accept less favorable trades
+        risk_factor = 0.8 + (self.risk_tolerance * 0.4)  # Range: 0.8 to 1.2
+        min_value_ratio = 1.0 / risk_factor  # Higher risk tolerance = lower required value ratio
+        
+        # Calculate value ratio of what we're getting vs giving
+        value_ratio = adjusted_value_getting / value_giving if value_giving > 0 else float('inf')
+        
+        # Make decision based on value ratio
+        if value_ratio >= min_value_ratio:
+            reason = f"Trade accepted: Value ratio {value_ratio:.2f} >= {min_value_ratio:.2f}"
+            if monopoly_bonus > 0:
+                reason += f" with monopoly bonus of {monopoly_bonus}"
+            
+            return {
+                "accept": True,
+                "reason": reason
+            }
+        else:
+            # Propose a counter offer if the trade wasn't terrible
+            counter_offer = None
+            if value_ratio >= 0.8:
+                # Simple counter: ask for more cash to make up value difference
+                cash_adjustment = int(value_giving - adjusted_value_getting)
+                if cash_adjustment > 0:
+                    counter_offer = {
+                        "properties_offered": properties_requested,
+                        "cash_offered": cash_requested,
+                        "properties_requested": properties_offered,
+                        "cash_requested": cash_offered + cash_adjustment
+                    }
+            
+            return {
+                "accept": False,
+                "reason": f"Trade rejected: Value ratio {value_ratio:.2f} < required {min_value_ratio:.2f}",
+                "counter_offer": counter_offer
+            }
+
     # TODO: Add other decision methods as needed:
     # - decide_mortgage_property(property_obj)
     # - decide_unmortgage_property(property_obj)
     # - decide_build_house(property_obj)
     # - decide_sell_house(property_obj)
     # - decide_propose_trade(other_player)
-    # - decide_respond_to_trade(trade_offer)
+    # - decide_respond_to_trade(trade_offer) - Implemented as decide_trade_offer
     # - decide_jail_action(options: list) # e.g. ['pay', 'card', 'roll']
 
 # Removed extraneous closing tag

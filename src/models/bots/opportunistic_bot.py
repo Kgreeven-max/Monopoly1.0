@@ -88,6 +88,107 @@ class OpportunisticBot(BotPlayer):
 
         return base_decision
 
+    def response_to_economic_event(self, event_type, event_data):
+        """
+        Respond strategically to economic events in the game.
+        
+        Args:
+            event_type (str): Type of economic event (e.g., "inflation_change", "market_boom", "market_bust")
+            event_data (dict): Additional data about the event
+            
+        Returns:
+            dict: Actions the bot decides to take in response to the event
+        """
+        actions = []
+        
+        # Log the event
+        logger.info(f"OpportunisticBot {self.player_id} responding to economic event: {event_type}")
+        
+        if event_type == "inflation_change":
+            new_state = event_data.get("new_state")
+            
+            if new_state == "recession":
+                # During recession: Buy properties, hold cash for bargains
+                actions.append({
+                    "action": "adjust_strategy",
+                    "strategy": "acquire_assets",
+                    "reason": "Recession presents buying opportunities at reduced prices"
+                })
+                
+                # Consider taking a loan for property acquisition
+                if hasattr(self.decision_maker, 'risk_tolerance'):
+                    old_risk_tolerance = self.decision_maker.risk_tolerance
+                    # Temporarily increase risk tolerance to be more aggressive during recession
+                    self.decision_maker.risk_tolerance = min(old_risk_tolerance * 1.25, 0.95)
+                    logger.info(f"OpportunisticBot {self.player_id} increased risk tolerance from {old_risk_tolerance:.2f} to {self.decision_maker.risk_tolerance:.2f} due to recession")
+                
+            elif new_state == "boom":
+                # During boom: Consider selling properties at premium, be cautious with purchases
+                actions.append({
+                    "action": "adjust_strategy",
+                    "strategy": "sell_premium_assets",
+                    "reason": "Boom market allows selling at higher prices"
+                })
+                
+                # Be more conservative with risk during boom (avoid buying overpriced assets)
+                if hasattr(self.decision_maker, 'risk_tolerance'):
+                    old_risk_tolerance = self.decision_maker.risk_tolerance
+                    # Temporarily decrease risk tolerance to be more cautious during boom
+                    self.decision_maker.risk_tolerance = max(old_risk_tolerance * 0.8, 0.3)
+                    logger.info(f"OpportunisticBot {self.player_id} decreased risk tolerance from {old_risk_tolerance:.2f} to {self.decision_maker.risk_tolerance:.2f} due to boom market")
+                
+            elif new_state == "normal":
+                # Reset strategy to baseline during normal conditions
+                actions.append({
+                    "action": "adjust_strategy",
+                    "strategy": "balanced",
+                    "reason": "Normal market conditions suggest balanced approach"
+                })
+                
+                # Reset risk tolerance to default for bot type and difficulty
+                if hasattr(self.decision_maker, 'risk_tolerance'):
+                    # Calculate default risk tolerance based on difficulty
+                    default_risk = self.decision_maker.calculate_default_risk_tolerance()
+                    # Apply opportunistic bot modifier (30% more risk-taking)
+                    self.decision_maker.risk_tolerance = min(default_risk * 1.3, 0.9)
+                    logger.info(f"OpportunisticBot {self.player_id} reset risk tolerance to {self.decision_maker.risk_tolerance:.2f} due to normal market")
+        
+        elif event_type == "market_boom":
+            # Short-term market boom - consider development opportunities
+            owned_properties = Property.query.filter_by(owner_id=self.player_id).all()
+            developable_properties = [p for p in owned_properties if p.can_build_house]
+            
+            if developable_properties:
+                # Prioritize development during booms
+                actions.append({
+                    "action": "prioritize_development",
+                    "property_ids": [p.id for p in developable_properties],
+                    "reason": "Market boom increases return on development investment"
+                })
+        
+        elif event_type == "market_bust":
+            # Market downturn - consider consolidating assets, hold cash
+            actions.append({
+                "action": "hold_cash",
+                "reason": "Market downturn suggests holding liquid assets for future opportunities"
+            })
+            
+            # Consider repaying loans during bust to reduce debt burden
+            from src.models.finance.loan import Loan
+            active_loans = Loan.query.filter_by(player_id=self.player.id, is_active=True).all()
+            if active_loans and self.player.cash > 1000:  # If we have cash to spare
+                actions.append({
+                    "action": "prioritize_loan_repayment",
+                    "loan_ids": [loan.id for loan in active_loans],
+                    "reason": "Market downturn makes debt riskier, prioritizing repayment"
+                })
+        
+        return {
+            "bot_id": self.player_id,
+            "event_type": event_type,
+            "actions": actions
+        }
+
         # Original simpler logic returning only amount:
         # property_id = auction_data["property_id"]
         # property_obj = Property.query.get(property_id)

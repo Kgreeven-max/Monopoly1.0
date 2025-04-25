@@ -19,7 +19,7 @@ from src.models.property import Property
 class SpecialSpaceController:
     """Controller for managing special spaces and card actions"""
     
-    def __init__(self, socketio=None, game_controller=None, economic_controller=None, board_controller=None):
+    def __init__(self, socketio=None, game_controller=None, economic_controller=None, board_controller=None, app_config=None):
         """Initialize special space controller
         
         Args:
@@ -27,11 +27,22 @@ class SpecialSpaceController:
             game_controller: GameController instance for game state management
             economic_controller: EconomicCycleController instance for economic effects
             board_controller: BoardController instance for board management
+            app_config: Application configuration dictionary
         """
         self.socketio = socketio
         self.game_controller = game_controller
         self.economic_controller = economic_controller
         self.board_controller = board_controller
+        self.app_config = app_config
+        
+        # Get important services from app_config if provided
+        if app_config:
+            # Store references to key services
+            self.banker = app_config.get('banker')
+            self.community_fund = app_config.get('community_fund')
+        else:
+            self.banker = None
+            self.community_fund = None
         
         # Initialize card decks
         self.chance_deck = CardDeck("chance", socketio, None, None)
@@ -1289,29 +1300,32 @@ class SpecialSpaceController:
             
             # Process the tax payment
             if tax_amount > 0:
-                # Get the finance controller
-                finance_controller = self.app_config.get('finance_controller')
-                if not finance_controller:
-                    # Fall back to basic payment
-                    player.money -= tax_amount
-                    db.session.add(player)
-                    
-                    # Add to community fund
-                    community_fund = self.app_config.get('community_fund')
-                    if community_fund:
-                        community_fund.add_funds(tax_amount, f"Tax payment: {tax_space.name}")
-                    else:
-                        # Fall back to updating game state directly
-                        game_state.community_fund += tax_amount
-                        # Ensure community_fund_enabled is set to true
-                        if not hasattr(game_state, 'community_fund_enabled'):
-                            game_state.community_fund_enabled = True
-                        db.session.add(game_state)
-                    
-                    db.session.commit()
+                # Set up tax name for messages
+                tax_name = tax_space.name or "Tax"
+                
+                # Get the banker for payment processing
+                banker = self.banker if hasattr(self, 'banker') else None
+                
+                if not banker:
+                    # Try to get banker from current_app
+                    from flask import current_app
+                    if hasattr(current_app, 'config'):
+                        banker = current_app.config.get('banker')
+                
+                # Get the community fund instance
+                community_fund = None
+                
+                if hasattr(self, 'community_fund'):
+                    community_fund = self.community_fund
                 else:
-                    # Use finance controller
-                    payment_result = finance_controller.remove_funds(player_id, tax_amount)
+                    # Try to get from current_app
+                    from flask import current_app
+                    if hasattr(current_app, 'config'):
+                        community_fund = current_app.config.get('community_fund')
+                
+                # Process payment through banker if available
+                if banker:
+                    payment_result = banker.player_pays_bank(player_id, tax_amount, f"Tax: {tax_name}")
                     
                     if not payment_result["success"]:
                         # Handle insufficient funds
@@ -1322,44 +1336,47 @@ class SpecialSpaceController:
                             "trigger_bankruptcy": True,
                             "tax_amount": tax_amount
                         }
+                else:
+                    # Direct payment if banker not available
+                    player.money -= tax_amount
+                    db.session.add(player)
+                    db.session.commit()
+                    payment_result = {"success": True, "player_id": player_id, "new_balance": player.money}
+                
+                # Add to community fund
+                if community_fund:
+                    # Add the funds directly to community fund
+                    community_fund.add_funds(tax_amount, f"Tax payment: {tax_name}")
+                    logging.info(f"Added ${tax_amount} to community fund from tax payment")
+                else:
+                    # Update game_state directly if no community fund instance
+                    if hasattr(game_state, 'free_parking_fund'):
+                        game_state.free_parking_fund = (game_state.free_parking_fund or 0) + tax_amount
+                    elif hasattr(game_state, 'community_fund'):
+                        game_state.community_fund = (game_state.community_fund or 0) + tax_amount
+                    else:
+                        # Fallback - update settings
+                        settings = game_state.settings if hasattr(game_state, 'settings') and game_state.settings else {}
+                        settings['community_fund'] = settings.get('community_fund', 0) + tax_amount
+                        game_state.settings = settings
                     
-                    # Add to community fund if configured
-                    add_to_community_fund = game_state.get_settings().get("taxes_to_community_fund", True)
-                    if add_to_community_fund:
-                        # Try direct community fund first
-                        community_fund = self.app_config.get('community_fund')
-                        if community_fund:
-                            community_fund.add_funds(tax_amount, f"Tax payment: {tax_space.name}")
-                        else:
-                            # Fall back to game state
-                            current_fund = game_state.get_community_fund()
-                            game_state.set_community_fund(current_fund + tax_amount)
-                            
-                            # Commit the updated game state
-                            db.session.add(game_state)
-                            db.session.commit()
+                    # Ensure community_fund_enabled is set to true
+                    if hasattr(game_state, 'community_fund_enabled'):
+                        game_state.community_fund_enabled = True
+                    
+                    db.session.add(game_state)
+                    db.session.commit()
+                    logging.info(f"Added ${tax_amount} to game_state community fund from tax payment")
                 
                 # Prepare response message
-                tax_name = "Income Tax" if tax_type == "income" else "Luxury Tax"
-                message = f"Player {player.name} paid ${tax_amount} in {tax_name}"
-                
-                # Add game log
-                game_state.add_game_log({
-                    "type": "tax_payment",
-                    "player_id": player_id,
-                    "tax_type": tax_type,
-                    "amount": tax_amount,
-                    "message": message,
-                    "timestamp": datetime.datetime.now().isoformat()
-                })
+                message = f"Player {player.username} paid ${tax_amount} in {tax_name}"
                 
                 # Emit an event to notify clients
-                socketio = self.socketio
-                if socketio:
-                    socketio.emit('tax_paid', {
+                if self.socketio:
+                    self.socketio.emit('tax_paid', {
                         'game_id': game_id,
                         'player_id': player_id,
-                        'player_name': player.name,
+                        'player_name': player.username,
                         'tax_type': tax_type,
                         'tax_amount': tax_amount,
                         'message': message
@@ -2205,10 +2222,6 @@ class SpecialSpaceController:
                 logging.error(f"Player {player_id} not found")
                 return {"success": False, "error": "Player not found"}
             
-            # Get player state - using the player directly instead of looking for it in game_state.players
-            # The issue was that game_state doesn't have a 'players' attribute
-            player_state = {"id": player.id, "position": player.position, "money": player.money}
-            
             # Initialize chance cards if needed
             if not hasattr(game_state, 'chance_cards') or not game_state.chance_cards:
                 game_state.chance_cards = self._initialize_chance_cards()
@@ -2222,8 +2235,74 @@ class SpecialSpaceController:
             card = game_state.chance_cards.pop(0)
             game_state.chance_cards.append(card)  # Put the card at the end of the deck
             
-            # Process the card's effect
-            result = self._process_chance_card(game_state, player_id, card)
+            # Process the card's effect with enhanced error handling
+            try:
+                result = self._process_chance_card(game_state, player_id, card)
+            except AttributeError as e:
+                # Handle the specific 'GameState has no attribute players' error
+                if "'GameState' object has no attribute 'players'" in str(e):
+                    logging.warning(f"Handling attribute error in chance card processing: {str(e)}")
+                    
+                    # Create a fallback result
+                    action = card.get("action", "unknown")
+                    result = {"action": action, "error": "Error processing card action"}
+                    
+                    # Retrieve the player again to ensure we have latest state
+                    player = Player.query.get(player_id)
+                    
+                    # For collect actions, try to handle them directly
+                    if action == "collect":
+                        amount = card.get("amount", 0)
+                        player.money += amount
+                        result = {
+                            "action": "collect",
+                            "amount": amount,
+                            "new_balance": player.money
+                        }
+                        db.session.add(player)
+                        logging.info(f"Applied fallback collect action for {amount} to player {player_id}")
+                    
+                    # For move_to actions, try to handle them directly
+                    elif action == "move_to":
+                        position = card.get("position", 0)
+                        old_position = player.position
+                        
+                        # Check if passing GO
+                        if position < old_position:
+                            player.money += 200
+                            result = {
+                                "action": "move_to",
+                                "old_position": old_position,
+                                "new_position": position,
+                                "passed_go": True,
+                                "collect_amount": 200
+                            }
+                        else:
+                            result = {
+                                "action": "move_to",
+                                "old_position": old_position,
+                                "new_position": position,
+                                "passed_go": False
+                            }
+                        
+                        player.position = position
+                        db.session.add(player)
+                        logging.info(f"Applied fallback move_to action to position {position} for player {player_id}")
+                    
+                    # For other actions, log the error and continue with basic info
+                    else:
+                        logging.error(f"Could not apply fallback handling for action type: {action}")
+                        result = {
+                            "action": action,
+                            "error": "Card effect could not be processed",
+                            "fallback_applied": True
+                        }
+                    
+                    db.session.commit()
+                else:
+                    # For other attribute errors, re-raise
+                    logging.error(f"Unknown attribute error in chance card processing: {str(e)}")
+                    raise
             
             # Add to game log
             log_entry = {
@@ -2260,8 +2339,9 @@ class SpecialSpaceController:
             }
             
         except Exception as e:
-            logging.error(f"Error handling chance space: {str(e)}")
-            return {"success": False, "error": str(e)}
+            logging.error(f"Error handling chance space: {str(e)}", exc_info=True)
+            db.session.rollback()  # Roll back any partial changes
+            return {"success": False, "error": f"Error processing chance card: {str(e)}"}
 
     def process_chance_card(self, player_id, game_id):
         """
@@ -2542,28 +2622,27 @@ class SpecialSpaceController:
             total_paid = 0
             recipients = []
             
-            # Get all players from the database
+            # Get all players using game_state.get_players() method
             other_players = game_state.get_players()
             
+            # Process payments to each player
             for p in other_players:
-                if p.id != player_id and hasattr(p, 'active') and p.active:
+                # Skip the current player
+                if p.id != player_id:
                     # Pay to this player
                     p.money += amount
                     total_paid += amount
-                    recipients.append({"player_id": p.id, "amount": amount})
+                    recipients.append({"player_id": p.id, "player_name": p.username, "amount": amount})
                     db.session.add(p)
             
             # Deduct total from current player
             player.money -= total_paid
             db.session.add(player)
             
-            # Update the player state for the return value
-            player_state["balance"] -= total_paid
-            
             result["amount_per_player"] = amount
             result["total_paid"] = total_paid
             result["recipients"] = recipients
-            result["new_balance"] = player_state.get("balance")
+            result["new_balance"] = player.money
             
         elif action == "pay_per_building":
             # Player pays based on number of houses and hotels
@@ -2591,6 +2670,7 @@ class SpecialSpaceController:
             
             # Calculate and apply payment
             total_cost = (houses * house_cost) + (hotels * hotel_cost)
+            player.money -= total_cost  # Update actual player model
             player_state["balance"] -= total_cost
             
             result["houses"] = houses
@@ -2612,12 +2692,21 @@ class SpecialSpaceController:
             
         elif action == "get_out_of_jail":
             # Player receives a Get Out of Jail Free card
-            player_state["jail_cards"] = player_state.get("jail_cards", 0) + 1
-            result["jail_cards"] = player_state.get("jail_cards")
+            if hasattr(player, 'jail_cards'):
+                player.jail_cards += 1  # Update actual player model
+                player_state["jail_cards"] = player.jail_cards
+                result["jail_cards"] = player_state.get("jail_cards")
+            else:
+                logging.warning(f"Player model does not have jail_cards attribute")
+                result["error"] = "Player model does not support jail cards"
             
         elif action == "go_to_jail":
             # Player goes to jail
-            player_state["position"] = 10  # Jail position
+            player.position = 10  # Jail position
+            player.in_jail = True
+            player.jail_turns = 0
+            
+            player_state["position"] = 10
             player_state["in_jail"] = True
             player_state["jail_turns"] = 0
             
@@ -2626,6 +2715,9 @@ class SpecialSpaceController:
         else:
             logging.error(f"Unknown card action: {action}")
             return {"error": f"Unknown card action: {action}"}
+        
+        # Save changes to the database
+        db.session.commit()
         
         return result
 
@@ -2934,9 +3026,9 @@ class SpecialSpaceController:
                 player_state["balance"] -= amount
                 
                 # Add to community fund if applicable
-                community_fund_enabled = game_state.settings.get("money_in_free_parking", False) if hasattr(game_state, 'settings') else False
-                if community_fund_enabled:
+                if hasattr(game_state, 'community_fund_enabled') and game_state.community_fund_enabled:
                     game_state.community_fund += amount
+                    result["community_fund"] = game_state.community_fund
                 
                 result["amount"] = amount
                 
@@ -2946,24 +3038,26 @@ class SpecialSpaceController:
                 total_collected = 0
                 collections = []
                 
-                # Get all active players except the current player
-                other_players = Player.query.filter(Player.id != player_id, Player.in_game == True).all()
+                # Get all active players except the current player using game_state.get_players()
+                other_players = game_state.get_players()
                 
                 for other_player in other_players:
-                    other_player_balance = other_player.money
-                    
-                    # Check if other player has enough money
-                    payment_amount = min(amount, other_player_balance)
-                    
-                    if payment_amount > 0:
-                        other_player.money -= payment_amount  # Update actual player model
-                        total_collected += payment_amount
+                    # Skip the current player
+                    if other_player.id != player_id:
+                        other_player_balance = other_player.money
                         
-                        collections.append({
-                            "player_id": other_player.id,
-                            "amount": payment_amount,
-                            "full_payment": payment_amount == amount
-                        })
+                        # Check if other player has enough money
+                        payment_amount = min(amount, other_player_balance)
+                        
+                        if payment_amount > 0:
+                            other_player.money -= payment_amount  # Update actual player model
+                            total_collected += payment_amount
+                            
+                            collections.append({
+                                "player_id": other_player.id,
+                                "amount": payment_amount,
+                                "full_payment": payment_amount == amount
+                            })
                 
                 player.money += total_collected  # Update actual player model
                 player_state["balance"] += total_collected
@@ -3009,9 +3103,9 @@ class SpecialSpaceController:
                 player_state["balance"] -= total_fee
                 
                 # Add to community fund if applicable
-                community_fund_enabled = game_state.settings.get("money_in_free_parking", False) if hasattr(game_state, 'settings') else False
-                if community_fund_enabled:
+                if hasattr(game_state, 'community_fund_enabled') and game_state.community_fund_enabled:
                     game_state.community_fund += total_fee
+                    result["community_fund"] = game_state.community_fund
                 
                 result["total_fee"] = total_fee
                 result["property_fees"] = property_fees
@@ -3023,6 +3117,7 @@ class SpecialSpaceController:
                     player_state["jail_cards"] = player.jail_cards
                 else:
                     logging.warning(f"Player model does not have jail_cards attribute")
+                    result["error"] = "Player model does not support jail cards"
                 
             elif card_type == "go_to_jail":
                 # Player goes to jail
@@ -3308,12 +3403,6 @@ class SpecialSpaceController:
                 logging.error(f"Player {player_id} not found")
                 return {"success": False, "error": "Player not found"}
             
-            # Get player state from game
-            player_state = next((p for p in game_state.players if p.get("id") == player_id), None)
-            if not player_state:
-                logging.error(f"Player state for {player_id} not found in game {game_id}")
-                return {"success": False, "error": "Player state not found"}
-            
             result = {
                 "success": True,
                 "amount": 0,
@@ -3321,13 +3410,19 @@ class SpecialSpaceController:
             }
             
             # If community fund is enabled, player collects the money
-            if game_state.community_fund_enabled and game_state.community_fund > 0:
+            if hasattr(game_state, 'community_fund_enabled') and game_state.community_fund_enabled and game_state.community_fund > 0:
                 amount = game_state.community_fund
-                player_state["balance"] += amount
+                
+                # Update player's money directly
+                player.money += amount
+                db.session.add(player)
+                
+                # Reset community fund
                 game_state.community_fund = 0
+                db.session.add(game_state)
                 
                 result["amount"] = amount
-                result["new_balance"] = player_state["balance"]
+                result["new_balance"] = player.money
                 result["message"] = f"Collected ${amount} from Free Parking!"
                 
                 # Add to game log
@@ -3403,12 +3498,6 @@ class SpecialSpaceController:
                 logging.error(f"Player {player_id} not found")
                 return {"success": False, "error": "Player not found"}
             
-            # Get player state from game
-            player_state = next((p for p in game_state.players if p.get("id") == player_id), None)
-            if not player_state:
-                logging.error(f"Player state for {player_id} not found in game {game_id}")
-                return {"success": False, "error": "Player state not found"}
-            
             # Get game configuration for GO salary
             config = self.get_game_config(game_id)
             base_go_salary = config.get("go_salary", 200)
@@ -3417,8 +3506,9 @@ class SpecialSpaceController:
             direct_go_multiplier = config.get("direct_go_multiplier", 2)
             go_amount = base_go_salary * direct_go_multiplier
             
-            # Update player balance
-            player_state["balance"] += go_amount
+            # Update player balance directly
+            player.money += go_amount
+            db.session.add(player)
             
             # Add to game log
             log_entry = {
@@ -3449,7 +3539,7 @@ class SpecialSpaceController:
             result = {
                 "success": True,
                 "amount": go_amount,
-                "new_balance": player_state["balance"],
+                "new_balance": player.money,
                 "message": f"Collected ${go_amount} for landing directly on GO!"
             }
             

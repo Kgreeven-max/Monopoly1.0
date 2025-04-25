@@ -5,6 +5,7 @@ from ..models.player import Player
 from ..models.property import Property
 from ..models.game_state import GameState
 from ..models.transaction import Transaction
+from ..models.special_space import SpecialSpace
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ class BotActionHandler:
                 game_state.advance_lap()
                 go_amount = 200 # TODO: Get GO amount from game config/GameState
                 logger.debug(f"Awarding ${go_amount} for passing GO to Player {player.id}")
-                player.cash += go_amount
+                player.money += go_amount
                 # TODO: Remove commit
                 # db.session.commit() 
                 # Temporarily committing
@@ -112,9 +113,9 @@ class BotActionHandler:
             logger.debug(f"Property is unowned. Bot decision to buy: {buy_decision}")
             if buy_decision:
                 price = property_obj.current_price
-                if player.cash >= price:
+                if player.money >= price:
                     logger.info(f"Player {player.id} buying {property_obj.name} for ${price}")
-                    player.cash -= price
+                    player.money -= price
                     property_obj.owner_id = player.id
                     # TODO: Remove commit
                     # db.session.commit()
@@ -147,12 +148,12 @@ class BotActionHandler:
                          logger.error(f"Error committing property purchase for Player {player.id}, Property {property_obj.id}: {e}", exc_info=True)
                          db.session.rollback()
                          # Should revert cash/ownership changes? Yes.
-                         player.cash += price
+                         player.money += price
                          property_obj.owner_id = None # Revert ownership on failed commit
                          # Maybe raise here to signal failure
                          raise
                 else:
-                    logger.warning(f"Player {player.id} decided to buy {property_obj.name} but lacked funds (${player.cash} < ${price})")
+                    logger.warning(f"Player {player.id} decided to buy {property_obj.name} but lacked funds (${player.money} < ${price})")
                     # Indicate failed attempt
                     actions.append({
                         "action": "buy_property_failed_funds",
@@ -195,9 +196,9 @@ class BotActionHandler:
                 rent_amount = self._calculate_rent(property_obj)
                 logger.info(f"Player {player.id} owes ${rent_amount} rent to Player {owner.id} for {property_obj.name}")
                 
-                if player.cash >= rent_amount:
-                    player.cash -= rent_amount
-                    owner.cash += rent_amount
+                if player.money >= rent_amount:
+                    player.money -= rent_amount
+                    owner.money += rent_amount
                     # TODO: Remove commit
                     # db.session.commit()
                     # Temporarily committing
@@ -231,11 +232,11 @@ class BotActionHandler:
                         logger.error(f"Error committing rent payment from {player.id} to {owner.id}: {e}", exc_info=True)
                         db.session.rollback()
                         # Revert cash transfer
-                        player.cash += rent_amount
-                        owner.cash -= rent_amount
+                        player.money += rent_amount
+                        owner.money -= rent_amount
                         raise
                 else:
-                    logger.warning(f"Player {player.id} cannot afford rent ${rent_amount} for {property_obj.name}. Available cash: ${player.cash}")
+                    logger.warning(f"Player {player.id} cannot afford rent ${rent_amount} for {property_obj.name}. Available cash: ${player.money}")
                     # Signal to controller that player needs to manage assets or declare bankruptcy
                     actions.append({
                         "action": "needs_to_liquidate_for_rent", 
@@ -243,7 +244,7 @@ class BotActionHandler:
                         "property_name": property_obj.name,
                         "owner_id": property_obj.owner_id,
                         "rent_amount": rent_amount,
-                        "available_cash": player.cash
+                        "available_cash": player.money
                     })
             else:
                 logger.error(f"Rent calculation failed: Owner Player {property_obj.owner_id} not found for property {property_obj.id}")
@@ -260,6 +261,93 @@ class BotActionHandler:
             })
 
         return actions
+
+    def handle_chance_space(self, player: Player):
+        """Handles actions when a player lands on a Chance space."""
+        if not player:
+            logger.error("handle_chance_space called with invalid player object.")
+            return []
+            
+        logger.info(f"Player {player.id} landed on a Chance space.")
+        
+        # We don't need to make any decisions here - the card draw and effects
+        # are handled by the SpecialSpaceController, which our caller should invoke
+        
+        return [{
+            "action": "draw_chance_card",
+            "player_id": player.id
+        }]
+    
+    def handle_community_chest_space(self, player: Player):
+        """Handles actions when a player lands on a Community Chest space."""
+        if not player:
+            logger.error("handle_community_chest_space called with invalid player object.")
+            return []
+            
+        logger.info(f"Player {player.id} landed on a Community Chest space.")
+        
+        # We don't need to make any decisions here - the card draw and effects
+        # are handled by the SpecialSpaceController, which our caller should invoke
+        
+        return [{
+            "action": "draw_community_chest_card",
+            "player_id": player.id
+        }]
+    
+    def handle_tax_space(self, player: Player, tax_space_details):
+        """Handles actions when a player lands on a Tax space."""
+        if not player or not tax_space_details:
+            logger.error("handle_tax_space called with invalid player object or tax details.")
+            return []
+            
+        tax_amount = tax_space_details.get('amount', 0)
+        tax_name = tax_space_details.get('name', 'Tax')
+        
+        logger.info(f"Player {player.id} landed on {tax_name} space, needs to pay ${tax_amount}.")
+        
+        if player.money >= tax_amount:
+            # Bot can afford the tax
+            return [{
+                "action": "pay_tax",
+                "player_id": player.id,
+                "tax_name": tax_name,
+                "tax_amount": tax_amount
+            }]
+        else:
+            # Bot needs to manage assets to pay tax
+            return [{
+                "action": "manage_assets_for_tax",
+                "player_id": player.id,
+                "tax_name": tax_name, 
+                "tax_amount": tax_amount,
+                "available_cash": player.money
+            }]
+
+    def handle_go_to_jail_space(self, player: Player):
+        """Handles actions when a player lands on Go To Jail space."""
+        if not player:
+            logger.error("handle_go_to_jail_space called with invalid player object.")
+            return []
+            
+        logger.info(f"Player {player.id} landed on Go To Jail space.")
+        
+        # Move player to jail position (which is 10)
+        player.position = 10
+        player.in_jail = True
+        player.jail_turns = 0
+        
+        try:
+            db.session.commit()
+            
+            return [{
+                "action": "went_to_jail",
+                "player_id": player.id,
+                "message": "Player went to jail"
+            }]
+        except Exception as e:
+            logger.error(f"Error sending player {player.id} to jail: {e}", exc_info=True)
+            db.session.rollback()
+            raise
 
     def _calculate_rent(self, property_obj: Property, dice_roll: int = None):
         """Calculates the rent owed for landing on a given property."""
@@ -347,3 +435,206 @@ class BotActionHandler:
         # Currently, just logs. Could be used for state cleanup if needed.
         logger.debug(f"BotActionHandler ending turn processing for Player {player.id}")
         # No direct game state changes needed here usually, handled by GameController. 
+
+    def handle_free_parking_space(self, player: Player):
+        """Handles actions when a player lands on Free Parking space."""
+        if not player:
+            logger.error("handle_free_parking_space called with invalid player object.")
+            return []
+            
+        logger.info(f"Player {player.id} landed on a Free Parking space.")
+        
+        # We don't need to make any decisions here - the action is handled by the SpecialSpaceController
+        
+        return [{
+            "action": "free_parking",
+            "player_id": player.id
+        }]
+
+    def handle_market_fluctuation_space(self, player: Player):
+        """Handles actions when a player lands on a Market Fluctuation space."""
+        if not player:
+            logger.error("handle_market_fluctuation_space called with invalid player object.")
+            return []
+            
+        logger.info(f"Player {player.id} landed on a Market Fluctuation space.")
+        
+        # Market fluctuation is handled by the EconomicCycleController via SpecialSpaceController
+        # No decision is needed from the bot - just indicate the action
+        
+        return [{
+            "action": "market_fluctuation",
+            "player_id": player.id
+        }]
+
+    def process_passing_go(self, player):
+        """Process a player passing GO."""
+        go_amount = self.get_go_amount()
+        player.money += go_amount
+        self.logger.info(f"Player {player.id} passed GO and collected ${go_amount}")
+        return {
+            "passing_go": True,
+            "amount": go_amount,
+            "new_balance": player.money
+        }
+
+    def buy_property(self, player, property_id):
+        """Buy a property for a player."""
+        # Get the property
+        property_obj = Property.query.get(property_id)
+        if not property_obj:
+            return {"success": False, "error": "Property not found"}
+        
+        # Check if property is already owned
+        if property_obj.owner_id:
+            return {"success": False, "error": "Property already owned"}
+        
+        # Check if player has enough money
+        price = property_obj.price
+        if player.money >= price:
+            # Buy the property
+            property_obj.owner_id = player.id
+            player.money -= price
+            db.session.add(property_obj)
+            db.session.add(player)
+            db.session.commit()
+            
+            self.logger.info(f"Player {player.id} bought {property_obj.name} for ${price}")
+            
+            return {
+                "success": True,
+                "property_id": property_id,
+                "property_name": property_obj.name,
+                "price": price,
+                "new_balance": player.money
+            }
+        else:
+            self.logger.warning(f"Player {player.id} decided to buy {property_obj.name} but lacked funds (${player.money} < ${price})")
+            return {
+                "success": False,
+                "error": "Not enough funds",
+                "property_id": property_id,
+                "property_name": property_obj.name,
+                "price": price,
+                "balance": player.money
+            }
+
+    def sell_property(self, player, property_id, buyer_id=None, price=None):
+        """Sell a property to another player or back to the bank."""
+        # Get the property
+        property_obj = Property.query.get(property_id)
+        if not property_obj:
+            return {"success": False, "error": "Property not found"}
+        
+        # Check if player owns the property
+        if property_obj.owner_id != player.id:
+            return {"success": False, "error": "You don't own this property"}
+        
+        # If selling to bank, price is half the base price
+        if not buyer_id:
+            price = property_obj.price // 2
+            property_obj.owner_id = None
+            player.money += price
+            db.session.add(property_obj)
+            db.session.add(player)
+            db.session.commit()
+            
+            self.logger.info(f"Player {player.id} sold {property_obj.name} to the bank for ${price}")
+            
+            return {
+                "success": True,
+                "property_id": property_id,
+                "property_name": property_obj.name,
+                "price": price,
+                "new_balance": player.money
+            }
+        
+        # If selling to another player, handle the transaction
+        # ...
+
+    def pay_rent(self, player, property_id):
+        """Pay rent to the owner of a property."""
+        # Get the property
+        property_obj = Property.query.get(property_id)
+        if not property_obj:
+            return {"success": False, "error": "Property not found"}
+        
+        # Check if property is owned and not by the current player
+        if not property_obj.owner_id or property_obj.owner_id == player.id:
+            return {"success": False, "error": "No rent due"}
+        
+        # Get the owner
+        owner = Player.query.get(property_obj.owner_id)
+        if not owner:
+            return {"success": False, "error": "Owner not found"}
+        
+        # Calculate rent amount
+        rent_amount = self._calculate_rent(property_obj)
+        
+        # Check if player has enough money
+        if player.money >= rent_amount:
+            # Pay rent
+            player.money -= rent_amount
+            owner.money += rent_amount
+            db.session.add(player)
+            db.session.add(owner)
+            db.session.commit()
+            
+            self.logger.info(f"Player {player.id} paid ${rent_amount} rent to Player {owner.id} for {property_obj.name}")
+            
+            return {
+                "success": True,
+                "property_id": property_id,
+                "property_name": property_obj.name,
+                "rent_amount": rent_amount,
+                "owner_id": owner.id,
+                "new_balance": player.money
+            }
+        else:
+            self.logger.warning(f"Player {player.id} cannot afford rent ${rent_amount} for {property_obj.name}. Available cash: ${player.money}")
+            
+            return {
+                "success": False,
+                "error": "Not enough funds for rent",
+                "property_id": property_id,
+                "property_name": property_obj.name,
+                "rent_amount": rent_amount,
+                "owner_id": owner.id,
+                "available_cash": player.money
+            }
+
+    def pay_tax(self, player, tax_type):
+        """Pay tax based on the type of tax."""
+        # Calculate tax amount based on type
+        if tax_type == "income":
+            tax_amount = 200
+        elif tax_type == "luxury":
+            tax_amount = 75
+        else:
+            tax_amount = 100  # Default tax amount
+        
+        # Check if player has enough money
+        if player.money >= tax_amount:
+            # Pay tax
+            player.money -= tax_amount
+            db.session.add(player)
+            db.session.commit()
+            
+            self.logger.info(f"Player {player.id} paid ${tax_amount} in {tax_type} tax")
+            
+            return {
+                "success": True,
+                "tax_type": tax_type,
+                "tax_amount": tax_amount,
+                "new_balance": player.money
+            }
+        else:
+            self.logger.warning(f"Player {player.id} cannot afford ${tax_amount} {tax_type} tax")
+            
+            return {
+                "success": False,
+                "error": "Not enough funds for tax",
+                "tax_type": tax_type,
+                "tax_amount": tax_amount,
+                "available_cash": player.money
+            } 

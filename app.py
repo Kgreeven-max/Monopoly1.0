@@ -80,6 +80,10 @@ from src.migrations.add_inflation_rate import run_migration as run_inflation_rat
 from src.migrations.add_started_at_column import run_migration as run_started_at_migration
 from src.migrations.fix_cash_to_money import run_migration as run_fix_cash_to_money_migration
 from src.migrations.add_community_chest_cards import run_migration as run_community_chest_cards_migration
+from src.migrations.add_game_id_to_auction import run_migration as run_add_game_id_to_auction_migration
+from src.migrations.add_game_id_to_loan import run_migration as run_add_game_id_to_loan_migration
+from src.migrations.add_fields_to_cd import run_migration as run_add_fields_to_cd_migration
+from src.migrations.add_history_to_loan import run_migration as run_add_history_to_loan_migration
 from src.controllers.trade_controller import TradeController # Import TradeController
 from src.routes.trade_routes import trade_routes # Import trade routes
 
@@ -196,6 +200,46 @@ with app.app_context(): # Use app context to access db/config safely
     except Exception as e:
         logging.error(f'Error running community chest cards migration: {str(e)}', exc_info=True)
     
+    # Run migration to add game_id column to auctions table
+    try:
+        auction_game_id_migration_result = run_add_game_id_to_auction_migration()
+        if auction_game_id_migration_result:
+            logging.info('Successfully ran add_game_id_to_auction migration.')
+        else:
+            logging.warning('Failed to run add_game_id_to_auction migration.')
+    except Exception as e:
+        logging.error(f'Error running add_game_id_to_auction migration: {str(e)}', exc_info=True)
+    
+    # Run migration to add game_id column to loans table
+    try:
+        loan_game_id_migration_result = run_add_game_id_to_loan_migration()
+        if loan_game_id_migration_result:
+            logging.info('Successfully ran add_game_id_to_loan migration.')
+        else:
+            logging.warning('Failed to run add_game_id_to_loan migration.')
+    except Exception as e:
+        logging.error(f'Error running add_game_id_to_loan migration: {str(e)}', exc_info=True)
+    
+    # Run migration to add required fields to CD model
+    try:
+        cd_fields_migration_result = run_add_fields_to_cd_migration()
+        if cd_fields_migration_result:
+            logging.info('Successfully ran add_fields_to_cd migration.')
+        else:
+            logging.warning('Failed to run add_fields_to_cd migration.')
+    except Exception as e:
+        logging.error(f'Error running add_fields_to_cd migration: {str(e)}', exc_info=True)
+    
+    # Run migration to add history column to loan table
+    try:
+        loan_history_migration_result = run_add_history_to_loan_migration()
+        if loan_history_migration_result:
+            logging.info('Successfully ran add_history_to_loan migration.')
+        else:
+            logging.warning('Failed to run add_history_to_loan migration.')
+    except Exception as e:
+        logging.error(f'Error running add_history_to_loan migration: {str(e)}', exc_info=True)
+    
     # Ensure GameState instance exists and has a game_id
     # Use a direct SQL query instead of ORM to avoid issues with missing columns
     try:
@@ -254,8 +298,8 @@ with app.app_context(): # Use app context to access db/config safely
     community_fund = CommunityFund(socketio, game_state)
     event_system = EventSystem(socketio, banker, community_fund)
     auction_system = AuctionSystem(socketio, banker)
-    economic_controller = EconomicCycleController(socketio) # Initialize EconomicCycleController first
-    special_space_controller = SpecialSpaceController(socketio=socketio, game_controller=None, economic_controller=economic_controller)
+    economic_controller = EconomicCycleController(socketio, app=app) # Pass the app instance
+    special_space_controller = SpecialSpaceController(socketio=socketio, game_controller=None, economic_controller=economic_controller, app_config=app.config)
     social_controller = SocialController(socketio, app.config) 
     remote_controller = RemoteController(app) # Needs app instance
     player_controller = PlayerController(db) # Pass the db instance
@@ -268,9 +312,36 @@ with app.app_context(): # Use app context to access db/config safely
     from src.controllers.finance_controller import FinanceController
     finance_controller = FinanceController(socketio=socketio, banker=banker, game_state=game_state)
     
-    # Initialize socket controller
-    from src.controllers.socket_controller import SocketController
-    socket_controller = SocketController(socketio, app.config)
+    # Store all dependencies in app.config before initializing other controllers
+    app.config['banker'] = banker
+    app.config['community_fund'] = community_fund
+    app.config['event_system'] = event_system
+    app.config['auction_system'] = auction_system  
+    app.config['special_space_controller'] = special_space_controller
+    app.config['social_controller'] = social_controller
+    app.config['remote_controller'] = remote_controller
+    app.config['player_controller'] = player_controller
+    app.config['auth_controller'] = auth_controller
+    app.config['game_state_instance'] = game_state
+    app.config['game_logic'] = game_logic 
+    app.config['property_controller'] = property_controller
+    app.config['auction_controller'] = auction_controller
+    app.config['socketio'] = socketio
+    app.config['economic_manager'] = None  # Will be set to economic_manager later
+    app.config['economic_controller'] = economic_controller
+    app.config['finance_controller'] = finance_controller
+    app.config['app'] = app
+
+    # Initialize game controller and store it before socket controller
+    game_controller = GameController(app.config)
+    app.config['game_controller'] = game_controller
+    
+    # Initialize bot controller
+    bot_controller = BotController(app.config)
+    app.config['bot_controller'] = bot_controller
+    
+    # NOTE: Socket controller initialization is now handled by register_socket_events()
+    # This prevents duplication/conflicts with controllers initialized there
 
     # Initialize social controllers
     chat_controller = ChatController(socketio, app.config)
@@ -308,10 +379,12 @@ with app.app_context(): # Use app context to access db/config safely
     app.config['property_controller'] = property_controller # Store property controller
     app.config['auction_controller'] = auction_controller # Store auction controller
     app.config['socketio'] = socketio # Store socketio instance
-    app.config['socket_controller'] = socket_controller # Store socket controller
+    # socket_controller is now initialized by register_socket_events() function
     app.config['economic_manager'] = economic_manager # Store economic cycle manager
     app.config['economic_controller'] = economic_controller # Store economic cycle controller
     app.config['finance_controller'] = finance_controller # Store finance controller
+    # Add economic system configuration
+    app.config['property_values_follow_economy'] = True  # Properties values fluctuate with the economy
     # Add app instance itself to the app_config for bot controller
     app.config['app'] = app
 
@@ -804,8 +877,6 @@ def setup_scheduled_tasks():
                     )
                 
         # Initial scheduling of tasks
-        # Commenting out problematic scheduler tasks temporarily
-        """
         if app.config['ADAPTIVE_DIFFICULTY_ENABLED']:
             socketio.start_background_task(
                 run_delayed_task, 
@@ -837,7 +908,6 @@ def setup_scheduled_tasks():
                 trigger_random_economic_event, 
                 app.config.get('INITIAL_ECONOMIC_EVENT_DELAY', 15) * 60  # Convert minutes to seconds
             )
-        """
     else:
         if not economic_controller:
             logging.warning("Economic cycle controller not found in app config. Economic updates will not run automatically.")

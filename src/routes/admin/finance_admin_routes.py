@@ -631,7 +631,13 @@ def get_financial_overview():
 
         # Get interest rates based on economic state
         base_rate = game_state.base_interest_rate if hasattr(game_state, 'base_interest_rate') else 0.05
-        economic_state = game_state.economic_cycle_state if hasattr(game_state, 'economic_cycle_state') else "normal"
+        
+        # Ensure base_rate is not None
+        if base_rate is None:
+            logger.warning("base_interest_rate is None, using default value of 0.05")
+            base_rate = 0.05
+            
+        economic_state = game_state.inflation_state if hasattr(game_state, 'inflation_state') else "normal"
         
         # Apply economic state modifier to rates
         state_modifiers = {

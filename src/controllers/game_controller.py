@@ -869,8 +869,21 @@ class GameController:
         """
         self.logger.info(f"_internal_end_turn: game_id parameter = {game_id}, game_state.id = {game_id}")
         try:
-            # Get game state
-            game_state = GameState.query.get(game_id)
+            # Get game state by primary key first, if that fails, try by game_id column
+            game_state = None
+            
+            # Try numeric ID first (used for integers)
+            try:
+                if isinstance(game_id, int) or (isinstance(game_id, str) and game_id.isdigit()):
+                    game_state = GameState.query.get(int(game_id))
+            except (ValueError, TypeError):
+                pass
+                
+            # If not found and it's a string (potentially UUID), try by game_id column
+            if not game_state and isinstance(game_id, str):
+                self.logger.info(f"Looking up GameState by UUID in game_id column: {game_id}")
+                game_state = GameState.query.filter_by(game_id=game_id).first()
+                
             if not game_state:
                 self.logger.error(f"Game state {game_id} not found")
                 return {"success": False, "error": "Game state not found"}
@@ -1037,9 +1050,30 @@ class GameController:
         self.logger.info(f"Received end_turn request from Player {player_id} (SID: {player_sid}) for Game {game_id}")
 
         with current_app.app_context(): 
-            game_state = GameState.query.get(game_id)
-            if not game_state: self.logger.error(f"Game state {game_id} not found."); self.socketio.emit('game_error', {'error': 'Game not found'}, room=player_sid); return
-            if game_state.status != 'active': self.logger.warning(f"End turn requested for inactive game {game_id}"); self.socketio.emit('game_error', {'error': 'Game not active'}, room=player_sid); return
+            # Get game state by primary key first, if that fails, try by game_id column
+            game_state = None
+            
+            # Try numeric ID first (used for integers)
+            try:
+                if isinstance(game_id, int) or (isinstance(game_id, str) and game_id.isdigit()):
+                    game_state = GameState.query.get(int(game_id))
+            except (ValueError, TypeError):
+                pass
+                
+            # If not found and it's a string (potentially UUID), try by game_id column
+            if not game_state and isinstance(game_id, str):
+                self.logger.info(f"Looking up GameState by UUID in game_id column: {game_id}")
+                game_state = GameState.query.filter_by(game_id=game_id).first()
+                
+            if not game_state: 
+                self.logger.error(f"Game state {game_id} not found.")
+                self.socketio.emit('game_error', {'error': 'Game not found'}, room=player_sid)
+                return
+                
+            if game_state.status != 'active': 
+                self.logger.warning(f"End turn requested for inactive game {game_id}")
+                self.socketio.emit('game_error', {'error': 'Game not active'}, room=player_sid)
+                return
                 
             if game_state.current_player_id != player_id:
                  self.logger.warning(f"Player {player_id} tried to end turn, but current player is {game_state.current_player_id}")
@@ -1051,8 +1085,9 @@ class GameController:
                  self.logger.warning(f"Player {player_id} tried to end turn, but action '{game_state.expected_action_type}' is pending.")
                  self.socketio.emit('game_error', {'error': f'Cannot end turn, must first {game_state.expected_action_type}'}, room=player_sid)
                  return
+            
             # --- End Action Validation --- 
-
+            
             # Call the internal logic
             self._internal_end_turn(player_id, game_id)
 
@@ -1069,23 +1104,28 @@ class GameController:
          return None # Placeholder
 
     def handle_property_purchase(self, data):
-        """Handle a player's request to purchase a property they've landed on."""
-        self.logger.info(f"Property purchase requested: {data}")
+        """Handle a player's decision to purchase a property they've landed on."""
+        self.logger.info(f"Property purchase request: {data}")
         
         player_id = data.get('player_id')
         property_id = data.get('property_id')
         game_id = data.get('game_id')
+        is_bot = data.get('is_bot', False)
         
         if not all([player_id, property_id, game_id]):
             self.logger.error(f"Missing required data for property purchase: {data}")
             return {'success': False, 'error': 'Missing required data'}
         
         try:
-            # Verify game is active
-            game_state = GameState.query.get(game_id)
-            if not game_state or game_state.status != 'active':
-                self.logger.warning(f"Cannot purchase property in inactive game {game_id}")
-                return {'success': False, 'error': 'Game not active'}
+            # Use the helper method to get the game state
+            game_state, error = self._get_game_state_by_id(
+                game_id, 
+                is_bot=is_bot, 
+                expected_action_type='property_decision'
+            )
+            
+            if error:
+                return error
             
             # Verify player is the current player
             if game_state.current_player_id != player_id:
@@ -1102,8 +1142,14 @@ class GameController:
             
             # Verify player has landed on this property
             if player.position != property_obj.position:
-                self.logger.warning(f"Player {player_id} attempting to buy property at position {property_obj.position} but is at position {player.position}")
-                return {'success': False, 'error': 'Not on this property'}
+                # It's possible that the player position was updated in the database but not in our model
+                # Let's refresh the player data from the database
+                db.session.refresh(player)
+                
+                # After refreshing, check again
+                if player.position != property_obj.position:
+                    self.logger.warning(f"Player {player_id} attempting to buy property at position {property_obj.position} but is at position {player.position}")
+                    return {'success': False, 'error': 'Not on this property'}
             
             # Verify property is available for purchase
             if property_obj.owner_id is not None:
@@ -1239,17 +1285,22 @@ class GameController:
         player_id = data.get('player_id')
         property_id = data.get('property_id')
         game_id = data.get('game_id')
+        is_bot = data.get('is_bot', False)  # Add flag to check if it's a bot request
         
         if not all([player_id, property_id, game_id]):
             self.logger.error(f"Missing required data for property decline: {data}")
             return {'success': False, 'error': 'Missing required data'}
         
         try:
-            # Verify game is active
-            game_state = GameState.query.get(game_id)
-            if not game_state or game_state.status != 'active':
-                self.logger.warning(f"Cannot decline property in inactive game {game_id}")
-                return {'success': False, 'error': 'Game not active'}
+            # Use the helper method to get the game state
+            game_state, error = self._get_game_state_by_id(
+                game_id, 
+                is_bot=is_bot, 
+                expected_action_type='property_decision'
+            )
+            
+            if error:
+                return error
             
             # Verify player is the current player
             if game_state.current_player_id != player_id:
@@ -2102,6 +2153,74 @@ class GameController:
             db.session.rollback()
             self.logger.error(f"Error resetting game: {e}", exc_info=True)
             return {'success': False, 'error': f'Failed to reset game: {str(e)}'}
+
+    def _get_game_state_by_id(self, game_id, is_bot=False, expected_action_type=None):
+        """
+        Helper method to look up a game state by various ID formats.
+        
+        Args:
+            game_id: The game ID to look up (can be UUID string, integer primary key, etc.)
+            is_bot: Whether the request is from a bot (affects behavior for inactive games)
+            expected_action_type: If provided, will clear this expected action type for bot
+                                 players in inactive games to prevent hanging states
+        
+        Returns:
+            Tuple of (game_state, error_dict) where error_dict is None on success,
+            or contains error information on failure
+        """
+        game_state = None
+        
+        try:
+            # First try to find game state by the game_id attribute (UUID)
+            if isinstance(game_id, str) and '-' in game_id:
+                self.logger.info(f"Looking up GameState by UUID field: {game_id}")
+                game_state = GameState.query.filter_by(game_id=game_id).first()
+            
+            # If not found or ID is numeric, try by primary key
+            if not game_state:
+                try:
+                    # Convert to int only if it's numeric
+                    if isinstance(game_id, int) or (isinstance(game_id, str) and game_id.isdigit()):
+                        pk_id = int(game_id)
+                        self.logger.info(f"Looking up GameState by primary key: {pk_id}")
+                        game_state = GameState.query.get(pk_id)
+                except (ValueError, TypeError):
+                    self.logger.warning(f"Could not convert game_id {game_id} to integer primary key")
+            
+            # Final fallback - get the singleton instance
+            if not game_state:
+                self.logger.warning(f"Could not find game_state for ID {game_id}, falling back to singleton")
+                game_state = GameState.get_instance()
+                
+                # Update the instance if its game_id doesn't match
+                if game_state and game_state.game_id != game_id and isinstance(game_id, str):
+                    self.logger.info(f"Refreshing game state instance to match requested game ID: {game_id}")
+                    success = game_state.refresh_from_db(game_id=game_id)
+                    if not success:
+                        self.logger.error(f"Failed to refresh game state to match requested game ID: {game_id}")
+            
+            if not game_state:
+                self.logger.error(f"Game state {game_id} not found after all lookup attempts")
+                return None, {'success': False, 'error': 'Game state not found'}
+            
+            # Verify game is active (but continue for bots to avoid action getting stuck)
+            if game_state.status != 'active':
+                # Clear expected action for bots anyway to prevent hanging state
+                if is_bot and expected_action_type and game_state.expected_action_type == expected_action_type:
+                    self.logger.warning(f"Game {game_id} not active, but clearing {expected_action_type} for bot")
+                    game_state.expected_action_type = None
+                    game_state.expected_action_details = None
+                    db.session.add(game_state)
+                    db.session.commit()
+                    
+                self.logger.warning(f"Game {game_id} not active")
+                return None, {'success': False, 'error': 'Game not active'}
+                
+            return game_state, None
+            
+        except Exception as e:
+            self.logger.error(f"Error finding game state: {str(e)}", exc_info=True)
+            return None, {'success': False, 'error': f'Internal error finding game state: {str(e)}'}
 
     # Make sure to register the handlers in app.py or wherever socketio events are defined:
     # socketio.on_event('roll_dice', game_controller.handle_roll_dice)
