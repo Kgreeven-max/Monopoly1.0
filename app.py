@@ -886,7 +886,7 @@ def setup_scheduled_tasks():
                     # Create an application context
                     with app.app_context():
                         # Find active games instead of using the one from app.config
-                        active_games = GameState.query.filter_by(game_active=True).all()
+                        active_games = GameState.query.filter_by(status='active').all()
                         
                         if not active_games:
                             logging.info("No active games found for economic cycle update")
@@ -942,7 +942,7 @@ def setup_scheduled_tasks():
                     # Create an application context
                     with app.app_context():
                         # Get all active games
-                        active_games = GameState.query.filter_by(game_active=True).all()
+                        active_games = GameState.query.filter_by(status='active').all()
                         
                         if not active_games:
                             logging.info("No active games found for random economic event")

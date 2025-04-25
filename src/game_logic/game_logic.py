@@ -353,6 +353,14 @@ class GameLogic:
                      # The controller will handle tax payment via socket event or direct call
                      tax_details = special_space.get_action_data() # Assumes method exists
                      return {"action": "pay_tax", "space_name": special_space.name, "tax_details": tax_details}
+                elif space_type == "market_fluctuation":
+                     # Delegate to the special space controller
+                     if special_space_controller:
+                         controller_result = special_space_controller.handle_market_fluctuation_space(game_state.id, player.id)
+                         return {"action": "market_fluctuation", "space_name": special_space.name, "result": controller_result}
+                     else:
+                         logger.warning(f"Special space controller not available for {space_type} at position {position}")
+                         return {"action": "unknown_special_space", "space_type": space_type}
                 else:
                      logger.warning(f"Unhandled special space type: {space_type} at position {position}")
                      return {"action": "unknown_special_space", "space_type": space_type}

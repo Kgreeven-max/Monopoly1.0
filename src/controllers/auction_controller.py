@@ -323,13 +323,18 @@ class AuctionController:
                     return True
                     
                 # Get the highest bid
-                highest_bid = auction.get_highest_bid()
+                highest_bid = None
+                if auction.current_bid and auction.current_bidder_id:
+                    highest_bid = {
+                        "bidder_id": auction.current_bidder_id,
+                        "amount": auction.current_bid
+                    }
                 
                 if highest_bid:
                     # Property was sold
                     property_id = auction.property_id
-                    buyer_id = highest_bid.bidder_id
-                    amount = highest_bid.amount
+                    buyer_id = highest_bid["bidder_id"]
+                    amount = highest_bid["amount"]
                     
                     # Update property ownership
                     property_obj = Property.query.get(property_id)
@@ -529,36 +534,27 @@ class AuctionController:
             return False
             
     def _timer_auction_end_callback(self, auction_id):
-        """Callback executed when an auction timer expires."""
-        try:
-            with self.app.app_context():
-                # Re-query the auction to get the latest state
-                auction = Auction.query.get(auction_id)
-                if not auction:
-                    logger.error(f"Auction {auction_id} not found in timer callback")
-                    return
-                    
-                # Check if the auction is still active (it might have been ended manually)
-                if auction.status != 'active':
-                    logger.info(f"Auction {auction_id} is no longer active (status: {auction.status}), ignoring timer callback")
-                    return
-                
-                # Process auction end
-                logger.info(f"Processing timeout-triggered end for auction {auction_id}")
-                result = self._end_auction_logic(auction_id)
-                
-                # Check result and log appropriately
-                if result.get('success'):
-                    winner_id = result.get('winner_id')
-                    if winner_id:
-                        logger.info(f"Auction {auction_id} ended successfully due to timer expiry. Winner: Player {winner_id}")
-                    else:
-                        logger.info(f"Auction {auction_id} ended with no winner due to timer expiry")
-                else:
-                    logger.error(f"Failed to end auction {auction_id} in timer callback: {result.get('error')}")
-                    
-        except Exception as e:
-            logger.error(f"Error in auction timer callback for {auction_id}: {str(e)}", exc_info=True)
+        """
+        Callback function for when an auction timer expires.
+        
+        Args:
+            auction_id (str): The ID of the auction to end.
+        """
+        logger.info(f"Timer expired for auction {auction_id}")
+        
+        # Remove the timer from the dictionary
+        if auction_id in self.active_timers:
+            del self.active_timers[auction_id]
+        
+        # End the auction
+        result = self._end_auction_logic(auction_id)
+        
+        if isinstance(result, dict) and not result.get("success", False):
+            logger.error(f"Failed to end auction {auction_id} after timer expiry: {result.get('error')}")
+        elif not result:
+            logger.error(f"Failed to end auction {auction_id} after timer expiry")
+        else:
+            logger.info(f"Successfully ended auction {auction_id} after timer expiry")
 
     def _check_active_auctions(self):
         """Periodically check all active auctions to ensure timers are working correctly."""
@@ -1114,8 +1110,10 @@ class AuctionController:
         # End the auction
         result = self._end_auction_logic(auction_id)
         
-        if not result["success"]:
+        if isinstance(result, dict) and not result.get("success", False):
             logger.error(f"Failed to end auction {auction_id} after timer expiry: {result.get('error')}")
+        elif not result:
+            logger.error(f"Failed to end auction {auction_id} after timer expiry")
         else:
             logger.info(f"Successfully ended auction {auction_id} after timer expiry")
 
