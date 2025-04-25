@@ -878,15 +878,15 @@ class BotController:
                 # Add current_lap attribute to loans, CDs, and HELOCs if missing
                 current_lap = game_state.current_lap if hasattr(game_state, 'current_lap') else 0
                 for loan in loans:
-                    if not hasattr(loan, 'current_lap'):
+                    if not 'current_lap' in loan:
                         loan['current_lap'] = current_lap
                 
                 for cd in cds:
-                    if not hasattr(cd, 'current_lap'):
+                    if not 'current_lap' in cd:
                         cd['current_lap'] = current_lap
                 
                 for heloc in helocs:
-                    if not hasattr(heloc, 'current_lap'):
+                    if not 'current_lap' in heloc:
                         heloc['current_lap'] = current_lap
                 
                 self.logger.info(f"Bot {player_id} financial status: ${player.money} cash, {len(loans)} loans, {len(cds)} CDs, {len(helocs)} HELOCs")

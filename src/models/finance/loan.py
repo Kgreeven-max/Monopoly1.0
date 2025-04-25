@@ -61,14 +61,32 @@ class Loan(db.Model):
     def calculate_remaining_laps(self, current_lap: int):
         """Calculate remaining laps until loan/CD completion"""
         if current_lap is None:
-            raise ValueError("current_lap must be provided")
+            # If current_lap is not provided, use the same approach as calculate_current_value
+            try:
+                # Import locally to avoid circular import
+                from src.models import db
+                # Query directly using SQL to avoid the circular import
+                result = db.session.execute("SELECT current_lap FROM game_state LIMIT 1").fetchone()
+                current_lap = result[0] if result else self.start_lap
+            except Exception as e:
+                logger.warning(f"Failed to get current_lap from game state: {e}")
+                current_lap = self.start_lap  # Default to start lap if we can't determine current lap
         
         return max(0, self.start_lap + self.length_laps - current_lap)
     
     def calculate_current_value(self, current_lap: int):
         """Calculate current value of loan/CD with interest"""
         if current_lap is None:
-            raise ValueError("current_lap must be provided")
+            # If current_lap is not provided, use a safer approach without importing GameState
+            try:
+                # Import locally to avoid circular import
+                from src.models import db
+                # Query directly using SQL to avoid the circular import
+                result = db.session.execute("SELECT current_lap FROM game_state LIMIT 1").fetchone()
+                current_lap = result[0] if result else self.start_lap
+            except Exception as e:
+                logger.warning(f"Failed to get current_lap from game state: {e}")
+                current_lap = self.start_lap  # Default to start lap if we can't determine current lap
         
         # Calculate laps that have passed
         laps_passed = max(0, current_lap - self.start_lap)
@@ -295,6 +313,10 @@ class Loan(db.Model):
     @classmethod
     def create_loan(cls, player_id, amount, interest_rate, length_laps, current_lap, loan_type="loan", property_id=None, game_id=None):
         """Create a new loan, CD, or HELOC"""
+        # Ensure length_laps is at least 1 to avoid 0-term loans
+        if length_laps <= 0:
+            length_laps = 3 if loan_type == "cd" else 1
+            
         loan = cls(
             player_id=player_id,
             amount=amount,

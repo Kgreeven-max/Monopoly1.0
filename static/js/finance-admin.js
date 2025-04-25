@@ -1,5 +1,19 @@
 // Finance Tab Functions
 
+// Throttle variables to prevent too many refreshes
+let lastRefreshTime = 0;
+const REFRESH_THROTTLE_MS = 5000; // 5 seconds between refreshes
+
+function throttledRefresh(refreshFunction) {
+    const now = Date.now();
+    if (now - lastRefreshTime >= REFRESH_THROTTLE_MS) {
+        lastRefreshTime = now;
+        refreshFunction();
+    } else {
+        console.log('Refresh throttled, too frequent calls');
+    }
+}
+
 // Function to initialize the finance tab
 function initializeFinanceTab() {
     console.log('Initializing finance tab...');
@@ -309,7 +323,7 @@ function refreshActiveCDs() {
                 
                 cds.forEach(cd => {
                     // Calculate display values with fallbacks
-                    const termLength = cd.length_laps || cd.term || 0;
+                    const termLength = cd.length_laps || cd.term || 3; // Default to 3 laps if both are 0/null
                     const maturityLap = cd.maturity_lap || (cd.start_lap + termLength);
                     
                     console.log(`CD ${cd.id}: length_laps=${termLength}, maturity_lap=${maturityLap}`);
@@ -714,12 +728,14 @@ function formatDate(isoString) {
     }
 }
 
-// Add a function to refresh all financial panels independently
+// Update the refreshAllFinancialPanels function to use throttling
 function refreshAllFinancialPanels() {
-    console.log('Refreshing all financial panels...');
-    refreshFinancialOverview();
-    refreshLoans();
-    refreshTransactions();
+    throttledRefresh(() => {
+        refreshFinancialOverview();
+        refreshLoans();
+        refreshTransactions();
+        loadEconomicState();
+    });
 }
 
 // Update document.ready to use the new function
