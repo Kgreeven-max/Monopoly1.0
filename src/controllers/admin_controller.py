@@ -2796,7 +2796,7 @@ class AdminController:
                     net_worth += prop.price # Use base price for simplicity
                 
                 # Calculate loan totals
-                loans_total = sum(loan.amount for loan in loans if not loan.is_paid)
+                loans_total = sum(loan.amount for loan in loans if loan.is_active)
                 
                 return {
                     "success": True,
@@ -2808,7 +2808,7 @@ class AdminController:
                         "credit_score": player.credit_score,
                         "properties_count": len(player.properties),
                         "properties_value": sum(prop.price for prop in player.properties),
-                        "active_loans": len([loan for loan in loans if not loan.is_paid]),
+                        "active_loans": len([loan for loan in loans if loan.is_active]),
                         "loans_total": loans_total
                     }
                 }
@@ -2827,7 +2827,7 @@ class AdminController:
                         net_worth += prop.price # Use base price for simplicity
                     
                     # Calculate loan totals
-                    loans_total = sum(loan.amount for loan in loans if not loan.is_paid)
+                    loans_total = sum(loan.amount for loan in loans if loan.is_active)
                     
                     player_data.append({
                         "id": player.id,
@@ -2837,17 +2837,21 @@ class AdminController:
                         "credit_score": player.credit_score,
                         "properties_count": len(player.properties),
                         "properties_value": sum(prop.price for prop in player.properties),
-                        "active_loans": len([loan for loan in loans if not loan.is_paid]),
+                        "active_loans": len([loan for loan in loans if loan.is_active]),
                         "loans_total": loans_total
                     })
+                
+                total_money = sum(p["money"] for p in player_data) if player_data else 0
+                total_net_worth = sum(p["net_worth"] for p in player_data) if player_data else 0
+                total_loans = sum(p["loans_total"] for p in player_data) if player_data else 0
                 
                 return {
                     "success": True,
                     "players": player_data,
                     "total_players": len(player_data),
-                    "total_money": sum(p["money"] for p in player_data),
-                    "total_net_worth": sum(p["net_worth"] for p in player_data),
-                    "total_loans": sum(p["loans_total"] for p in player_data)
+                    "total_money": total_money,
+                    "total_net_worth": total_net_worth,
+                    "total_loans": total_loans
                 }
                 
         except Exception as e:

@@ -53,15 +53,17 @@ function refreshFinancialOverview() {
                 let ratesHtml = `
                     <table class="table">
                         <tr><th>Base Interest Rate:</th><td>${(rates.base_rate * 100).toFixed(2)}%</td></tr>
-                        <tr><th>Loan Rate:</th><td>${(rates.loan_rate * 100).toFixed(2)}%</td></tr>
-                        <tr><th>Savings Rate:</th><td>${(rates.savings_rate * 100).toFixed(2)}%</td></tr>
-                        <tr><th>Mortgage Rate:</th><td>${(rates.mortgage_rate * 100).toFixed(2)}%</td></tr>
+                        <tr><th>Loan Rate:</th><td>${((rates.rates?.loan?.standard || 0) * 100).toFixed(2)}%</td></tr>
+                        <tr><th>Savings Rate:</th><td>${((rates.rates?.cd?.medium_term || 0) * 100).toFixed(2)}%</td></tr>
+                        <tr><th>Mortgage Rate:</th><td>${((rates.rates?.heloc || 0) * 100).toFixed(2)}%</td></tr>
                     </table>
                 `;
                 ratesElement.innerHTML = ratesHtml;
             }
         } else {
             console.error('Failed to refresh financial overview:', data.error);
+            // Provide fallback content when there's an error
+            provideFallbackFinancialData();
         }
     })
     .catch(error => {
@@ -70,6 +72,35 @@ function refreshFinancialOverview() {
         // Provide fallback content
         provideFallbackFinancialData();
     });
+}
+
+// Function to provide fallback financial data when API fails
+function provideFallbackFinancialData() {
+    // Update financial stats with fallback content
+    const statsElement = document.getElementById('finance-stats');
+    if (statsElement) {
+        statsElement.innerHTML = `
+            <div class="alert alert-warning">
+                <p>Financial data unavailable. Unable to connect to financial system.</p>
+                <button class="btn btn-sm btn-primary mt-2" onclick="refreshFinancialOverview()">
+                    <i class="bi bi-arrow-repeat"></i> Try Again
+                </button>
+            </div>
+        `;
+    }
+    
+    // Update interest rates with fallback content
+    const ratesElement = document.getElementById('interest-rates');
+    if (ratesElement) {
+        ratesElement.innerHTML = `
+            <div class="alert alert-warning">
+                <p>Interest rate data unavailable. Unable to connect to financial system.</p>
+                <button class="btn btn-sm btn-primary mt-2" onclick="refreshFinancialOverview()">
+                    <i class="bi bi-arrow-repeat"></i> Try Again
+                </button>
+            </div>
+        `;
+    }
 }
 
 // Function to refresh active loans
@@ -183,6 +214,7 @@ function refreshTransactions() {
         return response.json();
     })
     .then(data => {
+        console.log('Transactions data received:', data);
         if (data.success) {
             // Update transactions table
             const transactionsElement = document.getElementById('transactions-table');
@@ -302,19 +334,6 @@ function loadEconomicState() {
             economicElement.innerHTML = '<p class="text-center">Error loading economic data.</p>';
         }
     });
-}
-
-// Helper function to provide fallback financial data
-function provideFallbackFinancialData() {
-    const statsElement = document.getElementById('finance-stats');
-    if (statsElement) {
-        statsElement.innerHTML = '<p class="text-center">Financial data unavailable.</p>';
-    }
-    
-    const ratesElement = document.getElementById('interest-rates');
-    if (ratesElement) {
-        ratesElement.innerHTML = '<p class="text-center">Interest rate data unavailable.</p>';
-    }
 }
 
 // Utility functions for loan management

@@ -600,7 +600,7 @@ def get_financial_overview():
 
         # Count active loans
         active_loans = Loan.query.filter_by(is_active=True).count()
-        loan_total = db.session.query(func.sum(Loan.amount)).filter_by(is_active=True).scalar() or 0
+        loan_total = db.session.query(func.sum(Loan.outstanding_balance)).filter_by(is_active=True).scalar() or 0
 
         # Calculate bank reserves (if banker has balance property)
         banker = current_app.config.get('banker')
