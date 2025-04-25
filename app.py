@@ -84,6 +84,7 @@ from src.migrations.add_game_id_to_auction import run_migration as run_add_game_
 from src.migrations.add_game_id_to_loan import run_migration as run_add_game_id_to_loan_migration
 from src.migrations.add_fields_to_cd import run_migration as run_add_fields_to_cd_migration
 from src.migrations.add_history_to_loan import run_migration as run_add_history_to_loan_migration
+from src.migrations.add_times_passed_go import run_migration as run_add_times_passed_go_migration
 from src.controllers.trade_controller import TradeController # Import TradeController
 from src.routes.trade_routes import trade_routes # Import trade routes
 
@@ -239,6 +240,16 @@ with app.app_context(): # Use app context to access db/config safely
             logging.warning('Failed to run add_history_to_loan migration.')
     except Exception as e:
         logging.error(f'Error running add_history_to_loan migration: {str(e)}', exc_info=True)
+    
+    # Run migration to add times_passed_go column to players table
+    try:
+        times_passed_go_migration_result = run_add_times_passed_go_migration()
+        if times_passed_go_migration_result:
+            logging.info('Successfully ran add_times_passed_go migration.')
+        else:
+            logging.warning('Failed to run add_times_passed_go migration.')
+    except Exception as e:
+        logging.error(f'Error running add_times_passed_go migration: {str(e)}', exc_info=True)
     
     # Ensure GameState instance exists and has a game_id
     # Use a direct SQL query instead of ORM to avoid issues with missing columns

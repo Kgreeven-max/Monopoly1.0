@@ -307,145 +307,101 @@ class AuctionController:
             return {"success": False, "error": "Database error processing pass"}
 
     def _end_auction_logic(self, auction_id):
-        """
-        Internal method to end an auction, transferring property to winner and processing payment.
-        
-        Args:
-            auction_id (str): The ID of the auction to end.
-            
-        Returns:
-            dict: A dictionary with the results of ending the auction.
-        """
-        logger.info(f"Ending auction {auction_id}")
-        
+        """Internal logic for ending an auction"""
         try:
-            # Get the auction
-            auction = Auction.query.get(auction_id)
-            if not auction:
-                logger.error(f"Auction {auction_id} not found")
-                return {"success": False, "error": "Auction not found"}
-            
-            # Get the game state
-            game_state = GameState.query.filter_by(game_id=auction.game_id).first()
-            if not game_state:
-                logger.error(f"Game {auction.game_id} not found")
-                return {"success": False, "error": "Game not found"}
-            
-            # Get the property
-            property_obj = Property.query.get(auction.property_id)
-            if not property_obj:
-                logger.error(f"Property {auction.property_id} not found")
-                return {"success": False, "error": "Property not found"}
-            
-            result = {
-                "success": True,
-                "auction_id": auction_id,
-                "property_id": auction.property_id,
-                "property_name": property_obj.name,
-                "status": "completed"
-            }
-            
-            # Check if there's a winner
-            if auction.current_winner_id:
-                winner = Player.query.get(auction.current_winner_id)
-                if not winner:
-                    logger.error(f"Winner {auction.current_winner_id} not found")
-                    auction.status = "failed"
-                    db.session.commit()
-                    return {"success": False, "error": "Winner not found", "auction_status": "failed"}
+            # Get the Flask app from the config
+            app = self.app_config.get('app')
+            if not app:
+                self.logger.error("Flask app not found in app_config")
+                return False
                 
-                # Check if winner has enough money
-                if winner.balance < auction.current_bid:
-                    logger.error(f"Winner {auction.current_winner_id} doesn't have enough money")
-                    auction.status = "failed"
-                    db.session.commit()
-                    return {"success": False, "error": "Winner doesn't have enough money", "auction_status": "failed"}
+            # Use the app context for database operations
+            with app.app_context():
+                auction = Auction.query.get(auction_id)
+                if not auction:
+                    self.logger.error(f"Auction {auction_id} not found")
+                    return False
+                    
+                if auction.status != 'active':
+                    self.logger.info(f"Auction {auction_id} is already ended")
+                    return True
+                    
+                # Get the highest bid
+                highest_bid = auction.get_highest_bid()
                 
-                # Transfer property to winner
-                property_obj.owner_id = winner.id
+                if highest_bid:
+                    # Property was sold
+                    property_id = auction.property_id
+                    buyer_id = highest_bid.bidder_id
+                    amount = highest_bid.amount
+                    
+                    # Update property ownership
+                    property_obj = Property.query.get(property_id)
+                    if property_obj:
+                        property_obj.owner_id = buyer_id
+                        property_obj.is_mortgaged = False
+                        
+                        # Update buyer's money
+                        buyer = Player.query.get(buyer_id)
+                        if buyer:
+                            buyer.money -= amount
+                            
+                            # Add to game log
+                            game_state = GameState.query.get(auction.game_id)
+                            if game_state:
+                                log_entry = {
+                                    "type": "auction_ended",
+                                    "property_id": property_id,
+                                    "property_name": property_obj.name,
+                                    "buyer_id": buyer_id,
+                                    "buyer_name": buyer.username,
+                                    "amount": amount,
+                                    "timestamp": datetime.now().isoformat()
+                                }
+                                
+                                current_log = json.loads(game_state.game_log) if game_state.game_log else []
+                                current_log.append(log_entry)
+                                game_state.game_log = json.dumps(current_log)
+                    
+                    # Update auction status
+                    auction.status = 'completed'
+                    auction.current_bidder_id = buyer_id  # Use current_bidder_id instead of winner_id
+                    auction.final_price = amount
+                    
+                    # Emit auction ended event
+                    if self.socketio:
+                        self.socketio.emit('auction_ended', {
+                            'auction_id': auction_id,
+                            'property_id': property_id,
+                            'property_name': property_obj.name if property_obj else "Unknown",
+                            'winner_id': buyer_id,
+                            'winner_name': buyer.username if buyer else "Unknown",
+                            'amount': amount
+                        }, room=auction.game_id)
+                else:
+                    # No bids - property remains unowned
+                    auction.status = 'completed'
+                    auction.current_bidder_id = None  # Use current_bidder_id instead of winner_id
+                    auction.final_price = 0
+                    
+                    # Emit auction ended event
+                    if self.socketio:
+                        self.socketio.emit('auction_ended', {
+                            'auction_id': auction_id,
+                            'property_id': auction.property_id,
+                            'property_name': "Unknown",
+                            'winner_id': None,
+                            'winner_name': None,
+                            'amount': 0
+                        }, room=auction.game_id)
                 
-                # Process payment
-                winner.balance -= auction.current_bid
+                # Commit changes
+                db.session.commit()
+                return True
                 
-                # Update auction status
-                auction.status = "completed"
-                auction.end_time = datetime.utcnow()
-                
-                # Add to game log
-                log_entry = {
-                    "type": "auction_completed",
-                    "auction_id": auction_id,
-                    "property_id": auction.property_id,
-                    "property_name": property_obj.name,
-                    "winner_id": winner.id,
-                    "winner_name": winner.name,
-                    "final_bid": auction.current_bid,
-                    "timestamp": datetime.utcnow().isoformat()
-                }
-                
-                result.update({
-                    "winner_id": winner.id,
-                    "winner_name": winner.name,
-                    "final_bid": auction.current_bid
-                })
-            else:
-                # No bids were placed
-                auction.status = "no_bids"
-                auction.end_time = datetime.utcnow()
-                
-                # Add to game log
-                log_entry = {
-                    "type": "auction_no_bids",
-                    "auction_id": auction_id,
-                    "property_id": auction.property_id,
-                    "property_name": property_obj.name,
-                    "timestamp": datetime.utcnow().isoformat()
-                }
-                
-                result["status"] = "no_bids"
-            
-            # Update game log
-            if game_state.game_log:
-                try:
-                    current_log = json.loads(game_state.game_log)
-                except json.JSONDecodeError:
-                    logger.warning(f"Could not parse game log for game {auction.game_id}, creating new log")
-                    current_log = []
-            else:
-                current_log = []
-                
-            current_log.append(log_entry)
-            game_state.game_log = json.dumps(current_log)
-            
-            # Reset expected actions
-            if game_state.expected_action and "auction_id" in game_state.expected_action:
-                expected_action = json.loads(game_state.expected_action)
-                if expected_action.get("auction_id") == auction_id:
-                    game_state.expected_action = None
-            
-            db.session.commit()
-            
-            # Emit an event to notify clients
-            self.socketio.emit('auction_ended', result, room=auction.game_id)
-            
-            # Check if this auction is part of a sequential auction and process the next one
-            try:
-                if game_state and game_state.auction_data:
-                    auction_data = json.loads(game_state.auction_data)
-                    if (auction_data.get("status") == "active" and 
-                        auction_data.get("current_auction_id") == auction_id):
-                        # This is part of a sequential auction, process the next one
-                        logger.info(f"Auction {auction_id} was part of a sequential auction. Processing next auction.")
-                        self._process_next_sequential_auction(auction.game_id)
-            except Exception as e:
-                logger.error(f"Error checking sequential auction status: {str(e)}", exc_info=True)
-                # Don't fail the whole method if this part errors
-            
-            return result
-            
         except Exception as e:
-            logger.error(f"Error ending auction: {str(e)}", exc_info=True)
-            return {"success": False, "error": str(e)}
+            self.logger.error(f"Error ending auction: {str(e)}", exc_info=True)
+            return False
 
     # --- Timer Management --- 
 

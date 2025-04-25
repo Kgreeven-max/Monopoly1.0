@@ -86,364 +86,117 @@ class EconomicCycleController:
         logger.info("EconomicCycleController initialized")
     
     def process_economic_cycle(self, game_id):
-        """
-        Process the economic cycle for a given game.
-        
-        Args:
-            game_id: ID of the game to process
-            
-        Returns:
-            Dict with success status and economic state
-        """
-        self.logger.info(f"Processing economic cycle for game {game_id}")
-        
+        """Process economic cycle changes for a game"""
         try:
-            # Check if we need to create an app context
-            if _app_ctx_stack.top is None:
-                # No application context exists, create one
-                if self.app is None:
-                    self.logger.error("No Flask app available and no application context")
-                    return {"success": False, "error": "No Flask application context available"}
+            # Get the Flask app from the instance
+            app = self.app
+            if not app:
+                self.logger.error("Flask app not found")
+                return {'success': False, 'error': 'Flask app not found'}
                 
-                with self.app.app_context():
-                    return self._process_economic_cycle_internal(game_id)
-            else:
-                # Application context already exists
-                return self._process_economic_cycle_internal(game_id)
-            
-        except Exception as e:
-            self.logger.error(f"Error processing economic cycle: {str(e)}", exc_info=True)
-            # Try rollback in case transaction was started
-            try:
-                db.session.rollback()
-            except:
-                pass
-            return {"success": False, "error": str(e)}
-        
-    def _process_economic_cycle_internal(self, game_id):
-        """Internal method to process economic cycle with application context"""
-        # Get game state
-        game_state = GameState.query.filter_by(game_id=game_id).first()
-        if not game_state:
-            return {"success": False, "error": "Game state not found"}
-            
-        # Get the current economic state
-        current_state = game_state.inflation_state or "stable"
-        
-        # Determine the next economic state
-        next_state = self._determine_next_economic_state(current_state)
-        
-        # Update inflation based on the economic state
-        current_inflation = game_state.inflation_rate or 0.0
-        inflation_change = ECONOMIC_STATES[next_state]["inflation_modifier"]
-        new_inflation = max(min(current_inflation + inflation_change, 0.15), -0.05)  # Cap between -5% and 15%
-        
-        # Calculate interest rates for different financial instruments
-        base_loan_rate = 0.05  # 5% base
-        base_cd_rate = 0.03    # 3% base
-        base_heloc_rate = 0.06 # 6% base
-        
-        interest_rates = {
-            "loan": base_loan_rate * ECONOMIC_STATES[next_state]["loan_interest_modifier"],
-            "cd": base_cd_rate * ECONOMIC_STATES[next_state]["cd_interest_modifier"],
-            "heloc": base_heloc_rate * ECONOMIC_STATES[next_state]["heloc_interest_modifier"]
-        }
-        
-        # Apply economic changes to properties if configured
-        try:
-            property_values_follow_economy = current_app.config.get("property_values_follow_economy", True)
-        except RuntimeError:
-            # In case current_app is not available in this context
-            logger.warning("Could not access Flask current_app.config, defaulting property_values_follow_economy to True")
-            property_values_follow_economy = True
-            
-        if property_values_follow_economy:
-            self._update_property_values(game_id, ECONOMIC_STATES[next_state]["property_value_modifier"])
-        
-        # Update game state with new economic values
-        game_state.inflation_state = next_state
-        game_state.inflation_rate = new_inflation
-        game_state.last_economic_update = datetime.utcnow()
-        
-        # Store interest rates
-        if hasattr(game_state, 'interest_rates') and game_state.interest_rates:
-            try:
-                current_rates = json.loads(game_state.interest_rates)
-            except json.JSONDecodeError:
-                current_rates = {}
-        else:
-            # Initialize interest_rates if it doesn't exist
-            current_rates = {}
-            # Try to add the interest_rates column dynamically if possible
-            try:
-                # Add interest_rates attribute to the GameState instance
-                setattr(game_state, 'interest_rates', json.dumps({}))
-                logger.info("Added interest_rates attribute to GameState")
-            except Exception as e:
-                logger.warning(f"Could not add interest_rates attribute to GameState: {str(e)}")
-            
-        current_rates.update(interest_rates)
-        
-        # Only try to update the interest_rates if the attribute exists
-        if hasattr(game_state, 'interest_rates'):
-            game_state.interest_rates = json.dumps(current_rates)
-        
-        # Add to game log
-        log_entry = {
-            "type": "economic_cycle_update",
-            "previous_state": current_state,
-            "new_state": next_state,
-            "inflation_rate": new_inflation,
-            "interest_rates": interest_rates,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        
-        if game_state.game_log:
-            try:
-                current_log = json.loads(game_state.game_log)
-            except json.JSONDecodeError:
-                current_log = []
-            
-        current_log.append(log_entry)
-        game_state.game_log = json.dumps(current_log)
-        
-        # Calculate new bank multiplier for money lending
-        bank_multiplier = ECONOMIC_STATES[next_state]["bank_money_multiplier"]
-        
-        # Process economic effects on active loans and CDs
-        self._process_loan_interest_changes(game_id, interest_rates["loan"])
-        self._process_cd_interest_changes(game_id, interest_rates["cd"])
-        
-        # Commit changes to database
-        db.session.commit()
-        
-        # Emit an event to notify clients
-        economic_update = {
-            "game_id": game_id,
-            "economic_state": next_state,
-            "economic_description": ECONOMIC_STATES[next_state]["description"],
-            "inflation_rate": new_inflation,
-            "interest_rates": interest_rates,
-            "color": ECONOMIC_STATES[next_state]["color"],
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        self.socketio.emit('economic_update', economic_update, room=game_id)
-        
-        # Trigger bot reactions to the economic cycle change
-        try:
-            # Get bot controller from app config
-            bot_controller = current_app.config.get('bot_controller')
-            
-            if bot_controller and current_state != next_state:  # Only trigger when state actually changes
-                logger.info(f"Triggering bot reactions to economic cycle change: {current_state} -> {next_state}")
+            # Use the app context for database operations
+            with app.app_context():
+                game_state = GameState.query.filter_by(game_id=game_id).first()
+                if not game_state:
+                    self.logger.error(f"Game state not found for game {game_id}")
+                    return {'success': False, 'error': 'Game state not found'}
                 
-                # Prepare event data for bots
-                event_data = {
-                    "previous_state": current_state,
-                    "new_state": next_state,
-                    "inflation_rate": new_inflation,
-                    "interest_rates": interest_rates
+                # Get current economic state
+                current_state = game_state.economic_state or 'stable'
+                current_cycle_position = game_state.economic_cycle_position or 0
+                
+                # Get cycle period from game settings (defaults to 5 if not set)
+                cycle_period = game_state.economic_cycle_period or 5
+                
+                # Calculate average number of times players have passed GO
+                active_players = Player.query.filter_by(game_id=game_id, is_active=True).all()
+                if not active_players:
+                    return {'success': False, 'error': 'No active players found'}
+                
+                total_go_passes = sum(player.times_passed_go for player in active_players)
+                avg_go_passes = total_go_passes / len(active_players)
+                
+                # Calculate new cycle position based on average GO passes
+                # One full cycle should take exactly cycle_period average passes of GO
+                new_cycle_position = (avg_go_passes % cycle_period) / cycle_period
+                
+                # Only update if position has changed significantly (avoid floating point issues)
+                if abs(new_cycle_position - current_cycle_position) < 0.01:
+                    return {
+                        'success': True,
+                        'previous_state': current_state,
+                        'new_state': current_state,
+                        'cycle_position': current_cycle_position,
+                        'avg_go_passes': avg_go_passes
+                    }
+                
+                # Determine economic state based on cycle position
+                if new_cycle_position < 0.25:
+                    new_state = 'recovery'
+                elif new_cycle_position < 0.5:
+                    new_state = 'boom'
+                elif new_cycle_position < 0.75:
+                    new_state = 'stable'
+                else:
+                    new_state = 'recession'
+                
+                # Only update if state has changed
+                if new_state != current_state:
+                    self.logger.info(f"Economic state changing from {current_state} to {new_state} (avg GO passes: {avg_go_passes:.1f})")
+                    
+                    # Update game state
+                    game_state.economic_state = new_state
+                    game_state.economic_cycle_position = new_cycle_position
+                    
+                    # Update inflation and interest rates based on new state
+                    if new_state == 'boom':
+                        inflation_rate = 0.03
+                        base_interest_rate = 0.02
+                    elif new_state == 'stable':
+                        inflation_rate = 0.02
+                        base_interest_rate = 0.01
+                    elif new_state == 'recession':
+                        inflation_rate = 0.01
+                        base_interest_rate = 0.04
+                    else:  # recovery
+                        inflation_rate = 0.02
+                        base_interest_rate = 0.03
+                    
+                    game_state.inflation_rate = inflation_rate
+                    game_state.base_interest_rate = base_interest_rate
+                    
+                    # Update property values based on economic state
+                    if new_state == 'boom':
+                        multiplier = 1.15  # 15% increase
+                    elif new_state == 'stable':
+                        multiplier = 1.00  # No change
+                    elif new_state == 'recession':
+                        multiplier = 0.85  # 15% decrease
+                    else:  # recovery
+                        multiplier = 1.05  # 5% increase
+                    
+                    # Update all property values
+                    properties = Property.query.filter_by(game_id=game_id).all()
+                    for property in properties:
+                        property.current_price = int(property.base_price * multiplier)
+                        property.current_rent = int(property.base_rent * multiplier)
+                    
+                    # Commit changes
+                    db.session.commit()
+                
+                return {
+                    'success': True,
+                    'previous_state': current_state,
+                    'new_state': new_state,
+                    'cycle_position': new_cycle_position,
+                    'avg_go_passes': avg_go_passes,
+                    'inflation_rate': inflation_rate if new_state != current_state else game_state.inflation_rate,
+                    'base_interest_rate': base_interest_rate if new_state != current_state else game_state.base_interest_rate
                 }
                 
-                # Call bot controller to handle bot reactions
-                bot_reaction_result = bot_controller.handle_economic_event(game_id, "economic_cycle_change", event_data)
-                
-                if bot_reaction_result.get('success'):
-                    logger.info(f"Bots successfully reacted to economic cycle change: {len(bot_reaction_result.get('bot_responses', {}))} bot responses")
-                else:
-                    logger.warning(f"Error in bot reactions to economic cycle change: {bot_reaction_result.get('error', 'Unknown error')}")
-            elif not bot_controller:
-                logger.warning("Bot controller not found in app config, bot reactions to economic cycle change not triggered")
         except Exception as e:
-            logger.error(f"Error triggering bot reactions to economic cycle change: {str(e)}", exc_info=True)
-            # Continue with the main event even if bot reactions fail
-        
-        return {
-            "success": True,
-            "previous_state": current_state,
-            "new_state": next_state,
-            "inflation_rate": new_inflation,
-            "interest_rates": interest_rates
-        }
-    
-    def _determine_next_economic_state(self, current_state):
-        """
-        Determine the next economic state based on the current state.
-        
-        Args:
-            current_state (str): The current economic state.
-            
-        Returns:
-            str: The next economic state.
-        """
-        if current_state not in ECONOMIC_STATES:
-            logger.warning(f"Unknown economic state: {current_state}, defaulting to 'stable'")
-            return "stable"
-            
-        possible_next_states = ECONOMIC_STATES[current_state]["next_states"]
-        return random.choice(possible_next_states)
-    
-    def _update_property_values(self, game_id, modifier):
-        """
-        Update property values based on the economic state.
-        
-        Args:
-            game_id (str): The ID of the game.
-            modifier (float): The property value modifier.
-        """
-        try:
-            properties = Property.query.filter_by(game_id=game_id).all()
-            
-            for prop in properties:
-                # Only update non-railroad, non-utility properties
-                if prop.property_type not in ["railroad", "utility"]:
-                    # Update based price (original price) by the modifier
-                    if not hasattr(prop, 'base_price') or prop.base_price is None:
-                        prop.base_price = prop.price  # Store the original price if not already stored
-                    
-                    # Calculate the new price
-                    prop.price = int(prop.base_price * modifier)
-                    
-                    # Update rent values based on the new price
-                    if prop.rent_values:
-                        try:
-                            rent_values = json.loads(prop.rent_values)
-                            base_rent_values = json.loads(prop.base_rent_values) if hasattr(prop, 'base_rent_values') and prop.base_rent_values else None
-                            
-                            if not base_rent_values:
-                                prop.base_rent_values = prop.rent_values  # Store original rent values
-                                base_rent_values = rent_values
-                            
-                            # Update each rent value
-                            updated_rent = {}
-                            for key, value in base_rent_values.items():
-                                updated_rent[key] = int(value * modifier)
-                            
-                            prop.rent_values = json.dumps(updated_rent)
-                        except json.JSONDecodeError:
-                            logger.warning(f"Could not parse rent values for property {prop.id}")
-            
-            db.session.commit()
-            logger.info(f"Updated property values in game {game_id} with modifier {modifier}")
-            
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error updating property values: {str(e)}", exc_info=True)
-    
-    def _process_loan_interest_changes(self, game_id, new_rate):
-        """
-        Process interest changes for active loans.
-        
-        Args:
-            game_id (str): The ID of the game.
-            new_rate (float): The new base interest rate.
-        """
-        try:
-            # Get all active loans for the game
-            # Using direct filter instead of filter_by since game_id might not exist in all loans yet
-            loans = Loan.query.filter(Loan.is_active == True).all()
-            
-            # Process only loans that belong to this game (if available)
-            processed_loans = []
-            for loan in loans:
-                # Skip loans for other games if game_id is set
-                if loan.game_id and loan.game_id != game_id:
-                    continue
-                    
-                processed_loans.append(loan)
-                
-                # Only update variable rate loans (opposite of fixed rate)
-                if loan.is_variable_rate():
-                    old_rate = loan.interest_rate
-                    # Calculate new rate based on base rate and rate premium
-                    loan.interest_rate = new_rate + loan.rate_premium
-                    
-                    # Add to loan history using the method we created
-                    loan.add_history_event("interest_rate_change", {
-                        "old_rate": old_rate,
-                        "new_rate": loan.interest_rate,
-                        "base_rate": new_rate,
-                        "premium": loan.rate_premium
-                    })
-                    
-                    db.session.add(loan)
-            
-            if processed_loans:
-                db.session.commit()
-                logger.info(f"Updated {len(processed_loans)} loan interest rates in game {game_id} to base rate {new_rate}")
-            
-            return {
-                "success": True,
-                "updated_count": len(processed_loans),
-                "base_rate": new_rate
-            }
-            
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error updating loan interest rates: {str(e)}", exc_info=True)
-            return {
-                "success": False,
-                "error": f"Error updating loan interest rates: {str(e)}"
-            }
-    
-    def _process_cd_interest_changes(self, game_id, new_rate):
-        """
-        Process interest changes for active CDs.
-        
-        Args:
-            game_id (str): The ID of the game.
-            new_rate (float): The new base interest rate.
-        """
-        try:
-            # Handle this consistently with the loan processing approach
-            # Look for CDs which are a loan type
-            cds = Loan.query.filter(
-                Loan.is_active == True,
-                Loan.loan_type == "cd"
-            ).all()
-            
-            processed_cds = []
-            for cd in cds:
-                # Skip CDs for other games if game_id is set
-                if cd.game_id and cd.game_id != game_id:
-                    continue
-                    
-                processed_cds.append(cd)
-                
-                # Only update variable rate CDs (opposite of fixed_rate)
-                if cd.is_variable_rate():
-                    old_rate = cd.interest_rate
-                    
-                    # Apply rate premium
-                    cd.interest_rate = new_rate + cd.rate_premium
-                    
-                    # Add to CD history using our method
-                    cd.add_history_event("interest_rate_change", {
-                        "old_rate": old_rate,
-                        "new_rate": cd.interest_rate,
-                        "base_rate": new_rate,
-                        "premium": cd.rate_premium
-                    })
-                    
-                    db.session.add(cd)
-            
-            if processed_cds:
-                db.session.commit()
-                logger.info(f"Updated {len(processed_cds)} CD interest rates in game {game_id} to base rate {new_rate}")
-            
-            return {
-                "success": True,
-                "updated_count": len(processed_cds),
-                "base_rate": new_rate
-            }
-            
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error updating CD interest rates: {str(e)}", exc_info=True)
-            return {
-                "success": False,
-                "error": f"Error updating CD interest rates: {str(e)}"
-            }
+            self.logger.error(f"Error processing economic cycle: {str(e)}", exc_info=True)
+            return {'success': False, 'error': str(e)}
     
     def get_current_economic_state(self, game_id):
         """
@@ -549,8 +302,6 @@ class EconomicCycleController:
                     current_log = json.loads(game_state.game_log)
                 except json.JSONDecodeError:
                     current_log = []
-            else:
-                current_log = []
             
             current_log.append(log_entry)
             game_state.game_log = json.dumps(current_log)
@@ -684,29 +435,26 @@ class EconomicCycleController:
 
     def handle_market_fluctuation_space(self, game_id, player_id):
         """
-        Handles when a player lands on a market fluctuation space.
-        The effects are determined by the current economic state.
+        Handle when a player lands on a market fluctuation space.
         
         Args:
             game_id (str): The ID of the game.
-            player_id (str): The ID of the player who landed on the space.
+            player_id (int): The ID of the player.
             
         Returns:
-            dict: A dictionary with success status and effects of the market fluctuation.
+            dict: A dictionary with the results of the market fluctuation.
         """
         try:
-            logging.info(f"Player {player_id} landed on market fluctuation space in game {game_id}")
-            
-            # Get the game state and validate it exists
+            # Get the game state
             game_state = GameState.query.get(game_id)
             if not game_state:
-                logging.error(f"Game {game_id} not found")
+                self.logger.error(f"Game {game_id} not found")
                 return {"success": False, "error": "Game not found"}
             
-            # Get the player and validate they exist
+            # Get the player
             player = Player.query.get(player_id)
             if not player:
-                logging.error(f"Player {player_id} not found")
+                self.logger.error(f"Player {player_id} not found")
                 return {"success": False, "error": "Player not found"}
             
             # Get the current economic state
@@ -743,32 +491,25 @@ class EconomicCycleController:
                 "description": state_effects["description"]
             }
             
-            # Process cash effects
+            # Apply cash effects
             if "cash_bonus" in state_effects:
-                # Add bonus to player's balance
-                bonus_amount = state_effects["cash_bonus"]
-                player.balance += bonus_amount
-                result["cash_change"] = bonus_amount
-                result["cash_effect"] = "bonus"
-                
+                player.money += state_effects["cash_bonus"]
+                result["cash_bonus"] = state_effects["cash_bonus"]
             elif "cash_penalty" in state_effects:
-                # Deduct penalty from player's balance (ensure they don't go negative)
-                penalty_amount = min(state_effects["cash_penalty"], player.balance)
-                player.balance -= penalty_amount
-                result["cash_change"] = -penalty_amount
-                result["cash_effect"] = "penalty"
+                player.money -= state_effects["cash_penalty"]
+                result["cash_penalty"] = state_effects["cash_penalty"]
             
-            # Process property value effects
-            owned_properties = Property.query.filter_by(owner_id=player_id, game_id=game_id).all()
+            # Apply property value changes
             property_changes = []
+            owned_properties = Property.query.filter_by(owner_id=player_id, game_id=game_id).all()
             
             for prop in owned_properties:
                 if "property_value_increase" in state_effects:
                     # Increase property value
                     increase_rate = state_effects["property_value_increase"]
-                    old_value = prop.price
+                    old_value = prop.current_price
                     new_value = int(old_value * (1 + increase_rate))
-                    prop.price = new_value
+                    prop.current_price = new_value
                     
                     property_changes.append({
                         "property_id": prop.id,
@@ -781,9 +522,9 @@ class EconomicCycleController:
                 elif "property_value_decrease" in state_effects:
                     # Decrease property value
                     decrease_rate = state_effects["property_value_decrease"]
-                    old_value = prop.price
+                    old_value = prop.current_price
                     new_value = int(old_value * (1 - decrease_rate))
-                    prop.price = new_value
+                    prop.current_price = new_value
                     
                     property_changes.append({
                         "property_id": prop.id,
@@ -806,48 +547,25 @@ class EconomicCycleController:
                 else:
                     result["property_effect"] = "decrease"
             
-            # Add to game log
-            log_entry = {
-                "type": "market_fluctuation",
-                "player_id": player_id,
-                "economic_state": current_state,
-                "effects": result,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-            
-            # Update game log
-            if game_state.game_log:
-                try:
-                    current_log = json.loads(game_state.game_log)
-                except json.JSONDecodeError:
-                    current_log = []
-            
-            current_log.append(log_entry)
-            game_state.game_log = json.dumps(current_log)
-            
             # Commit changes
             db.session.commit()
             
-            # Emit an event to notify clients
-            self.socketio.emit('market_fluctuation', {
-                'game_id': game_id,
-                'player_id': player_id,
-                'player_name': player.username,
-                'economic_state': current_state,
-                'effects': result,
-                'color': ECONOMIC_STATES[current_state]["color"]
-            }, room=game_id)
+            # Emit event
+            if self.socketio:
+                self.socketio.emit('market_fluctuation', {
+                    "player_id": player_id,
+                    "game_id": game_id,
+                    "result": result
+                }, room=game_id)
             
             return {
                 "success": True,
-                "economic_state": current_state,
-                "effects": result,
-                "message": state_effects["description"]
+                "result": result
             }
             
         except Exception as e:
             db.session.rollback()
-            logging.error(f"Error handling market fluctuation space: {str(e)}", exc_info=True)
+            self.logger.error(f"Error handling market fluctuation: {str(e)}", exc_info=True)
             return {"success": False, "error": str(e)}
 
     def trigger_economic_event(self, game_id, admin_key=None, specific_event=None):

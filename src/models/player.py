@@ -26,6 +26,7 @@ class Player(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     credit_score = db.Column(db.Integer, default=700)  # Credit score range: 300-850
+    times_passed_go = db.Column(db.Integer, default=0)  # Track number of times passed GO
     
     # Foreign Key to link Player to a Game
     game_id = db.Column(db.Integer, db.ForeignKey('games.id'), nullable=True)
@@ -70,10 +71,18 @@ class Player(db.Model):
         """Move player to a specific position"""
         old_position = self.position
         self.position = position
+        
+        # Check if passed GO (moved to a lower position number)
+        if position < old_position:
+            self.times_passed_go += 1  # Increment times_passed_go counter
+            passed_go = True
+        else:
+            passed_go = False
+            
         return {
             'old_position': old_position,
             'new_position': position,
-            'passed_go': old_position > position
+            'passed_go': passed_go
         }
     
     def move(self, spaces):
@@ -83,7 +92,11 @@ class Player(db.Model):
         self.position = (self.position + spaces) % board_size
         
         # Check if passed GO
-        passed_go = (old_position + spaces) >= board_size
+        if (old_position + spaces) >= board_size:
+            self.times_passed_go += 1  # Increment times_passed_go counter
+            passed_go = True
+        else:
+            passed_go = False
         
         return {
             'old_position': old_position,
@@ -137,6 +150,7 @@ class Player(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'credit_score': self.credit_score,
+            'times_passed_go': self.times_passed_go,
         }
         if include_properties:
             player_dict['properties'] = [prop.to_dict() for prop in self.properties]

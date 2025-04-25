@@ -362,6 +362,11 @@ class BotController:
                  landing_action.update(details)
              else:
                  self.logger.warning(f"Bot {player.id} has action type '{action_type}' but no valid details")
+                 # Special handling for community chest and chance cards when details are missing
+                 if action_type in ['draw_community_chest_card', 'draw_chance_card']:
+                     self.logger.info(f"Adding default details for {action_type} action")
+                     landing_action["player_id"] = player.id
+                     landing_action["game_id"] = game_state.game_id
              
              # Handle the action with dedicated action handler  
              self._handle_landing_action(player, landing_action, game_state)
@@ -409,9 +414,18 @@ class BotController:
             # Handle property purchase decision
             property_id = landing_action.get('property_id')
             
+            # First verify the player is actually on a property space
+            player_position = player.position
+            if player_position in [0, 2, 4, 7, 10, 17, 20, 22, 30, 33, 36, 38]:
+                self.logger.info(f"Player is on a non-property space at position {player_position}")
+                # Clear the action since we can't buy on non-property spaces
+                game_state.expected_action_type = None
+                game_state.expected_action_details = None
+                db.session.commit()
+                return False
+            
             # If no property_id is provided in the landing action, look up the property at the player's current position
             if not property_id:
-                player_position = player.position
                 # Find the property at the player's current position
                 property_obj = Property.query.filter_by(position=player_position, game_id=game_id).first()
                 if property_obj:
@@ -424,42 +438,30 @@ class BotController:
             if property_id:
                 property_obj = Property.query.get(property_id)
                 if property_obj:
-                    # Extract cost from property_obj
-                    cost = property_obj.price if hasattr(property_obj, 'price') else property_obj.current_price
-                    
-                    # Refresh player position from database to ensure it's current
-                    db.session.refresh(player)
-                    self.logger.info(f"Refreshed player position: {player.position}")
-                    
                     # Verify the property is at the player's position
-                    if property_obj.position != player.position:
-                        self.logger.warning(f"Property {property_id} is at position {property_obj.position} but player is at position {player.position}")
-                        # Attempt to find the correct property at the player's position
-                        correct_property = Property.query.filter_by(position=player.position, game_id=game_id).first()
+                    if property_obj.position != player_position:
+                        self.logger.warning(f"Property {property_id} is at position {property_obj.position} but player is at position {player_position}")
+                        # Try to find the correct property at the player's position
+                        correct_property = Property.query.filter_by(position=player_position, game_id=game_id).first()
                         if correct_property:
-                            self.logger.info(f"Found correct property {correct_property.name} (ID: {correct_property.id}) at player position {player.position}")
                             property_id = correct_property.id
                             property_obj = correct_property
-                            cost = property_obj.price if hasattr(property_obj, 'price') else property_obj.current_price
+                            self.logger.info(f"Found correct property {correct_property.name} (ID: {property_id}) at player position {player_position}")
                         else:
-                            # Check if player position is 0 (Go) or another non-property space
-                            if player.position in [0, 2, 4, 7, 10, 17, 20, 22, 30, 33, 36, 38]:
-                                self.logger.info(f"Player is on a non-property space at position {player.position}")
-                                return False
-                            self.logger.error(f"Cannot find property at player position {player.position}")
+                            # Clear the action since we can't find the correct property
+                            game_state.expected_action_type = None
+                            game_state.expected_action_details = None
+                            db.session.commit()
                             return False
+                    
+                    # Extract cost from property_obj
+                    cost = property_obj.price if hasattr(property_obj, 'price') else property_obj.current_price
                     
                     # Use decision maker to determine whether to buy
                     decision = self._decide_buy_property(player, property_id, cost)
                     if decision:  # The method returns True/False, not a dictionary with a "buy" key
                         # Bot decides to buy the property
                         self.logger.info(f"Bot {player_id} decided to BUY property {property_id}")
-                        
-                        # Double-check that we're purchasing the correct property (at the player's position)
-                        current_property = Property.query.filter_by(position=player.position, game_id=game_id).first()
-                        if current_property and current_property.id != property_id:
-                            self.logger.warning(f"Property mismatch: Selected property ID {property_id} doesn't match property at position {player.position} (ID: {current_property.id}). Correcting.")
-                            property_id = current_property.id
                         
                         # Call game controller to purchase
                         purchase_result = self.game_controller.handle_property_purchase(
@@ -482,11 +484,15 @@ class BotController:
 
         elif action_type == 'draw_chance_card':
             self.logger.info(f"Bot {player_id} drawing Chance card.")
-            self.special_space_controller.process_chance_card(player_id, game_state.id)
+            # Get game_id from landing_action if available, otherwise use from game_state
+            card_game_id = landing_action.get('game_id', game_state.id)
+            self.special_space_controller.process_chance_card(player_id, card_game_id)
 
         elif action_type == 'draw_community_chest_card':
             self.logger.info(f"Bot {player_id} drawing Community Chest card.")
-            self.special_space_controller.process_community_chest_card(player_id, game_state.id)
+            # Get game_id from landing_action if available, otherwise use from game_state
+            card_game_id = landing_action.get('game_id', game_state.id)
+            self.special_space_controller.process_community_chest_card(player_id, card_game_id)
         
         elif action_type == 'free_parking':
             self.logger.info(f"Bot {player_id} landed on Free Parking.")
