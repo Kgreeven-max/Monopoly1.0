@@ -217,6 +217,18 @@ function gameReducer(state, action) {
       };
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
+    case 'CARD_DRAWN':
+      console.log("[GameContext] Card drawn:", action.payload);
+      return {
+        ...state,
+        lastCardDrawn: action.payload,
+        notifications: [
+          { 
+            message: `${state.players.find(p => p.id === action.payload.player_id)?.username || `Player ${action.payload.player_id}`} drew a ${action.payload.cardType || ''} card: ${action.payload.card?.title || action.payload.card?.description || 'Unknown Card'}` 
+          },
+          ...state.notifications.slice(0, 19)
+        ]
+      };
     default:
       return state;
   }
@@ -230,9 +242,44 @@ export const GameProvider = ({ children }) => {
   // Effect for handling game state updates from the server
   useEffect(() => {
     if (socket) {
-      const handleGameStateUpdate = (newState) => {
-        console.log('[GameContext] Received game_state_update:', newState);
-        dispatch({ type: 'SET_INITIAL_STATE', payload: newState });
+      const handleGameStateUpdate = (data) => {
+        console.log('[GameContext] Received game_state_update:', data);
+        
+        // Store previous player positions to detect changes
+        const previousPositions = {};
+        if (gameState.players && gameState.players.length) {
+          gameState.players.forEach(player => {
+            if (player && player.id) {
+              previousPositions[player.id] = player.position;
+            }
+          });
+        }
+        
+        // Update game state first
+        dispatch({ type: 'SET_INITIAL_STATE', payload: data });
+        
+        // Check if player positions changed and dispatch explicit move events
+        if (data.players && data.players.length) {
+          data.players.forEach(player => {
+            if (player && player.id && previousPositions[player.id] !== undefined) {
+              const oldPosition = previousPositions[player.id];
+              const newPosition = player.position;
+              
+              if (oldPosition !== newPosition) {
+                console.log(`[GameContext] Detected player ${player.id} moved from ${oldPosition} to ${newPosition}`);
+                // Dispatch a separate player moved event for animation
+                dispatch({ 
+                  type: 'PLAYER_MOVED', 
+                  payload: { 
+                    player_id: player.id, 
+                    old_position: oldPosition,
+                    new_position: newPosition 
+                  } 
+                });
+              }
+            }
+          });
+        }
       };
 
       const handleGameNotification = (notification) => {
@@ -245,6 +292,30 @@ export const GameProvider = ({ children }) => {
       const handlePlayerMoved = (data) => {
         console.log('[GameContext] Player moved:', data);
         dispatch({ type: 'PLAYER_MOVED', payload: data });
+      };
+      
+      // Card draw events
+      const handleCardDrawn = (data) => {
+        console.log('[GameContext] Card drawn:', data);
+        dispatch({ type: 'CARD_DRAWN', payload: data });
+      };
+      
+      // Community chest card events
+      const handleCommunityChestCardDrawn = (data) => {
+        console.log('[GameContext] Community Chest card drawn:', data);
+        dispatch({ type: 'CARD_DRAWN', payload: {
+          ...data,
+          cardType: 'community_chest'
+        }});
+      };
+      
+      // Chance card events
+      const handleChanceCardDrawn = (data) => {
+        console.log('[GameContext] Chance card drawn:', data);
+        dispatch({ type: 'CARD_DRAWN', payload: {
+          ...data,
+          cardType: 'chance'
+        }});
       };
       
       // Dice roll events
@@ -316,6 +387,9 @@ export const GameProvider = ({ children }) => {
       socket.on('turn_changed', handleTurnChanged);
       socket.on('property_updated', handlePropertyUpdated);
       socket.on('player_updated', handlePlayerUpdated);
+      socket.on('card_drawn', handleCardDrawn);
+      socket.on('community_chest_card_drawn', handleCommunityChestCardDrawn);
+      socket.on('chance_card_drawn', handleChanceCardDrawn);
       
       // Setup wizard events
       socket.on('game_created', handleGameCreated);
@@ -343,6 +417,9 @@ export const GameProvider = ({ children }) => {
         socket.off('turn_changed', handleTurnChanged);
         socket.off('property_updated', handlePropertyUpdated);
         socket.off('player_updated', handlePlayerUpdated);
+        socket.off('card_drawn', handleCardDrawn);
+        socket.off('community_chest_card_drawn', handleCommunityChestCardDrawn);
+        socket.off('chance_card_drawn', handleChanceCardDrawn);
         
         // Remove setup wizard events
         socket.off('game_created', handleGameCreated);

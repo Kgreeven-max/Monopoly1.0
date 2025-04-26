@@ -21,6 +21,7 @@ import AdminDashboard from './AdminDashboard';
 import RemotePlayerPage from './pages/RemotePlayerPage';
 import ConnectPage from './pages/ConnectPage';
 import NotFoundPage from './pages/NotFoundPage';
+import DebugPage from './pages/DebugPage';
 
 // Define a basic theme (optional, customize as needed)
 const theme = createTheme({
@@ -71,9 +72,11 @@ function App() {
               <NotificationProvider>
                 {/* Routes component now directly inside NotificationProvider */}
                 <Routes>
-                  {/* Public Route */}
+                  {/* Public Routes */}
                   <Route path="/" element={<HomePage />} />
                   <Route path="/connect" element={<ConnectPage />} />
+                  <Route path="/board" element={<BoardPage />} />
+                  <Route path="/debug" element={<DebugPage />} />
 
                   {/* Protected routes */}
                   <Route
@@ -97,14 +100,6 @@ function App() {
                     element={
                       <ProtectedRoute roleRequired="admin">
                         <AdminDashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/board"
-                    element={
-                      <ProtectedRoute roleRequired="display">
-                        <BoardPage />
                       </ProtectedRoute>
                     }
                   />
