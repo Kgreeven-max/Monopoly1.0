@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSocket } from './SocketContext'; 
 
 const AuthContext = createContext(null);
@@ -10,9 +10,11 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true); // Loading during initial session check
     const [error, setError] = useState(null);
     const [pendingAuthPlayerId, setPendingAuthPlayerId] = useState(null); // Temp storage for ID before socket auth
+    const [playerInfo, setPlayerInfo] = useState(null);
     
     const { socket, isConnected, connectSocket, disconnectSocket } = useSocket();
     const navigate = useNavigate();
+    const location = useLocation();
     
     // --- Derived State --- 
     const isAuthenticated = !!user;
@@ -74,6 +76,40 @@ export const AuthProvider = ({ children }) => {
             navigate('/board'); // Navigate display to /board
         }
     }, [user, navigate]);
+
+    // Check URL path on initial load to auto-authenticate for display mode
+    useEffect(() => {
+        const initAuth = async () => {
+            // If on board page, auto-authenticate as display
+            if (location.pathname === '/board') {
+                console.log('[AuthContext] Auto-authenticating for display mode');
+                setUser({ 
+                    id: 'display-' + Date.now(),
+                    role: 'display',
+                    username: 'Display'
+                });
+                setLoading(false);
+            } else {
+                // Otherwise check for saved auth
+                const savedUser = localStorage.getItem('user');
+                const savedAdmin = localStorage.getItem('adminKey');
+                const savedPlayer = localStorage.getItem('playerInfo');
+                
+                if (savedUser) {
+                    setUser(JSON.parse(savedUser));
+                }
+                if (savedAdmin) {
+                    setAdminKey(savedAdmin);
+                }
+                if (savedPlayer) {
+                    setPlayerInfo(JSON.parse(savedPlayer));
+                }
+                setLoading(false);
+            }
+        };
+        
+        initAuth();
+    }, [location.pathname]);
 
     // --- Auth Functions --- 
 
@@ -287,7 +323,8 @@ export const AuthProvider = ({ children }) => {
         logout, 
         registerPlayer,
         loginAdmin, 
-        initializeDisplay // Ensure this is included
+        initializeDisplay,
+        playerInfo
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

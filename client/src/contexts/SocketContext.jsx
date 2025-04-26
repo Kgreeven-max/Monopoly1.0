@@ -8,7 +8,7 @@ const SocketContext = createContext();
 export const useSocket = () => useContext(SocketContext);
 
 // Ensure the WebSocket URL is configurable, fallback to default
-const WS_URL = import.meta.env.VITE_WS_URL || 'http://127.0.0.1:5000'; 
+const WS_URL = import.meta.env.VITE_WS_URL || window.location.origin;
 
 // Socket provider component
 export const SocketProvider = ({ children }) => {
@@ -27,7 +27,7 @@ export const SocketProvider = ({ children }) => {
     // Prevent multiple connections or if already connected
     if (socketRef.current?.connected) {
       console.log('[SocketContext] Already connected, skipping connection request');
-      return;
+      return socketRef.current;
     }
     
     // Clear any previous reconnection timeout
@@ -36,23 +36,25 @@ export const SocketProvider = ({ children }) => {
       reconnectTimeoutRef.current = null;
     }
 
-    console.log('[SocketContext] Attempting to connect to websocket server...');
-    
-    // Default connection options
-    const connectionOptions = {
+    // Allow direct override of connection options
+    const finalOptions = {
+      // Default options
       path: '/ws/socket.io', // Path configured in Flask-SocketIO
       transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
       reconnection: true,
       reconnectionAttempts: maxReconnectAttempts,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      timeout: 10000,
-      ...options // Override with any user-provided options
+      timeout: 20000, // Increase timeout
+      // Override with any user-provided options
+      ...options
     };
 
+    console.log(`[SocketContext] Attempting to connect to websocket server at ${WS_URL} with options:`, finalOptions);
+    
     try {
       // Create a new socket connection
-      const newSocket = io(WS_URL, connectionOptions);
+      const newSocket = io(WS_URL, finalOptions);
       socketRef.current = newSocket;
 
       // Setup event handlers

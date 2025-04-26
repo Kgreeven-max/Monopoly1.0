@@ -28,12 +28,19 @@ function gameReducer(state, action) {
   switch (action.type) {
     case 'SET_INITIAL_STATE':
       console.log("[GameContext] Setting initial state:", action.payload);
+      // Make sure we're keeping all data from the payload
       return {
-        ...initialGameState, // Reset to initial structure
-        ...action.payload, // Apply received state
+        ...initialGameState,
+        ...action.payload,
         // Ensure we have both camelCase and snake_case for compatibility
-        currentPlayerId: action.payload.current_player_id || null,
-        currentTurn: action.payload.current_turn || 0,
+        currentPlayerId: action.payload.current_player_id || action.payload.currentPlayerId || null,
+        current_player_id: action.payload.current_player_id || action.payload.currentPlayerId || null,
+        currentTurn: action.payload.current_turn || action.payload.currentTurn || 0,
+        current_turn: action.payload.current_turn || action.payload.currentTurn || 0,
+        // Make sure players array is properly set
+        players: action.payload.players || [],
+        // Make sure properties array is properly set
+        properties: action.payload.properties || [],
         loading: false,
         error: null,
       };

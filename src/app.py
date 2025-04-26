@@ -6,6 +6,9 @@ from src.routes.admin.finance_admin_routes import finance_admin_bp
 from src.routes.admin.economic_admin_routes import economic_admin_bp
 from src.routes.admin.property_admin_routes import property_admin_bp
 from src.routes.admin.bot_admin_routes import bot_admin_bp
+from src.routes.view_routes import view_routes
+from src.routes.api_routes import api_routes
+from src.routes.auth_routes import auth_routes
 
 app.register_blueprint(game_bp, url_prefix='/api/game')
 app.register_blueprint(player_bp, url_prefix='/api/player')
@@ -14,6 +17,9 @@ app.register_blueprint(finance_admin_bp, url_prefix='/api/admin/finance')
 app.register_blueprint(economic_admin_bp, url_prefix='/api/admin/economic')
 app.register_blueprint(property_admin_bp, url_prefix='/api/admin/property')
 app.register_blueprint(bot_admin_bp, url_prefix='/api/admin/bots')
+app.register_blueprint(view_routes)
+app.register_blueprint(api_routes, url_prefix='/api')
+app.register_blueprint(auth_routes, url_prefix='/api/auth')
 
 # Initialize economic cycle manager
 from src.models.economic_cycle_manager import EconomicCycleManager

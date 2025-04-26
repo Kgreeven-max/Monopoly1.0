@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Avatar, Chip, Tooltip, CircularProgress } from '@mui/material';
+import { Box, Typography, Paper, Avatar, Chip, Tooltip, CircularProgress, Grid } from '@mui/material';
 import { useGame } from '../contexts/GameContext';
 import { useSocket } from '../contexts/SocketContext';
+import PlayerList from '../components/PlayerList';
+import { GameLog, gameLogStyle } from '../components/GameLog';
 
 // Define board layout structure (could be moved to a constants file)
 // Simplified: assumes 40 spaces, 11 per side (corners shared)
@@ -119,19 +121,27 @@ const playerTokenStyle = (playerIndex, isCurrentPlayer) => ({
   bottom: `${5 + playerIndex * 15}%`,
   left: '50%',
   transform: 'translateX(-50%)',
-  width: '20px',
-  height: '20px',
+  width: '24px',
+  height: '24px',
   backgroundColor: playerColors[playerIndex % playerColors.length],
   borderRadius: '50%',
-  border: isCurrentPlayer ? '2px solid gold' : '1px solid #333',
-  boxShadow: isCurrentPlayer ? '0 0 8px gold' : '0 1px 3px rgba(0,0,0,0.3)',
-  zIndex: 10 + playerIndex, // Ensure tokens are visible
-  transition: 'all 0.8s cubic-bezier(0.22, 1, 0.36, 1)', // Smooth animation for movement
+  border: isCurrentPlayer ? '3px solid gold' : '2px solid #333',
+  boxShadow: isCurrentPlayer ? '0 0 10px gold' : '0 2px 5px rgba(0,0,0,0.5)',
+  zIndex: 100 + playerIndex, // Higher z-index to ensure tokens are always visible
+  transition: 'all 1.2s cubic-bezier(0.22, 1, 0.36, 1)', // Slower transition for more visible movement
   animation: isCurrentPlayer ? 'pulse 1.5s infinite' : 'none',
-  '@keyframes pulse': {
-    '0%': { boxShadow: '0 0 0 0 rgba(255, 215, 0, 0.7)' },
-    '70%': { boxShadow: '0 0 0 8px rgba(255, 215, 0, 0)' },
-    '100%': { boxShadow: '0 0 0 0 rgba(255, 215, 0, 0)' }
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    top: '-12px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '0',
+    height: '0',
+    borderLeft: '6px solid transparent',
+    borderRight: '6px solid transparent',
+    borderBottom: '8px solid #333',
+    display: isCurrentPlayer ? 'block' : 'none'
   }
 });
 
@@ -177,100 +187,140 @@ const DiceDisplay = ({ diceRoll }) => {
   );
 };
 
-// Component for the player list sidebar
-const PlayerList = ({ players, currentPlayerId }) => {
-  if (!players || players.length === 0) return <Typography>No players</Typography>;
-  
-  return (
-    <Box sx={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      gap: 1,
-      maxHeight: '400px',
-      overflowY: 'auto',
-      p: 1
-    }}>
-      {players.map((player, index) => (
-        <Tooltip key={player.id} title={`Position: ${player.position || 'N/A'}, Money: $${player.money || 0}`}>
-          <Chip
-            avatar={
-              <Avatar 
-                sx={{ 
-                  bgcolor: playerColors[index % playerColors.length],
-                  border: player.id === currentPlayerId ? '2px solid gold' : 'none'
-                }}
-              >
-                {player.username ? player.username.charAt(0).toUpperCase() : '?'}
-              </Avatar>
-            }
-            label={`${player.username || `Player ${player.id}`} ${player.is_bot ? '(Bot)' : ''}`}
-            variant={player.id === currentPlayerId ? "filled" : "outlined"}
-            sx={{ 
-              fontWeight: player.id === currentPlayerId ? 'bold' : 'normal',
-              boxShadow: player.id === currentPlayerId ? '0 0 5px rgba(255,215,0,0.5)' : 'none',
-              transition: 'all 0.3s ease'
-            }}
-          />
-        </Tooltip>
-      ))}
-    </Box>
-  );
-};
-
-// Game activity log component
-const GameLog = ({ notifications }) => {
-  if (!notifications || notifications.length === 0) return null;
-  
-  return (
-    <Box sx={{ 
-      maxHeight: '150px', 
-      overflowY: 'auto',
-      p: 1,
-      border: '1px solid #ddd',
-      borderRadius: 1,
-      mt: 2,
-      fontSize: '0.85rem'
-    }}>
-      {notifications.map((notification, index) => (
-        <Typography key={index} variant="body2" sx={{ mb: 0.5 }}>
-          {notification.message || notification}
-        </Typography>
-      ))}
-    </Box>
-  );
-};
-
 function BoardPage() {
   const { gameState } = useGame();
   const { socket, emit, connectSocket, isConnected } = useSocket();
   const [lastPlayerPositions, setLastPlayerPositions] = useState({});
+  const [boardState, setBoardState] = useState({
+    loading: true,
+    error: null,
+    retryCount: 0,
+    gameData: null  // Store game data directly
+  });
   
-  // Connect socket when component mounts
+  // Connect socket and request game state updates
   useEffect(() => {
     if (!isConnected) {
-      connectSocket();
+      // Force a specific URL for socket connection
+      connectSocket({
+        path: '/ws/socket.io', // Path configured in Flask-SocketIO 
+        transports: ['websocket', 'polling']
+      });
     }
-  }, [isConnected, connectSocket]);
+
+    // Direct API fetch for game state (bypassing socket if needed)
+    const fetchGameState = async () => {
+      try {
+        const response = await fetch('/api/games/1/state');
+        if (response.ok) {
+          const data = await response.json();
+          console.log("[BoardPage] Fetched game state via API:", data);
+          setBoardState(prev => ({
+            ...prev, 
+            loading: false,
+            gameData: data,
+            error: null
+          }));
+        } else {
+          console.error("[BoardPage] API fetch failed, falling back to socket");
+          // Fall back to socket request
+          if (isConnected) {
+            requestGameStateViaSocket();
+          }
+        }
+      } catch (error) {
+        console.error("[BoardPage] API fetch error:", error);
+        // Fall back to socket request
+        if (isConnected) {
+          requestGameStateViaSocket();
+        }
+      }
+    };
+
+    // Socket-based game state request
+    const requestGameStateViaSocket = () => {
+      console.log("[BoardPage] Requesting game state update via socket");
+      emit('request_game_state', { gameId: 1 });
+    };
+
+    // Request game state immediately after connection
+    if (isConnected) {
+      requestGameStateViaSocket();
+      
+      // Also set up socket listener for game state updates
+      const handleGameStateUpdate = (data) => {
+        console.log("[BoardPage] Received game state update via socket:", data);
+        setBoardState(prev => ({
+          ...prev,
+          loading: false,
+          gameData: data,
+          error: null
+        }));
+      };
+
+      socket.on('game_state_update', handleGameStateUpdate);
+      
+      // Clean up
+      return () => {
+        socket.off('game_state_update', handleGameStateUpdate);
+      };
+    }
+
+    // Try direct API fetch first
+    fetchGameState();
+    
+    // Set up periodic refresh every 3 seconds
+    const refreshInterval = setInterval(() => {
+      if (isConnected) {
+        requestGameStateViaSocket();
+      } else {
+        fetchGameState();
+      }
+    }, 3000);
+
+    // Clean up interval on unmount
+    return () => clearInterval(refreshInterval);
+  }, [isConnected, connectSocket, emit, socket]);
+  
+  // Update from gameState context if it's available
+  useEffect(() => {
+    if (gameState && !gameState.loading) {
+      setBoardState(prev => ({
+        loading: false,
+        error: null,
+        retryCount: 0,
+        gameData: gameState
+      }));
+    }
+  }, [gameState]);
   
   // Track player positions for animation
   useEffect(() => {
-    if (gameState?.players) {
+    const players = boardState.gameData?.players || gameState?.players;
+    if (players) {
       // Store previous positions to enable animation
       const newPositions = {};
-      gameState.players.forEach(player => {
+      players.forEach(player => {
         if (player.id && player.position !== undefined) {
           newPositions[player.id] = player.position;
         }
       });
       setLastPlayerPositions(newPositions);
     }
-  }, [gameState?.players]);
-  
-  useEffect(() => {
-    console.log("[BoardPage] Game State Updated:", gameState);
-  }, [gameState]);
+  }, [boardState.gameData, gameState?.players]);
 
-  if (!gameState || gameState.loading) {
+  // Use game data from either boardState or gameState context
+  const gameData = boardState.gameData || gameState || {
+    status: 'initializing',
+    players: [],
+    properties: [],
+    current_turn: 0,
+    current_player_id: null,
+    notifications: []
+  };
+
+  // If still loading, show loading indicator
+  if (!gameData.players && boardState.loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
         <CircularProgress />
@@ -279,9 +329,9 @@ function BoardPage() {
     );
   }
 
-  // Enrich boardLayout with dynamic data from gameState.properties
+  // Enrich boardLayout with dynamic data from gameData.properties
   const enrichedBoard = boardLayout.map(space => {
-    const propertyData = gameState?.properties?.find(p => p.position === space.id);
+    const propertyData = gameData?.properties?.find(p => p.position === space.id);
     return { 
       ...space, 
       ...propertyData, // Add owner_id, improvement_level, etc.
@@ -290,114 +340,167 @@ function BoardPage() {
   });
   
   return (
-    <Box sx={{ 
-      p: 2, 
-      display: 'flex', 
-      flexDirection: { xs: 'column', md: 'row' },
-      alignItems: { xs: 'center', md: 'flex-start' },
-      gap: 4
-    }}>
-      <Box sx={{ flex: 1, maxWidth: '800px' }}>
-        <Typography variant="h4" gutterBottom sx={{ textAlign: 'center', fontWeight: 'bold', color: '#2E7D32' }}>
-          Pi-nopoly Game Board
-        </Typography>
-        
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-          <Typography variant="h6">
-            Status: <Chip label={gameState?.status || 'Unknown'} color={
-              gameState?.status === 'active' ? 'success' : 
-              gameState?.status === 'setup' ? 'info' : 
-              gameState?.status === 'waiting' ? 'warning' : 'default'
-            } size="small" />
-          </Typography>
-          
-          <Typography variant="h6">
-            Turn: {gameState?.current_turn || 0}
-          </Typography>
-        </Box>
-        
-        {gameState?.lastDiceRoll && <DiceDisplay diceRoll={gameState.lastDiceRoll} />}
-
-        <Box sx={boardStyle}>
-          {/* Center area */}
-          <Paper elevation={3} sx={{ 
-            gridColumn: '2 / 11', 
-            gridRow: '2 / 11', 
-            display: 'flex', 
-            flexDirection: 'column',
-            alignItems: 'center', 
-            justifyContent: 'center',
-            backgroundImage: 'linear-gradient(to bottom right, #E8F5E9, #C8E6C9)',
-            borderRadius: '8px',
-          }}>
-            <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#1B5E20', mb: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}>
-              Pi-nopoly
-            </Typography>
-            {gameState?.current_player_id && (
-              <Typography variant="h6">
-                Current Player: {
-                  gameState.players?.find(p => p.id === gameState.current_player_id)?.username || 
-                  `Player ${gameState.current_player_id}`
-                }
-              </Typography>
-            )}
-          </Paper>
-          
-          {/* Render Board Spaces */}
-          {enrichedBoard.map((space) => (
-            <Box key={space.id} sx={spaceStyle({ ...space, col: space.gridPos.col, row: space.gridPos.row })}>
-              {space.type === 'property' && <Box sx={propertyColorStripe(space.group)} />} 
-              <Typography variant="caption" sx={{ fontWeight: 'bold', flexGrow: 1 }}>{space.name}</Typography>
-              
-              {space.owner_id && 
-                <Tooltip title={`Owned by: ${gameState.players?.find(p => p.id === space.owner_id)?.username || `Player ${space.owner_id}`}`}>
-                  <Box sx={{ 
-                    height: '4px', 
-                    width: '80%', 
-                    margin: '0 auto',
-                    backgroundColor: playerColors[space.owner_id % playerColors.length],
-                    borderRadius: '2px'
-                  }} />
-                </Tooltip>
-              }
-              
-              {/* Render Player Tokens within this space */}
-              {gameState?.players
-                ?.filter(p => p.position === space.id)
-                .map((player, index) => (
-                  <Tooltip 
-                    key={player.id} 
-                    title={`${player.username || `Player ${player.id}`} ${player.is_bot ? '(Bot)' : ''}`}
-                  >
-                    <Box 
-                      sx={playerTokenStyle(
-                        index, 
-                        player.id === gameState.current_player_id
-                      )} 
-                    />
-                  </Tooltip>
-                ))}
-            </Box>
-          ))}
-        </Box>
-        
-        <GameLog notifications={gameState.notifications} />
-      </Box>
-      
-      <Box sx={{ 
-        width: { xs: '100%', md: '250px' }, 
-        backgroundColor: '#f5f5f5',
-        borderRadius: '8px',
+    <Grid container spacing={2} sx={{ height: '100vh', overflow: 'hidden' }}>
+      {/* Player list sidebar */}
+      <Grid item xs={12} md={3} sx={{ 
+        height: '100%', 
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
         p: 2,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        borderRight: '1px solid rgba(0, 0, 0, 0.12)'
       }}>
-        <Typography variant="h6" gutterBottom>Players</Typography>
+        <Typography variant="h5" gutterBottom fontWeight="bold" color="primary">
+          Players
+        </Typography>
         <PlayerList 
-          players={gameState.players || []} 
-          currentPlayerId={gameState.current_player_id} 
+          players={gameData.players || []} 
+          currentPlayerId={gameData.current_player_id} 
         />
-      </Box>
-    </Box>
+        
+        {/* Game log section */}
+        <Box sx={gameLogStyle.container}>
+          <Typography variant="h5" gutterBottom fontWeight="bold" color="primary" sx={{ mt: 4 }}>
+            Game Log
+          </Typography>
+          <GameLog notifications={gameData.notifications || []} />
+        </Box>
+      </Grid>
+      <Grid item xs={12} md={9}>
+        <Box sx={{ 
+          p: 2, 
+          display: 'flex', 
+          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: { xs: 'center', md: 'flex-start' },
+          gap: 4,
+          backgroundColor: '#f9f9f9', // Light background for the whole page
+          minHeight: '100vh'
+        }}>
+          <Box sx={{ flex: 1, maxWidth: '800px' }}>
+            <Typography variant="h4" gutterBottom sx={{ 
+              textAlign: 'center', 
+              fontWeight: 'bold', 
+              color: '#2E7D32',
+              textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
+            }}>
+              Pi-nopoly Game Board
+            </Typography>
+            
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              mb: 2,
+              p: 2,
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+            }}>
+              <Typography variant="h6">
+                Status: <Chip label={gameData?.status || 'Unknown'} color={
+                  gameData?.status === 'active' ? 'success' : 
+                  gameData?.status === 'setup' ? 'info' : 
+                  gameData?.status === 'waiting' ? 'warning' : 'default'
+                } size="small" />
+              </Typography>
+              
+              <Typography variant="h6">
+                Turn: {gameData?.current_turn || 0}
+              </Typography>
+            </Box>
+            
+            {gameData?.lastDiceRoll && <DiceDisplay diceRoll={gameData.lastDiceRoll} />}
+
+            {/* Add economic info */}
+            {gameData?.economic_state && (
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
+                <Chip 
+                  label={`Economy: ${gameData.economic_state.state} (Inflation: ${(gameData.economic_state.inflation_rate * 100).toFixed(1)}%, Interest: ${(gameData.economic_state.interest_rate * 100).toFixed(1)}%)`}
+                  color={
+                    gameData.economic_state.state === 'boom' ? 'success' : 
+                    gameData.economic_state.state === 'recession' ? 'error' : 'primary'
+                  }
+                  variant="outlined"
+                />
+              </Box>
+            )}
+
+            <Box sx={boardStyle}>
+              {/* Center area */}
+              <Paper elevation={3} sx={{ 
+                gridColumn: '2 / 11', 
+                gridRow: '2 / 11', 
+                display: 'flex', 
+                flexDirection: 'column',
+                alignItems: 'center', 
+                justifyContent: 'center',
+                backgroundImage: 'linear-gradient(to bottom right, #E8F5E9, #C8E6C9)',
+                borderRadius: '8px',
+              }}>
+                <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#1B5E20', mb: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}>
+                  Pi-nopoly
+                </Typography>
+                {gameData?.current_player_id && (
+                  <Typography variant="h6">
+                    Current Player: {
+                      gameData.players?.find(p => p.id === gameData.current_player_id)?.username || 
+                      `Player ${gameData.current_player_id}`
+                    }
+                  </Typography>
+                )}
+              </Paper>
+              
+              {/* Render Board Spaces */}
+              {enrichedBoard.map((space) => (
+                <Box key={space.id} sx={spaceStyle({ ...space, col: space.gridPos.col, row: space.gridPos.row })}>
+                  {space.type === 'property' && <Box sx={propertyColorStripe(space.group)} />} 
+                  <Typography variant="caption" sx={{ fontWeight: 'bold', flexGrow: 1 }}>{space.name}</Typography>
+                  
+                  {space.owner_id && 
+                    <Tooltip title={`Owned by: ${gameData.players?.find(p => p.id === space.owner_id)?.username || `Player ${space.owner_id}`}`}>
+                      <Box sx={{ 
+                        height: '4px', 
+                        width: '80%', 
+                        margin: '0 auto',
+                        backgroundColor: playerColors[space.owner_id % playerColors.length],
+                        borderRadius: '2px'
+                      }} />
+                    </Tooltip>
+                  }
+                  
+                  {/* Render Player Tokens within this space */}
+                  {gameData?.players
+                    ?.filter(p => p.position === space.id)
+                    .map((player, index) => (
+                      <Tooltip 
+                        key={player.id} 
+                        title={`${player.username || `Player ${player.id}`} ${player.is_bot ? '(Bot)' : ''} - $${player.money || 0}`}
+                      >
+                        <Box 
+                          sx={playerTokenStyle(
+                            player.id - 1, // Use player ID directly for consistent colors
+                            player.id === gameData.current_player_id
+                          )} 
+                        >
+                          <Typography sx={{ 
+                            fontSize: '12px', 
+                            fontWeight: 'bold', 
+                            color: 'white', 
+                            textAlign: 'center',
+                            lineHeight: '24px',
+                            textShadow: '1px 1px 2px black'
+                          }}>
+                            {player.id}
+                          </Typography>
+                        </Box>
+                      </Tooltip>
+                    ))}
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        </Box>
+      </Grid>
+    </Grid>
   );
 }
 
