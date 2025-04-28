@@ -63,33 +63,38 @@ const boardStyle = {
   display: 'grid',
   gridTemplateColumns: '1fr repeat(9, 0.7fr) 1fr', // Corner, 9 spaces, Corner
   gridTemplateRows: '1fr repeat(9, 0.7fr) 1fr',    // Corner, 9 spaces, Corner
-  width: '90vw',
-  height: '90vw',
-  maxWidth: '800px',
-  maxHeight: '800px',
-  margin: '20px auto',
-  border: '2px solid #333',
-  borderRadius: '8px',
-  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+  width: '95vw',
+  height: '95vw',
+  maxWidth: '900px',
+  maxHeight: '900px',
+  margin: '10px auto',
+  border: '3px solid #333',
+  borderRadius: '10px',
+  boxShadow: '0 6px 25px rgba(0,0,0,0.2)',
   position: 'relative', // For positioning player tokens
   backgroundColor: '#E8F5E9',
   // Make board responsive in fullscreen
   '@media (display-mode: fullscreen)': {
-    maxWidth: 'min(90vh, 1000px)',
-    maxHeight: 'min(90vh, 1000px)',
-    width: 'min(90vw, 90vh)',
-    height: 'min(90vw, 90vh)',
+    maxWidth: 'min(95vh, 1200px)',
+    maxHeight: 'min(95vh, 1200px)',
+    width: 'min(95vw, 95vh)',
+    height: 'min(95vw, 95vh)',
+  },
+  // Make board larger for larger screens
+  '@media (min-width: 1600px)': {
+    maxWidth: '1000px',
+    maxHeight: '1000px',
   }
 };
 
 const spaceStyle = (space) => ({
   border: '1px solid #bbb',
-  padding: '4px',
-  fontSize: '0.65em',
+  padding: '5px',
+  fontSize: '0.75em', // Slightly larger text
   textAlign: 'center',
   position: 'relative', // For player tokens within space
-  minWidth: '50px', // Ensure minimum size
-  minHeight: '50px',
+  minWidth: '55px', // Ensure minimum size
+  minHeight: '55px',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'space-between',
@@ -99,8 +104,9 @@ const spaceStyle = (space) => ({
   transition: 'all 0.3s ease',
   '&:hover': {
     backgroundColor: '#f5f5f5',
-    transform: 'scale(1.02)',
-    zIndex: 5,
+    transform: 'scale(1.05)',
+    zIndex: 10,
+    boxShadow: '0 0 15px rgba(0,0,0,0.2)',
   }
 });
 
@@ -130,8 +136,8 @@ const playerTokenStyle = (playerIndex, isCurrentPlayer) => ({
   bottom: `${5 + playerIndex * 15}%`,
   left: '50%',
   transform: 'translateX(-50%)',
-  width: '30px', // Larger tokens
-  height: '30px', // Larger tokens
+  width: '35px', // Larger tokens
+  height: '35px', // Larger tokens
   backgroundColor: playerColors[playerIndex % playerColors.length],
   borderRadius: '50%',
   border: isCurrentPlayer ? '3px solid gold' : '2px solid #333',
@@ -372,30 +378,29 @@ function BoardPage() {
     }}>
       <NavBar />
       
-      {/* The rest of your render method */}
-      
-      {/* Adjust the container for fullscreen */}
       <Box sx={{
         display: 'flex',
-        flexDirection: { xs: 'column', md: 'row' },
-        alignItems: 'flex-start',
+        flexDirection: { xs: 'column', lg: 'row' },
+        alignItems: { xs: 'center', lg: 'flex-start' },
         justifyContent: 'center',
-        flexWrap: 'wrap',
         gap: 2,
-        p: 2,
+        p: 1,
         ...(isFullScreenActive && {
           height: 'calc(100vh - 64px)', // Adjust for the NavBar height
           overflow: 'auto'
         })
       }}>
-        {/* Player list sidebar */}
-        <Grid item xs={12} md={3} sx={{ 
-          height: '100%', 
+        {/* Player list sidebar - make narrower to allow more space for board */}
+        <Grid item xs={12} lg={2} sx={{ 
+          height: { xs: 'auto', lg: '100%' },
+          maxHeight: { xs: '300px', lg: '100vh' },
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          p: 2,
-          borderRight: '1px solid rgba(0, 0, 0, 0.12)'
+          p: 1,
+          borderRight: '1px solid rgba(0, 0, 0, 0.12)',
+          width: { xs: '100%', lg: '250px' },
+          flexShrink: 0
         }}>
           <Typography variant="h5" gutterBottom fontWeight="bold" color="primary">
             Players
@@ -413,150 +418,163 @@ function BoardPage() {
             <GameLog notifications={gameData.notifications || []} />
           </Box>
         </Grid>
-        <Grid item xs={12} md={9}>
+
+        {/* Board section - make it take more space */}
+        <Grid item xs={12} lg={8} sx={{ 
+          display: 'flex',
+          justifyContent: 'center',
+          flexGrow: 1,
+          p: 1
+        }}>
           <Box sx={{ 
-            p: 2, 
             display: 'flex', 
-            flexDirection: { xs: 'column', md: 'row' },
-            alignItems: { xs: 'center', md: 'flex-start' },
-            gap: 4,
-            backgroundColor: '#f9f9f9', // Light background for the whole page
-            minHeight: '100vh'
+            flexDirection: 'column',
+            alignItems: 'center',
+            width: '100%'
           }}>
-            <Box sx={{ flex: 1, maxWidth: '800px' }}>
-              <Typography variant="h4" gutterBottom sx={{ 
-                textAlign: 'center', 
-                fontWeight: 'bold', 
-                color: '#2E7D32',
-                textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
-              }}>
-                Pi-nopoly Game Board
+            <Typography variant="h4" gutterBottom sx={{ 
+              textAlign: 'center', 
+              fontWeight: 'bold', 
+              color: '#2E7D32',
+              textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
+            }}>
+              Pi-nopoly Game Board
+            </Typography>
+            
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              width: '100%',
+              maxWidth: boardStyle.maxWidth,
+              mb: 2,
+              p: 2,
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+            }}>
+              <Typography variant="h6">
+                Status: <Chip label={gameData?.status || 'Unknown'} color={
+                  gameData?.status === 'active' ? 'success' : 
+                  gameData?.status === 'setup' ? 'info' : 
+                  gameData?.status === 'waiting' ? 'warning' : 'default'
+                } size="small" />
               </Typography>
               
-              <Box sx={{ 
+              <Typography variant="h6">
+                Turn: {gameData?.current_turn || 0}
+              </Typography>
+            </Box>
+            
+            {gameData?.lastDiceRoll && <DiceDisplay diceRoll={gameData.lastDiceRoll} />}
+
+            {/* Add economic info */}
+            {gameData?.economic_state && (
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
+                <Chip 
+                  label={`Economy: ${gameData.economic_state.state} (Inflation: ${(gameData.economic_state.inflation_rate * 100).toFixed(1)}%, Interest: ${(gameData.economic_state.interest_rate * 100).toFixed(1)}%)`}
+                  color={
+                    gameData.economic_state.state === 'boom' ? 'success' : 
+                    gameData.economic_state.state === 'recession' ? 'error' : 'primary'
+                  }
+                  variant="outlined"
+                />
+              </Box>
+            )}
+
+            <Box sx={boardStyle}>
+              {/* Center area */}
+              <Paper elevation={3} sx={{ 
+                gridColumn: '2 / 11', 
+                gridRow: '2 / 11', 
                 display: 'flex', 
-                justifyContent: 'space-between', 
-                mb: 2,
-                p: 2,
-                backgroundColor: 'white',
+                flexDirection: 'column',
+                alignItems: 'center', 
+                justifyContent: 'center',
+                backgroundImage: 'linear-gradient(to bottom right, #E8F5E9, #C8E6C9)',
                 borderRadius: '8px',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
               }}>
-                <Typography variant="h6">
-                  Status: <Chip label={gameData?.status || 'Unknown'} color={
-                    gameData?.status === 'active' ? 'success' : 
-                    gameData?.status === 'setup' ? 'info' : 
-                    gameData?.status === 'waiting' ? 'warning' : 'default'
-                  } size="small" />
+                <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#1B5E20', mb: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}>
+                  Pi-nopoly
                 </Typography>
-                
-                <Typography variant="h6">
-                  Turn: {gameData?.current_turn || 0}
-                </Typography>
-              </Box>
-              
-              {gameData?.lastDiceRoll && <DiceDisplay diceRoll={gameData.lastDiceRoll} />}
-
-              {/* Add economic info */}
-              {gameData?.economic_state && (
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
-                  <Chip 
-                    label={`Economy: ${gameData.economic_state.state} (Inflation: ${(gameData.economic_state.inflation_rate * 100).toFixed(1)}%, Interest: ${(gameData.economic_state.interest_rate * 100).toFixed(1)}%)`}
-                    color={
-                      gameData.economic_state.state === 'boom' ? 'success' : 
-                      gameData.economic_state.state === 'recession' ? 'error' : 'primary'
+                {gameData?.current_player_id && (
+                  <Typography variant="h6">
+                    Current Player: {
+                      gameData.players?.find(p => p.id === gameData.current_player_id)?.username || 
+                      `Player ${gameData.current_player_id}`
                     }
-                    variant="outlined"
-                  />
-                </Box>
-              )}
-
-              <Box sx={boardStyle}>
-                {/* Center area */}
-                <Paper elevation={3} sx={{ 
-                  gridColumn: '2 / 11', 
-                  gridRow: '2 / 11', 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  backgroundImage: 'linear-gradient(to bottom right, #E8F5E9, #C8E6C9)',
-                  borderRadius: '8px',
-                }}>
-                  <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#1B5E20', mb: 2, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}>
-                    Pi-nopoly
                   </Typography>
-                  {gameData?.current_player_id && (
-                    <Typography variant="h6">
-                      Current Player: {
-                        gameData.players?.find(p => p.id === gameData.current_player_id)?.username || 
-                        `Player ${gameData.current_player_id}`
-                      }
-                    </Typography>
-                  )}
-                </Paper>
-                
-                {/* Render Board Spaces */}
-                {enrichedBoard.map((space) => (
-                  <Box key={space.id} sx={spaceStyle({ ...space, col: space.gridPos.col, row: space.gridPos.row })}>
-                    {space.type === 'property' && <Box sx={propertyColorStripe(space.group)} />} 
-                    <Typography variant="caption" sx={{ fontWeight: 'bold', flexGrow: 1 }}>{space.name}</Typography>
-                    
-                    {space.owner_id && 
-                      <Tooltip title={`Owned by: ${gameData.players?.find(p => p.id === space.owner_id)?.username || `Player ${space.owner_id}`}`}>
-                        <Box sx={{ 
-                          height: '4px', 
-                          width: '80%', 
-                          margin: '0 auto',
-                          backgroundColor: playerColors[space.owner_id % playerColors.length],
-                          borderRadius: '2px'
-                        }} />
-                      </Tooltip>
-                    }
-                    
-                    {/* Render Player Tokens within this space */}
-                    {gameData?.players
-                      ?.filter(p => p.position === space.id)
-                      .map((player, index) => (
-                        <Tooltip 
-                          key={`player-token-${player.id}-${player.position}-${lastUpdate}`} 
-                          title={`${player.username || `Player ${player.id}`} ${player.is_bot ? '(Bot)' : ''} - $${player.money || 0}`}
+                )}
+              </Paper>
+              
+              {/* Render Board Spaces */}
+              {enrichedBoard.map((space) => (
+                <Box key={space.id} sx={spaceStyle({ ...space, col: space.gridPos.col, row: space.gridPos.row })}>
+                  {space.type === 'property' && <Box sx={propertyColorStripe(space.group)} />} 
+                  <Typography variant="caption" sx={{ fontWeight: 'bold', flexGrow: 1 }}>{space.name}</Typography>
+                  
+                  {space.owner_id && 
+                    <Tooltip title={`Owned by: ${gameData.players?.find(p => p.id === space.owner_id)?.username || `Player ${space.owner_id}`}`}>
+                      <Box sx={{ 
+                        height: '4px', 
+                        width: '80%', 
+                        margin: '0 auto',
+                        backgroundColor: playerColors[space.owner_id % playerColors.length],
+                        borderRadius: '2px'
+                      }} />
+                    </Tooltip>
+                  }
+                  
+                  {/* Render Player Tokens within this space */}
+                  {gameData?.players
+                    ?.filter(p => p.position === space.id)
+                    .map((player, index) => (
+                      <Tooltip 
+                        key={`player-token-${player.id}-${player.position}-${lastUpdate}`} 
+                        title={`${player.username || `Player ${player.id}`} ${player.is_bot ? '(Bot)' : ''} - $${player.money || 0}`}
+                      >
+                        <Box 
+                          sx={{
+                            ...playerTokenStyle(
+                              player.id - 1, // Use player ID directly for consistent colors
+                              player.id === gameData.current_player_id
+                            ),
+                            transition: 'all 1.5s cubic-bezier(0.22, 1, 0.36, 1)', // Ensure smooth transitions
+                            animation: player.id === gameData.current_player_id ? 'pulse 1.5s infinite' : 'none',
+                          }}
+                          data-player-id={player.id}
+                          data-position={player.position}
+                          data-timestamp={lastUpdate}
                         >
-                          <Box 
-                            sx={{
-                              ...playerTokenStyle(
-                                player.id - 1, // Use player ID directly for consistent colors
-                                player.id === gameData.current_player_id
-                              ),
-                              transition: 'all 1.5s cubic-bezier(0.22, 1, 0.36, 1)', // Ensure smooth transitions
-                              animation: player.id === gameData.current_player_id ? 'pulse 1.5s infinite' : 'none',
-                            }}
-                            data-player-id={player.id}
-                            data-position={player.position}
-                            data-timestamp={lastUpdate}
-                          >
-                            <Typography sx={{ 
-                              fontSize: '14px', // Bigger text for better visibility
-                              fontWeight: 'bold', 
-                              color: 'white', 
-                              textAlign: 'center',
-                              lineHeight: '30px', // Match the new height
-                              textShadow: '1px 1px 3px black'
-                            }}>
-                              {player.id}
-                            </Typography>
-                          </Box>
-                        </Tooltip>
-                      ))}
-                  </Box>
-                ))}
-              </Box>
+                          <Typography sx={{ 
+                            fontSize: '16px', // Bigger text for better visibility
+                            fontWeight: 'bold', 
+                            color: 'white', 
+                            textAlign: 'center',
+                            lineHeight: '35px', // Match the new height
+                            textShadow: '1px 1px 3px black'
+                          }}>
+                            {player.id}
+                          </Typography>
+                        </Box>
+                      </Tooltip>
+                    ))}
+                </Box>
+              ))}
             </Box>
           </Box>
         </Grid>
         
-        {/* Add CardDisplay component */}
-        <CardDisplay />
+        {/* Card display and actions - make narrower */}
+        <Grid item xs={12} lg={2} sx={{ 
+          height: { xs: 'auto', lg: '100%' },
+          maxHeight: { xs: '300px', lg: '100vh' },
+          overflowY: 'auto',
+          p: 1,
+          width: { xs: '100%', lg: '250px' },
+          flexShrink: 0
+        }}>
+          <CardDisplay />
+        </Grid>
       </Box>
     </Box>
   );

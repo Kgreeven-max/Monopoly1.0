@@ -798,10 +798,10 @@
 :-webkit-full-screen .game-board, 
 :-moz-full-screen .game-board, 
 :-ms-fullscreen .game-board {
-  width: min(90vw, 90vh);
-  height: min(90vw, 90vh);
-  max-width: 90vh;
-  max-height: 90vh;
+  width: min(95vw, 95vh);
+  height: min(95vw, 95vh);
+  max-width: 95vh;
+  max-height: 95vh;
 }
 
 /* Responsive font sizes for fullscreen mode */
@@ -809,22 +809,22 @@
 :-webkit-full-screen .space-name, 
 :-moz-full-screen .space-name, 
 :-ms-fullscreen .space-name {
-  font-size: clamp(0.6rem, 1.5vmin, 1rem);
+  font-size: clamp(0.7rem, 1.8vmin, 1.2rem);
 }
 
 :fullscreen .player-info, 
 :-webkit-full-screen .player-info, 
 :-moz-full-screen .player-info, 
 :-ms-fullscreen .player-info {
-  font-size: clamp(0.8rem, 1.8vmin, 1.2rem);
+  font-size: clamp(0.9rem, 2vmin, 1.3rem);
 }
 
 :fullscreen .player-token, 
 :-webkit-full-screen .player-token, 
 :-moz-full-screen .player-token, 
 :-ms-fullscreen .player-token {
-  width: clamp(20px, 3vmin, 40px);
-  height: clamp(20px, 3vmin, 40px);
+  width: clamp(25px, 3.5vmin, 45px);
+  height: clamp(25px, 3.5vmin, 45px);
 }
 
 /* Improve visibility of game elements */

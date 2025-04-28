@@ -31,9 +31,11 @@ html, body {
 :-webkit-full-screen .game-board, 
 :-moz-full-screen .game-board, 
 :-ms-fullscreen .game-board {
-  width: min(90vw, 90vh);
-  height: min(90vw, 90vh);
+  width: min(95vw, 95vh);
+  height: min(95vw, 95vh);
   margin: 0 auto;
+  transform: scale(1.05);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.25);
 }
 
 /* Adjust content sizing for fullscreen */
@@ -50,7 +52,7 @@ html, body {
 :-webkit-full-screen .player-token, 
 :-moz-full-screen .player-token, 
 :-ms-fullscreen .player-token {
-  transform: scale(1.2);
+  transform: scale(1.3);
 }
 
 #root {
