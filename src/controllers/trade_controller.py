@@ -294,7 +294,7 @@ class TradeController:
                 
                 if prop.owner_id != owner_id:
                     self.logger.warning(f"Property {item.property_id} is no longer owned by {'proposer' if item.is_from_proposer else 'receiver'}")
-                    return {'success': False, 'error': f'Property {prop.name} is no longer owned by the {'proposer' if item.is_from_proposer else 'receiver'}'}
+                    return {'success': False, 'error': f"Property {prop.name} is no longer owned by the {'proposer' if item.is_from_proposer else 'receiver'}"}
                 
                 if prop.is_mortgaged:
                     self.logger.warning(f"Property {item.property_id} is now mortgaged")
