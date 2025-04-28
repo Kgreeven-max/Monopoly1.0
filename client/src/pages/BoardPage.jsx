@@ -73,6 +73,13 @@ const boardStyle = {
   boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
   position: 'relative', // For positioning player tokens
   backgroundColor: '#E8F5E9',
+  // Make board responsive in fullscreen
+  '@media (display-mode: fullscreen)': {
+    maxWidth: 'min(90vh, 1000px)',
+    maxHeight: 'min(90vh, 1000px)',
+    width: 'min(90vw, 90vh)',
+    height: 'min(90vw, 90vh)',
+  }
 };
 
 const spaceStyle = (space) => ({
@@ -208,6 +215,9 @@ function BoardPage() {
   // Track the last update timestamp to force re-renders
   const [lastUpdate, setLastUpdate] = useState(Date.now());
   
+  // Check for fullscreen state changes
+  const [isFullScreenActive, setIsFullScreenActive] = useState(false);
+  
   // Connect socket and request game state updates
   useEffect(() => {
     if (!isConnected) {
@@ -296,6 +306,30 @@ function BoardPage() {
     }
   }, [gameState.players]);
 
+  // Check for fullscreen state changes
+  useEffect(() => {
+    const handleFullScreenChange = () => {
+      setIsFullScreenActive(!!(
+        document.fullscreenElement || 
+        document.webkitFullscreenElement || 
+        document.mozFullScreenElement || 
+        document.msFullscreenElement
+      ));
+    };
+    
+    document.addEventListener('fullscreenchange', handleFullScreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullScreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullScreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullScreenChange);
+    
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullScreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullScreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullScreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullScreenChange);
+    };
+  }, []);
+
   // Use game data from either boardState or gameState context
   const gameData = boardState.gameData || gameState || {
     status: 'initializing',
@@ -327,23 +361,33 @@ function BoardPage() {
   });
   
   return (
-    <>
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column',
+      minHeight: '100vh',
+      ...(isFullScreenActive && {
+        padding: '0.5rem',
+        backgroundColor: '#f5f5f5',
+      })
+    }}>
       <NavBar />
-      <Grid container spacing={2} sx={{ height: '100vh', overflow: 'hidden' }}>
-        {/* Add global styles for animations */}
-        <style>{`
-          @keyframes pulse {
-            0% { transform: translateX(-50%) scale(1); }
-            50% { transform: translateX(-50%) scale(1.2); }
-            100% { transform: translateX(-50%) scale(1); }
-          }
-          
-          @keyframes bounce {
-            0%, 100% { transform: translateX(-50%) translateY(0); }
-            50% { transform: translateX(-50%) translateY(-10px); }
-          }
-        `}</style>
-        
+      
+      {/* The rest of your render method */}
+      
+      {/* Adjust the container for fullscreen */}
+      <Box sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', md: 'row' },
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+        gap: 2,
+        p: 2,
+        ...(isFullScreenActive && {
+          height: 'calc(100vh - 64px)', // Adjust for the NavBar height
+          overflow: 'auto'
+        })
+      }}>
         {/* Player list sidebar */}
         <Grid item xs={12} md={3} sx={{ 
           height: '100%', 
@@ -513,8 +557,8 @@ function BoardPage() {
         
         {/* Add CardDisplay component */}
         <CardDisplay />
-      </Grid>
-    </>
+      </Box>
+    </Box>
   );
 }
 

@@ -768,4 +768,96 @@
 
 .bot-events-container {
   border-left: 4px solid var(--secondary);
+}
+
+/* Keyframes animations for player tokens */
+@keyframes pulse {
+  0% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.2); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-10px); }
+}
+
+/* Fullscreen mode optimizations */
+:fullscreen .board-container, 
+:-webkit-full-screen .board-container, 
+:-moz-full-screen .board-container, 
+:-ms-fullscreen .board-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-height: 100vh;
+}
+
+:fullscreen .game-board, 
+:-webkit-full-screen .game-board, 
+:-moz-full-screen .game-board, 
+:-ms-fullscreen .game-board {
+  width: min(90vw, 90vh);
+  height: min(90vw, 90vh);
+  max-width: 90vh;
+  max-height: 90vh;
+}
+
+/* Responsive font sizes for fullscreen mode */
+:fullscreen .space-name, 
+:-webkit-full-screen .space-name, 
+:-moz-full-screen .space-name, 
+:-ms-fullscreen .space-name {
+  font-size: clamp(0.6rem, 1.5vmin, 1rem);
+}
+
+:fullscreen .player-info, 
+:-webkit-full-screen .player-info, 
+:-moz-full-screen .player-info, 
+:-ms-fullscreen .player-info {
+  font-size: clamp(0.8rem, 1.8vmin, 1.2rem);
+}
+
+:fullscreen .player-token, 
+:-webkit-full-screen .player-token, 
+:-moz-full-screen .player-token, 
+:-ms-fullscreen .player-token {
+  width: clamp(20px, 3vmin, 40px);
+  height: clamp(20px, 3vmin, 40px);
+}
+
+/* Improve visibility of game elements */
+:fullscreen .player-list, 
+:-webkit-full-screen .player-list, 
+:-moz-full-screen .player-list, 
+:-ms-fullscreen .player-list {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+:fullscreen .game-log-container, 
+:-webkit-full-screen .game-log-container, 
+:-moz-full-screen .game-log-container, 
+:-ms-fullscreen .game-log-container {
+  max-height: 40vh;
+}
+
+/* Adapt layout for different device orientations */
+@media (orientation: portrait) {
+  :fullscreen .board-layout, 
+  :-webkit-full-screen .board-layout, 
+  :-moz-full-screen .board-layout, 
+  :-ms-fullscreen .board-layout {
+    flex-direction: column;
+  }
+}
+
+@media (orientation: landscape) {
+  :fullscreen .board-layout, 
+  :-webkit-full-screen .board-layout, 
+  :-moz-full-screen .board-layout, 
+  :-ms-fullscreen .board-layout {
+    flex-direction: row;
+  }
 } 
