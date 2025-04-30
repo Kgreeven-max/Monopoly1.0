@@ -45,6 +45,10 @@ class Player(db.Model):
     crimes = db.relationship('Crime', foreign_keys='Crime.player_id', back_populates='player')
     # The 'team' backref is automatically created by the relationship in Team model
     
+    # Transaction relationships
+    outgoing_transactions = db.relationship('Transaction', foreign_keys='Transaction.from_player_id', back_populates='from_player')
+    incoming_transactions = db.relationship('Transaction', foreign_keys='Transaction.to_player_id', back_populates='to_player')
+    
     def __repr__(self):
         return f'<Player {self.username} (ID: {self.id})>'
     

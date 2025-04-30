@@ -276,14 +276,28 @@ export const AuthProvider = ({ children }) => {
         
         try {
             // Call backend to initialize display (no key required)
-            const response = await fetch('/api/auth/display/initialize', {
+            // Use the 8080 port for our customized websocket server
+            const API_URL = 'http://localhost:8080';
+            console.log(`[AuthContext] Making request to ${API_URL}/api/auth/display/initialize`);
+            
+            const response = await fetch(`${API_URL}/api/auth/display/initialize`, {
                 method: 'POST', 
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Origin': window.location.origin
+                },
+                mode: 'cors',
+                cache: 'no-cache',
+                credentials: 'same-origin',
                 body: JSON.stringify({})
             });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+            }
+            
             const data = await response.json();
-
-            if (!response.ok || !data.success) {
+            if (!data.success) {
                 throw new Error(data.error || 'Display initialization failed');
             }
 

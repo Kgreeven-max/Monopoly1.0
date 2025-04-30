@@ -1,0 +1,22 @@
+2025-04-29 22:27:54,663 - werkzeug - INFO -  * Restarting with stat
+2025-04-29 22:27:54,842 - werkzeug - WARNING -  * Debugger is active!
+2025-04-29 22:27:54,850 - werkzeug - INFO -  * Debugger PIN: 137-069-245
+2025-04-30 07:03:03,891 - werkzeug - INFO -  * Detected change in '/Users/kendallgreeven/Monoply mac/Monopoly1.0/run_server.py', reloading
+2025-04-30 07:03:03,924 - werkzeug - INFO -  * Restarting with stat
+2025-04-30 07:03:04,191 - werkzeug - WARNING -  * Debugger is active!
+2025-04-30 07:03:04,196 - werkzeug - INFO -  * Debugger PIN: 137-069-245
+2025-04-30 07:10:09,058 - werkzeug - INFO -  * Detected change in '/Users/kendallgreeven/Monoply mac/Monopoly1.0/run_server.py', reloading
+2025-04-30 07:10:09,091 - werkzeug - INFO -  * Restarting with stat
+2025-04-30 07:10:09,365 - werkzeug - WARNING -  * Debugger is active!
+2025-04-30 07:10:09,371 - werkzeug - INFO -  * Debugger PIN: 137-069-245
+2025-04-30 07:10:31,748 - werkzeug - INFO -  * Restarting with stat
+2025-04-30 07:10:31,935 - werkzeug - WARNING -  * Debugger is active!
+2025-04-30 07:10:31,940 - werkzeug - INFO -  * Debugger PIN: 137-069-245
+2025-04-30 07:13:47,668 - werkzeug - INFO -  * Detected change in '/Users/kendallgreeven/Monoply mac/Monopoly1.0/src/models/finance/transaction.py', reloading
+2025-04-30 07:13:47,681 - werkzeug - INFO -  * Detected change in '/Users/kendallgreeven/Monoply mac/Monopoly1.0/src/models/finance/transaction.py', reloading
+2025-04-30 07:13:47,724 - werkzeug - INFO -  * Restarting with stat
+2025-04-30 07:13:47,728 - werkzeug - INFO -  * Restarting with stat
+2025-04-30 07:13:48,021 - werkzeug - WARNING -  * Debugger is active!
+2025-04-30 07:13:48,021 - werkzeug - WARNING -  * Debugger is active!
+2025-04-30 07:13:48,026 - werkzeug - INFO -  * Debugger PIN: 137-069-245
+2025-04-30 07:13:48,026 - werkzeug - INFO -  * Debugger PIN: 137-069-245

@@ -7,8 +7,8 @@ const SocketContext = createContext();
 // Custom hook to use the socket context
 export const useSocket = () => useContext(SocketContext);
 
-// Ensure the WebSocket URL is configurable, fallback to default
-const WS_URL = import.meta.env.VITE_WS_URL || window.location.origin;
+// Use port 8080 for WebSocket connection
+const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8080';
 
 // Socket provider component
 export const SocketProvider = ({ children }) => {
