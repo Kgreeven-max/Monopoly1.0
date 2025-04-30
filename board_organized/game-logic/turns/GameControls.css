@@ -1,0 +1,111 @@
+.game-controls {
+  width: 100%;
+  max-width: 500px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.game-controls.disabled {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.controls-status {
+  text-align: center;
+  font-style: italic;
+  color: #6c757d;
+  padding: 10px;
+}
+
+.control-button {
+  width: 100%;
+  padding: 12px 15px;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.control-button.primary {
+  background-color: #4caf50;
+  color: white;
+}
+
+.control-button.primary:hover {
+  background-color: #43a047;
+}
+
+.control-button.warning {
+  background-color: #f44336;
+  color: white;
+  animation: pulse-warning 1s infinite;
+}
+
+@keyframes pulse-warning {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.control-button.disabled {
+  background-color: #e0e0e0;
+  color: #9e9e9e;
+  cursor: not-allowed;
+}
+
+.roll-button {
+  margin-bottom: 10px;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.action-button {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: #f1f3f5;
+  color: #495057;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.action-button:hover {
+  background-color: #e9ecef;
+  border-color: #ced4da;
+}
+
+@media (max-width: 576px) {
+  .game-controls {
+    padding: 15px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .control-button {
+    padding: 10px;
+    font-size: 15px;
+  }
+} 

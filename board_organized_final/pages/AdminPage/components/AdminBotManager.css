@@ -1,0 +1,228 @@
+.admin-bot-manager {
+  padding: 1.5rem;
+  background-color: var(--background-secondary);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.admin-bot-manager h2 {
+  color: var(--text-primary);
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.8rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.admin-bot-manager h3 {
+  color: var(--text-primary);
+  font-size: 1.3rem;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.notification {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: var(--border-radius-md);
+  font-size: 0.95rem;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.notification.success {
+  background-color: var(--success-light);
+  color: var(--success-dark);
+  border-left: 4px solid var(--success);
+}
+
+.notification.error {
+  background-color: var(--danger-light);
+  color: var(--danger-dark);
+  border-left: 4px solid var(--danger);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Add Bot Form Styles */
+.add-bot-form {
+  background-color: var(--background-card);
+  padding: 1.25rem;
+  border-radius: var(--border-radius-md);
+  margin-bottom: 2rem;
+}
+
+.form-row {
+  margin-bottom: 1rem;
+}
+
+.form-row label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.form-row input,
+.form-row select {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--background-input);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.form-row input:focus,
+.form-row select:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.2);
+}
+
+.type-description {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.add-bot-button {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.add-bot-button:hover {
+  background-color: var(--primary-dark);
+}
+
+/* Active Bots Styles */
+.active-bots {
+  background-color: var(--background-card);
+  padding: 1.25rem;
+  border-radius: var(--border-radius-md);
+}
+
+.no-bots {
+  font-style: italic;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 1rem;
+}
+
+.bot-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.bot-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color-light);
+  transition: background-color 0.2s;
+}
+
+.bot-item:last-child {
+  border-bottom: none;
+}
+
+.bot-item:hover {
+  background-color: var(--background-hover);
+}
+
+.bot-info {
+  flex: 1;
+}
+
+.bot-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.bot-icon {
+  margin-right: 0.5rem;
+  font-size: 1.2rem;
+}
+
+.bot-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.bot-type, .bot-difficulty {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bot-difficulty select {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--background-input);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.remove-bot-button {
+  background-color: var(--danger);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.remove-bot-button:hover {
+  background-color: var(--danger-dark);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .admin-bot-manager {
+    padding: 1rem;
+  }
+  
+  .bot-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .bot-details {
+    margin-bottom: 1rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .remove-bot-button {
+    align-self: flex-end;
+  }
+} 

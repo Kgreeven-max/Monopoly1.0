@@ -1,0 +1,190 @@
+.bot-action-display {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.bot-action-display h3 {
+  color: #3b3b3b;
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 1.2rem;
+  border-bottom: 1px solid #eaeaea;
+  padding-bottom: 8px;
+}
+
+.bot-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.no-actions {
+  color: #95a5a6;
+  text-align: center;
+  font-style: italic;
+  padding: 20px 0;
+}
+
+.bot-action {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  border-left: 4px solid #bdc3c7;
+  animation: fadeIn 0.3s ease-out forwards;
+  transition: transform 0.2s ease;
+}
+
+.bot-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.action-icon {
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+}
+
+.action-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.action-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.bot-name {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.action-time {
+  font-size: 0.8rem;
+  color: #7f8c8d;
+}
+
+.action-message {
+  margin-bottom: 4px;
+  color: #444;
+  font-size: 0.95rem;
+}
+
+.dice-result {
+  font-size: 0.9rem;
+  background-color: #f0f2f5;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+/* Action type styles */
+.dice-action {
+  border-left-color: #9b59b6;
+  background-color: rgba(155, 89, 182, 0.05);
+}
+
+.buy-action {
+  border-left-color: #2ecc71;
+  background-color: rgba(46, 204, 113, 0.05);
+}
+
+.negative-action {
+  border-left-color: #e74c3c;
+  background-color: rgba(231, 76, 60, 0.05);
+}
+
+.pay-action {
+  border-left-color: #e67e22;
+  background-color: rgba(230, 126, 34, 0.05);
+}
+
+.positive-action {
+  border-left-color: #3498db;
+  background-color: rgba(52, 152, 219, 0.05);
+}
+
+.card-action {
+  border-left-color: #f1c40f;
+  background-color: rgba(241, 196, 15, 0.05);
+}
+
+.mortgage-action {
+  border-left-color: #95a5a6;
+  background-color: rgba(149, 165, 166, 0.05);
+}
+
+.unmortgage-action {
+  border-left-color: #16a085;
+  background-color: rgba(22, 160, 133, 0.05);
+}
+
+/* Event styles */
+.event-action {
+  border-left-color: #3498db;
+  background-color: rgba(52, 152, 219, 0.05);
+}
+
+.event-action.trade-event {
+  border-left-color: #3498db;
+  background-color: rgba(52, 152, 219, 0.05);
+}
+
+.event-action.auction-event {
+  border-left-color: #f39c12;
+  background-color: rgba(243, 156, 18, 0.05);
+}
+
+.event-action.crash-event {
+  border-left-color: #e74c3c;
+  background-color: rgba(231, 76, 60, 0.05);
+}
+
+.event-action.boom-event {
+  border-left-color: #2ecc71;
+  background-color: rgba(46, 204, 113, 0.05);
+}
+
+.event-action.challenge-event {
+  border-left-color: #9b59b6;
+  background-color: rgba(155, 89, 182, 0.05);
+}
+
+/* Animation for new actions */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .bot-action {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .action-icon {
+    align-self: flex-start;
+  }
+  
+  .action-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .action-time {
+    margin-top: 2px;
+  }
+} 

@@ -1,0 +1,43 @@
+.market-crash-panel {
+  position: fixed;
+  right: 20px;
+  top: 20px;
+  width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 1000;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 1200px) {
+  .market-crash-panel {
+    position: static;
+    width: 100%;
+    max-height: none;
+    margin: 20px 0;
+  }
+}
+
+.team-panel {
+  position: fixed;
+  right: 20px;
+  top: 20px;
+  width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 1000;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 1200px) {
+  .team-panel {
+    position: static;
+    width: 100%;
+    max-height: none;
+    margin: 20px 0;
+  }
+} 

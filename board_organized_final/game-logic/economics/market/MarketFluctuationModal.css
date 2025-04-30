@@ -1,0 +1,176 @@
+.market-fluctuation-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.market-fluctuation-modal.fade-in {
+  opacity: 1;
+}
+
+.market-fluctuation-modal .modal-content {
+  background-color: #fff;
+  width: 90%;
+  max-width: 550px;
+  border-radius: 8px;
+  padding: 20px;
+  position: relative;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.market-fluctuation-modal .close-button {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.market-fluctuation-modal .close-button:hover {
+  color: #333;
+}
+
+.market-fluctuation-modal h2 {
+  margin-top: 0;
+  color: #333;
+  text-align: center;
+  font-size: 1.8rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.market-fluctuation-modal .economic-state {
+  margin: 20px 0;
+  padding: 15px;
+  border: 2px solid;
+  border-radius: 8px;
+  background-color: rgba(33, 150, 243, 0.1);
+}
+
+.market-fluctuation-modal .economic-state h3 {
+  margin-top: 0;
+  font-size: 1.2rem;
+}
+
+.market-fluctuation-modal .cash-effect,
+.market-fluctuation-modal .property-effect {
+  margin: 20px 0;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.market-fluctuation-modal .effect-value {
+  font-size: 1.8rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.market-fluctuation-modal .direction-icon {
+  margin-right: 10px;
+  font-size: 2rem;
+}
+
+.market-fluctuation-modal .bonus,
+.market-fluctuation-modal .increase {
+  color: #4CAF50;
+}
+
+.market-fluctuation-modal .penalty,
+.market-fluctuation-modal .decrease {
+  color: #F44336;
+}
+
+.market-fluctuation-modal .property-list {
+  margin-top: 15px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.market-fluctuation-modal .property-item {
+  display: grid;
+  grid-template-columns: 2fr 1fr 0.3fr 1fr 1fr;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.market-fluctuation-modal .property-item:last-child {
+  border-bottom: none;
+}
+
+.market-fluctuation-modal .property-name {
+  font-weight: bold;
+}
+
+.market-fluctuation-modal .arrow {
+  text-align: center;
+  color: #666;
+}
+
+.market-fluctuation-modal .change-value {
+  text-align: right;
+  font-weight: bold;
+}
+
+.market-fluctuation-modal .modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.market-fluctuation-modal .action-button {
+  background-color: #2196F3;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.market-fluctuation-modal .action-button:hover {
+  background-color: #0d8bf2;
+}
+
+@media (max-width: 600px) {
+  .market-fluctuation-modal .modal-content {
+    width: 95%;
+    padding: 15px;
+  }
+  
+  .market-fluctuation-modal .property-item {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    grid-gap: 5px;
+  }
+  
+  .market-fluctuation-modal .property-name {
+    grid-column: 1 / -1;
+  }
+  
+  .market-fluctuation-modal .old-value,
+  .market-fluctuation-modal .arrow,
+  .market-fluctuation-modal .new-value {
+    font-size: 0.9rem;
+  }
+} 

@@ -1,0 +1,82 @@
+.chat-input {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem;
+  background-color: #ffffff;
+  border-top: 1px solid #e0e0e0;
+}
+
+.chat-input textarea {
+  flex: 1;
+  min-height: 40px;
+  max-height: 120px;
+  padding: 0.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  resize: none;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  background-color: #f8f9fa;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.chat-input textarea:focus {
+  outline: none;
+  border-color: #90caf9;
+  background-color: #ffffff;
+}
+
+.chat-input textarea::placeholder {
+  color: #999;
+}
+
+.send-button {
+  align-self: flex-end;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background-color: #1976d2;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.send-button:hover:not(:disabled) {
+  background-color: #1565c0;
+}
+
+.send-button:disabled {
+  background-color: #e0e0e0;
+  cursor: not-allowed;
+}
+
+/* Custom scrollbar for textarea */
+.chat-input textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-input textarea::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.chat-input textarea::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.chat-input textarea::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .chat-input {
+    padding: 0.75rem;
+  }
+
+  .send-button {
+    padding: 0.5rem 0.75rem;
+  }
+} 

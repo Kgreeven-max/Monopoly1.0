@@ -1,0 +1,146 @@
+.player-list {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.player-list h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.player-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.player-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-radius: 6px;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+}
+
+.player-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.player-token {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 15px;
+  flex-shrink: 0;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.player-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.player-name {
+  font-weight: 600;
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-cash {
+  color: #2e7d32;
+  font-weight: 500;
+  margin-top: 3px;
+}
+
+.player-status {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.status-indicator {
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: #f0f0f0;
+  color: #666;
+}
+
+.player-properties {
+  margin-left: 10px;
+  text-align: right;
+  font-size: 13px;
+  color: #666;
+}
+
+.property-count, .net-worth {
+  margin-bottom: 3px;
+}
+
+/* Status classes */
+.player-active {
+  border-left: 4px solid #4caf50;
+  background-color: rgba(76, 175, 80, 0.05);
+}
+
+.player-active .status-indicator {
+  background-color: #4caf50;
+  color: white;
+}
+
+.player-jailed {
+  border-left: 4px solid #f44336;
+  background-color: rgba(244, 67, 54, 0.05);
+}
+
+.player-jailed .status-indicator {
+  background-color: #f44336;
+  color: white;
+}
+
+.player-bankrupt {
+  border-left: 4px solid #9e9e9e;
+  background-color: rgba(158, 158, 158, 0.05);
+  opacity: 0.7;
+}
+
+.player-bankrupt .status-indicator {
+  background-color: #9e9e9e;
+  color: white;
+}
+
+.player-disconnected {
+  border-left: 4px solid #ff9800;
+  background-color: rgba(255, 152, 0, 0.05);
+}
+
+.player-disconnected .status-indicator {
+  background-color: #ff9800;
+  color: white;
+}
+
+.player-list-empty {
+  padding: 30px;
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  background-color: white;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+} 

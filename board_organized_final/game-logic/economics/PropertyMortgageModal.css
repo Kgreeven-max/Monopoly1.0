@@ -1,0 +1,200 @@
+.property-mortgage-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.property-mortgage-modal.fade-in {
+  opacity: 1;
+}
+
+.property-mortgage-modal .modal-content {
+  background-color: #fff;
+  width: 90%;
+  max-width: 500px;
+  border-radius: 8px;
+  padding: 20px;
+  position: relative;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.property-mortgage-modal .close-button {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.property-mortgage-modal .close-button:hover {
+  color: #333;
+}
+
+.property-mortgage-modal h2 {
+  margin-top: 0;
+  color: #333;
+  text-align: center;
+  font-size: 1.8rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.property-mortgage-modal .property-info {
+  margin: 20px 0;
+  padding: 15px;
+  border: 2px solid;
+  border-radius: 8px;
+  background-color: rgba(33, 150, 243, 0.1);
+  text-align: center;
+}
+
+.property-mortgage-modal .property-info h3 {
+  margin-top: 0;
+  font-size: 1.4rem;
+  margin-bottom: 5px;
+}
+
+.property-mortgage-modal .property-info .color-group {
+  margin: 0;
+  font-size: 1rem;
+  color: #666;
+}
+
+.property-mortgage-modal .transaction-details {
+  margin: 20px 0;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.property-mortgage-modal .detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.property-mortgage-modal .detail-row:last-child {
+  border-bottom: none;
+}
+
+.property-mortgage-modal .detail-row.highlight {
+  font-weight: bold;
+  background-color: rgba(33, 150, 243, 0.1);
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 4px;
+}
+
+.property-mortgage-modal .label {
+  color: #666;
+}
+
+.property-mortgage-modal .value {
+  font-weight: bold;
+}
+
+.property-mortgage-modal .value.sufficient {
+  color: #4CAF50;
+}
+
+.property-mortgage-modal .value.insufficient {
+  color: #F44336;
+}
+
+.property-mortgage-modal .error-message {
+  background-color: #FFEBEE;
+  color: #F44336;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 15px 0;
+  font-weight: bold;
+}
+
+.property-mortgage-modal .mortgage-warning {
+  margin: 20px 0;
+  background-color: #FFF8E1;
+  padding: 10px;
+  border-radius: 4px;
+  border-left: 4px solid #FFC107;
+}
+
+.property-mortgage-modal .mortgage-warning p {
+  margin: 0;
+  color: #5D4037;
+}
+
+.property-mortgage-modal .modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.property-mortgage-modal .action-button,
+.property-mortgage-modal .cancel-button {
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s;
+  min-width: 120px;
+}
+
+.property-mortgage-modal .action-button {
+  background-color: #2196F3;
+  color: white;
+}
+
+.property-mortgage-modal .action-button:hover {
+  background-color: #0d8bf2;
+}
+
+.property-mortgage-modal .action-button.disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.property-mortgage-modal .cancel-button {
+  background-color: #f1f1f1;
+  color: #333;
+}
+
+.property-mortgage-modal .cancel-button:hover {
+  background-color: #e0e0e0;
+}
+
+.property-mortgage-modal button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .property-mortgage-modal .modal-content {
+    width: 95%;
+    padding: 15px;
+  }
+  
+  .property-mortgage-modal .modal-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .property-mortgage-modal .action-button,
+  .property-mortgage-modal .cancel-button {
+    width: 100%;
+  }
+} 
