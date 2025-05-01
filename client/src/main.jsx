@@ -5,6 +5,17 @@ import App from './App';
 import './styles/index.css';
 import './styles/variables.css';
 
+// Import fonts
+import '@fontsource/poppins/300.css';
+import '@fontsource/poppins/400.css';
+import '@fontsource/poppins/500.css';
+import '@fontsource/poppins/600.css';
+import '@fontsource/poppins/700.css';
+import '@fontsource/roboto/300.css';
+import '@fontsource/roboto/400.css';
+import '@fontsource/roboto/500.css';
+import '@fontsource/roboto/700.css';
+
 // Define a modern theme for the application
 const theme = createTheme({
   palette: {

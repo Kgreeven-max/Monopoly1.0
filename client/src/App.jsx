@@ -23,54 +23,91 @@ import ConnectPage from './pages/ConnectPage';
 import NotFoundPage from './pages/NotFoundPage';
 import DebugPage from './pages/DebugPage';
 
-// Define a basic theme (optional, customize as needed)
+// Define a modern theme
 const theme = createTheme({
   palette: {
-    mode: 'light', // or 'dark'
+    mode: 'light',
     primary: {
-      main: '#1976d2', // Blue
+      main: '#2E7D32', // Green - monopoly color
     },
     secondary: {
-      main: '#dc004e', // Pink
+      main: '#C62828', // Red - monopoly color
+    },
+    background: {
+      default: '#f5f5f5',
+      paper: '#ffffff',
+    }
+  },
+  typography: {
+    fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
+    h1: {
+      fontWeight: 600,
+    },
+    h2: {
+      fontWeight: 600,
+    },
+    h3: {
+      fontWeight: 500,
+    },
+    button: {
+      fontWeight: 500,
+    }
+  },
+  shape: {
+    borderRadius: 8
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          padding: '8px 16px',
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.08)',
+        },
+      },
     },
   },
 });
 
 // Protected route component
 const ProtectedRoute = ({ children, roleRequired }) => {
-  const { isAuthenticated, role, loading, user } = useAuth();
+  const { isAuthenticated, role, loading } = useAuth();
   const location = useLocation();
 
-  console.log(`[ProtectedRoute] Checking access:`, { isAuthenticated, loading, role });
-
   if (loading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><CircularProgress /></Box>;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   if (!isAuthenticated) {
-    console.log(`[ProtectedRoute] Access DENIED (Not Authenticated). Redirecting to /`);
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   if (roleRequired && role !== roleRequired) {
-    console.log(`[ProtectedRoute] Access DENIED (Role Mismatch: required ${roleRequired}, user has ${role}). Redirecting to /`);
     return <Navigate to="/" replace />;
   }
 
-  console.log(`[ProtectedRoute] Access GRANTED.`);
   return children;
 };
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <CssBaseline /> {/* Provides basic CSS reset and background */}
-      <Router> {/* Router should wrap providers */}
+      <CssBaseline />
+      <Router>
         <SocketProvider>
           <AuthProvider>
             <GameProvider>
               <NotificationProvider>
-                {/* Routes component now directly inside NotificationProvider */}
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<HomePage />} />

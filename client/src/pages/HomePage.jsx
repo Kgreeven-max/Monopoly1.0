@@ -1,19 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-
-// Import MUI components
-import Container from '@mui/material/Container';
-import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
-import Typography from '@mui/material/Typography';
-import Alert from '@mui/material/Alert';
-import CircularProgress from '@mui/material/CircularProgress';
-import FormHelperText from '@mui/material/FormHelperText';
+import {
+  Container,
+  Box,
+  Paper,
+  Tabs,
+  Tab,
+  TextField,
+  Button,
+  Typography,
+  Alert,
+  CircularProgress,
+  Fade,
+  Grid,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
+import PersonIcon from '@mui/icons-material/Person';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import MonitorIcon from '@mui/icons-material/Monitor';
 
 // Helper component for Tab Panels
 function TabPanel(props) {
@@ -27,9 +34,11 @@ function TabPanel(props) {
       {...other}
     >
       {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
+        <Fade in={value === index}>
+          <Box sx={{ p: 3 }}>
+            {children}
+          </Box>
+        </Fade>
       )}
     </div>
   );
@@ -39,14 +48,15 @@ const HomePage = () => {
   const [tabValue, setTabValue] = useState(0);
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
-  const [adminKeyInput, setAdminKeyInput] = useState(''); // New state for admin key input
-  const [playerId, setPlayerId] = useState(''); // For login
+  const [adminKeyInput, setAdminKeyInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [localError, setLocalError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   
   const { registerPlayer, loginPlayer, loginAdmin, initializeDisplay, error, loading, user } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Clear messages when tab changes
   useEffect(() => {
@@ -54,7 +64,7 @@ const HomePage = () => {
     setSuccessMessage(null);
   }, [tabValue]);
 
-  // Redirect if user is already logged in (from AuthContext state)
+  // Redirect if user is already logged in
   useEffect(() => {
     if (user?.role === 'player') {
       navigate(`/player/${user.id}`);
@@ -75,7 +85,9 @@ const HomePage = () => {
         setLocalError('Username and PIN are required to join.');
         return;
     }
+    setIsLoading(true);
     const result = await registerPlayer(username, pin); 
+    setIsLoading(false);
     if (result.success) {
       setSuccessMessage('Registration successful! Redirecting...');
       // Navigation is handled by useEffect watching `user` state
@@ -92,10 +104,11 @@ const HomePage = () => {
         setLocalError('Username and PIN are required to log in.');
         return;
     }
+    setIsLoading(true);
     const result = await loginPlayer(username, pin);
+    setIsLoading(false);
     if (result.success) {
         setSuccessMessage('Login successful! Redirecting...');
-       // Navigation is handled by useEffect watching `user` state
     } else {
         setLocalError(result.error || 'Login failed.');
     }
@@ -109,10 +122,11 @@ const HomePage = () => {
         setLocalError('Admin Key is required.');
         return;
     }
+    setIsLoading(true);
     const result = await loginAdmin(adminKeyInput);
+    setIsLoading(false);
     if (result.success) {
         setSuccessMessage('Admin login successful! Redirecting...');
-        // Navigation is handled by useEffect watching `user` state
     } else {
         setLocalError(result.error || 'Admin login failed.');
     }
@@ -122,8 +136,9 @@ const HomePage = () => {
     e.preventDefault();
     setLocalError(null);
     setSuccessMessage(null);
-    
+    setIsLoading(true);
     const result = await initializeDisplay();
+    setIsLoading(false);
     if (result.success) {
         setSuccessMessage('Display initialized! Redirecting...');
     } else {
@@ -135,159 +150,224 @@ const HomePage = () => {
   const displayError = localError || error;
 
   return (
-    <Container component="main" maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100vh', justifyContent: 'center', py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Typography component="h1" variant="h4" gutterBottom sx={{ mb: 1 }}>
-          Pi-nopoly
-        </Typography>
-        <Typography component="p" variant="subtitle1" color="text.secondary" sx={{ mb: 3 }}>
-          A modern take on the classic board game
-        </Typography>
-
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', width: '100%', mb: 2 }}>
-          <Tabs value={tabValue} onChange={handleTabChange} aria-label="Login/Register Tabs" centered variant="fullWidth">
-            <Tab label="Join / Register" />
-            <Tab label="Return" />
-            <Tab label="Admin" />
-            <Tab label="Display" />
-          </Tabs>
-        </Box>
-
-        {/* Display error or success messages */} 
-        {displayError && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{displayError}</Alert>}
-        {successMessage && <Alert severity="success" sx={{ width: '100%', mb: 2 }}>{successMessage}</Alert>}
-
-        {/* Tab Panels */}
-        <TabPanel value={tabValue} index={0}>
-          <Typography component="h1" variant="h5" align="center">Join New Game</Typography>
-          <Box component="form" onSubmit={handleJoinGame} noValidate sx={{ mt: 1 }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="join-username"
-              label="Username"
-              name="username"
-              autoComplete="username"
-              autoFocus
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="pin"
-              label="PIN (4-digits)"
-              type="password"
-              id="join-pin"
-              autoComplete="current-password"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              inputProps={{ maxLength: 4, pattern: "[0-9]*" }}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
+    <Box 
+      sx={{ 
+        minHeight: '100vh',
+        background: 'linear-gradient(45deg, rgba(46,125,50,0.05) 0%, rgba(198,40,40,0.05) 100%)',
+        py: 4
+      }}
+    >
+      <Container maxWidth="sm">
+        <Grid container spacing={2} justifyContent="center" alignItems="center" sx={{ minHeight: '90vh' }}>
+          <Grid item xs={12}>
+            <Box sx={{ textAlign: 'center', mb: 4 }}>
+              <Typography 
+                component="h1" 
+                variant="h3"
+                sx={{ 
+                  fontWeight: 700,
+                  color: theme.palette.primary.main,
+                  letterSpacing: '-0.5px',
+                  mb: 1
+                }}
+              >
+                Pi-nopoly
+              </Typography>
+              <Typography 
+                variant="subtitle1" 
+                color="text.secondary"
+                sx={{ fontWeight: 400 }}
+              >
+                A modern take on the classic board game
+              </Typography>
+            </Box>
+          
+            <Paper 
+              elevation={2} 
+              sx={{ 
+                borderRadius: 2,
+                overflow: 'hidden',
+                boxShadow: '0 8px 40px rgba(0,0,0,0.12)'
+              }}
             >
-              {loading ? <CircularProgress size={24} /> : 'Join Game'}
-            </Button>
-          </Box>
-        </TabPanel>
+              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <Tabs 
+                  value={tabValue} 
+                  onChange={handleTabChange} 
+                  variant="fullWidth"
+                  indicatorColor="primary"
+                  textColor="primary"
+                  aria-label="Game options"
+                >
+                  <Tab icon={<PersonAddIcon />} label={isMobile ? "" : "Join"} iconPosition="start" />
+                  <Tab icon={<PersonIcon />} label={isMobile ? "" : "Return"} iconPosition="start" />
+                  <Tab icon={<AdminPanelSettingsIcon />} label={isMobile ? "" : "Admin"} iconPosition="start" />
+                  <Tab icon={<MonitorIcon />} label={isMobile ? "" : "Display"} iconPosition="start" />
+                </Tabs>
+              </Box>
 
-        <TabPanel value={tabValue} index={1}>
-          <Typography component="h1" variant="h5" align="center">Player Login</Typography>
-          <Box component="form" onSubmit={handleLogin} noValidate sx={{ mt: 1 }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="login-username"
-              label="Username"
-              name="username"
-              autoComplete="username"
-              autoFocus
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="pin"
-              label="PIN"
-              type="password"
-              id="login-pin"
-              autoComplete="current-password"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Login'}
-            </Button>
-          </Box>
-        </TabPanel>
+              {/* Display error or success messages */} 
+              {displayError && (
+                <Alert severity="error" sx={{ mx: 3, mt: 2 }}>
+                  {displayError}
+                </Alert>
+              )}
+              {successMessage && (
+                <Alert severity="success" sx={{ mx: 3, mt: 2 }}>
+                  {successMessage}
+                </Alert>
+              )}
 
-        <TabPanel value={tabValue} index={2}>
-          <Typography component="h1" variant="h5" align="center">Admin Login</Typography>
-          <Box component="form" onSubmit={handleAdminLogin} noValidate sx={{ mt: 1 }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="adminKey"
-              label="Admin Key"
-              type="password"
-              id="admin-key"
-              value={adminKeyInput}
-              onChange={(e) => setAdminKeyInput(e.target.value)}
-              autoFocus
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              color="secondary"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Admin Login'}
-            </Button>
-          </Box>
-        </TabPanel>
+              {/* Tab Panels */}
+              <TabPanel value={tabValue} index={0}>
+                <Typography variant="h6" align="center" gutterBottom>
+                  Join New Game
+                </Typography>
+                <Box component="form" onSubmit={handleJoinGame} noValidate>
+                  <TextField
+                    margin="normal"
+                    required
+                    fullWidth
+                    id="join-username"
+                    label="Username"
+                    name="username"
+                    autoComplete="username"
+                    autoFocus
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    variant="outlined"
+                  />
+                  <TextField
+                    margin="normal"
+                    required
+                    fullWidth
+                    name="pin"
+                    label="PIN (4-digits)"
+                    type="password"
+                    id="join-pin"
+                    autoComplete="current-password"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value)}
+                    inputProps={{ maxLength: 4, pattern: "[0-9]*" }}
+                    variant="outlined"
+                  />
+                  <Button
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    sx={{ mt: 3, mb: 1, py: 1.5 }}
+                    disabled={isLoading}
+                    disableElevation
+                  >
+                    {isLoading ? <CircularProgress size={24} /> : 'Join Game'}
+                  </Button>
+                </Box>
+              </TabPanel>
 
-        <TabPanel value={tabValue} index={3}>
-          <Typography component="h1" variant="h5" align="center">TV Display</Typography>
-          <Box component="form" onSubmit={handleInitializeDisplay} noValidate sx={{ mt: 1 }}>
-            <Typography variant="body1" align="center" sx={{ mb: 2 }}>
-              Click below to initialize the TV display.
+              <TabPanel value={tabValue} index={1}>
+                <Typography variant="h6" align="center" gutterBottom>
+                  Player Login
+                </Typography>
+                <Box component="form" onSubmit={handleLogin} noValidate>
+                  <TextField
+                    margin="normal"
+                    required
+                    fullWidth
+                    id="login-username"
+                    label="Username"
+                    name="username"
+                    autoComplete="username"
+                    autoFocus
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    variant="outlined"
+                  />
+                  <TextField
+                    margin="normal"
+                    required
+                    fullWidth
+                    name="pin"
+                    label="PIN"
+                    type="password"
+                    id="login-pin"
+                    autoComplete="current-password"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value)}
+                    variant="outlined"
+                  />
+                  <Button
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    sx={{ mt: 3, mb: 1, py: 1.5 }}
+                    disabled={isLoading}
+                    disableElevation
+                  >
+                    {isLoading ? <CircularProgress size={24} /> : 'Login'}
+                  </Button>
+                </Box>
+              </TabPanel>
+
+              <TabPanel value={tabValue} index={2}>
+                <Typography variant="h6" align="center" gutterBottom>
+                  Admin Login
+                </Typography>
+                <Box component="form" onSubmit={handleAdminLogin} noValidate>
+                  <TextField
+                    margin="normal"
+                    required
+                    fullWidth
+                    name="adminKey"
+                    label="Admin Key"
+                    type="password"
+                    id="admin-key"
+                    autoFocus
+                    value={adminKeyInput}
+                    onChange={(e) => setAdminKeyInput(e.target.value)}
+                    variant="outlined"
+                  />
+                  <Button
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    sx={{ mt: 3, mb: 1, py: 1.5 }}
+                    disabled={isLoading}
+                    disableElevation
+                  >
+                    {isLoading ? <CircularProgress size={24} /> : 'Login as Admin'}
+                  </Button>
+                </Box>
+              </TabPanel>
+
+              <TabPanel value={tabValue} index={3}>
+                <Typography variant="h6" align="center" gutterBottom>
+                  Initialize Display
+                </Typography>
+                <Box component="form" onSubmit={handleInitializeDisplay} noValidate sx={{ mt: 1 }}>
+                  <Typography variant="body2" align="center" color="text.secondary" paragraph>
+                    This will initialize the game board for display on a shared screen or TV.
+                  </Typography>
+                  <Button
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    sx={{ mt: 3, mb: 1, py: 1.5 }}
+                    disabled={isLoading}
+                    disableElevation
+                  >
+                    {isLoading ? <CircularProgress size={24} /> : 'Initialize Display'}
+                  </Button>
+                </Box>
+              </TabPanel>
+            </Paper>
+            
+            <Typography variant="body2" align="center" sx={{ mt: 4, color: 'text.secondary' }}>
+              © {new Date().getFullYear()} Pi-nopoly
             </Typography>
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Initialize Display'}
-            </Button>
-          </Box>
-        </TabPanel>
-
-      </Paper>
-       <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 5 }}>
-         Pi-nopoly &copy; {new Date().getFullYear()}
-       </Typography>
-    </Container>
+          </Grid>
+        </Grid>
+      </Container>
+    </Box>
   );
 };
 
