@@ -1,0 +1,103 @@
+/* Monopoly Board Styles */
+
+@import url('https://fonts.googleapis.com/css2?family=Arial:wght@400;700&display=swap');
+
+/* Animations for active tiles */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+}
+
+/* Dotted background pattern for utilities */
+.utility-background {
+  background-image: radial-gradient(circle, #000 1px, transparent 1px);
+  background-size: 6px 6px;
+}
+
+/* Diagonal stripes for Chance and Community Chest */
+.chance-background {
+  background-image: repeating-linear-gradient(
+    45deg,
+    #C58BF1,
+    #C58BF1 10px,
+    #E5C7F8 10px,
+    #E5C7F8 20px
+  );
+}
+
+.chest-background {
+  background-image: repeating-linear-gradient(
+    45deg,
+    #C8E6FF,
+    #C8E6FF 10px,
+    #E0F2FF 10px,
+    #E0F2FF 20px
+  );
+}
+
+/* Improved corner tile styling */
+.corner-go {
+  background-color: #FFFFFF;
+  background-image: linear-gradient(135deg, #FF0000 0%, #FF0000 25%, transparent 25%);
+  position: relative;
+}
+
+.corner-jail {
+  background-color: #FFFFFF;
+  position: relative;
+}
+
+.corner-jail::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 60%;
+  height: 60%;
+  background-color: #FF9800;
+  border-bottom-left-radius: 8px;
+}
+
+.corner-free-parking {
+  background-color: #FFFFFF;
+  position: relative;
+}
+
+.corner-go-to-jail {
+  background-color: #FFFFFF;
+  position: relative;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .board-space-name {
+    font-size: 8px !important;
+  }
+  
+  .player-token {
+    width: 18px !important;
+    height: 18px !important;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .board-container {
+    background-color: #1E1E1E !important;
+  }
+  
+  .board-space {
+    background-color: #2D2D2D !important;
+    border-color: #555555 !important;
+  }
+  
+  .board-space-name {
+    color: #FFFFFF !important;
+  }
+  
+  .board-center {
+    background-color: #2D2D2D !important;
+    border-color: #555555 !important;
+  }
+} 

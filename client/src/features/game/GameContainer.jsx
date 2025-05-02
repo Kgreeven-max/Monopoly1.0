@@ -27,6 +27,9 @@ import { styled } from '@mui/material/styles';
 import { useGame } from '../../contexts/GameContext';
 import { useSocket } from '../../contexts/SocketContext';
 
+// Import Monopoly board styles
+import '../../styles/monopoly-board.css';
+
 // Import components
 import Board from '../board/Board';
 
@@ -225,6 +228,7 @@ const GameContainer = ({ children }) => {
         minHeight: '100vh',
         backgroundColor: theme.palette.background.default
       }}
+      className="board-page"
     >
       {/* App Bar */}
       <GameAppBar position="fixed">
