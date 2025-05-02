@@ -16,9 +16,9 @@ class Transaction(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     lap_number = db.Column(db.Integer, nullable=True)  # Game lap when transaction occurred
     
-    # Relationships
-    from_player = db.relationship('Player', foreign_keys=[from_player_id], backref='outgoing_transactions')
-    to_player = db.relationship('Player', foreign_keys=[to_player_id], backref='incoming_transactions')
+    # Relationships - Fix backref conflict by removing them
+    from_player = db.relationship('Player', foreign_keys=[from_player_id], back_populates='outgoing_transactions')
+    to_player = db.relationship('Player', foreign_keys=[to_player_id], back_populates='incoming_transactions')
     property = db.relationship('Property', backref='transactions')
     loan = db.relationship('Loan', backref='transactions')
     

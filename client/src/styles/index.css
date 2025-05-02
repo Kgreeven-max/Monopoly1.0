@@ -355,4 +355,233 @@ input:focus, select:focus, textarea:focus {
   .container {
     padding: 0 0.5rem;
   }
+}
+
+/* Base styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Poppins', 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Animations */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes slideIn {
+  0% {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Full screen mode styles */
+.fullscreen-enabled {
+  background-color: #E8F5E9;
+}
+
+/* Dice animation */
+.dice-rolling {
+  animation: spin 0.5s ease-in-out;
+}
+
+/* Card animations */
+.card-enter {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.card-enter-active {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 300ms, transform 300ms;
+}
+
+.card-exit {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.card-exit-active {
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 300ms, transform 300ms;
+}
+
+/* Token movement animation */
+.token-moving {
+  transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Hover effects for buttons */
+.hover-lift {
+  transition: transform 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+/* Material design ripple effect */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple:after {
+  content: "";
+  display: block;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, #000 10%, transparent 10.01%);
+  background-repeat: no-repeat;
+  background-position: 50%;
+  transform: scale(10, 10);
+  opacity: 0;
+  transition: transform 0.5s, opacity 1s;
+}
+
+.ripple:active:after {
+  transform: scale(0, 0);
+  opacity: 0.2;
+  transition: 0s;
+}
+
+/* Game mode styles */
+.game-mode-waiting {
+  opacity: 0.7;
+}
+
+.game-mode-active {
+  animation: pulse 2s infinite;
+}
+
+/* Property card styles */
+.property-card {
+  transition: all 0.3s ease;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.property-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+/* Game board glow effect for current position */
+.current-position {
+  box-shadow: 0 0 15px 5px rgba(255, 215, 0, 0.5);
+  z-index: 50;
+}
+
+/* Notifications */
+.notification-badge {
+  animation: pulse 1.5s infinite;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Player turn indicator */
+.player-turn {
+  animation: pulse 1.5s infinite;
+}
+
+/* Utility classes */
+.text-shadow {
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+}
+
+.box-shadow {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.hover-scale {
+  transition: transform 0.2s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
 } 

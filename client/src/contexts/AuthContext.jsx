@@ -12,7 +12,10 @@ export const AuthProvider = ({ children }) => {
     const [pendingAuthPlayerId, setPendingAuthPlayerId] = useState(null); // Temp storage for ID before socket auth
     const [playerInfo, setPlayerInfo] = useState(null);
     
-    const { socket, isConnected, connectSocket, disconnectSocket } = useSocket();
+    // Fix: Provide default empty object for destructuring
+    const socketContext = useSocket() || {};
+    const { socket, isConnected, connectSocket, disconnectSocket } = socketContext;
+    
     const navigate = useNavigate();
     const location = useLocation();
     
@@ -34,7 +37,7 @@ export const AuthProvider = ({ children }) => {
             setAdminKey(storedAdminKey);
             // Create a dummy admin user object for consistency
             setUser({ id: 'admin', username: 'Administrator', role: 'admin' });
-            if (!isConnected) connectSocket(); // Connect socket for admin too
+            if (!isConnected && connectSocket) connectSocket(); // Connect socket for admin too
         }
         else if (storedUserInfo) {
             try {
@@ -42,7 +45,7 @@ export const AuthProvider = ({ children }) => {
                 if (userInfo && userInfo.id && userInfo.role && userInfo.role !== 'admin') { // Ensure it's not admin
                     console.log('[AuthContext] Restoring player session for:', userInfo);
                     setUser(userInfo);
-                    if (!isConnected) connectSocket(); 
+                    if (!isConnected && connectSocket) connectSocket(); 
                 } else {
                      localStorage.removeItem('userInfo'); // Clear invalid data
                 }
@@ -52,7 +55,7 @@ export const AuthProvider = ({ children }) => {
             }
         }
          setLoading(false); 
-    }, [connectSocket]); // connectSocket dependency is fine here
+    }, [connectSocket, isConnected]); // connectSocket dependency is fine here
 
     // 2. Authenticate socket for players
     useEffect(() => {
@@ -96,13 +99,23 @@ export const AuthProvider = ({ children }) => {
                 const savedPlayer = localStorage.getItem('playerInfo');
                 
                 if (savedUser) {
-                    setUser(JSON.parse(savedUser));
+                    try {
+                        setUser(JSON.parse(savedUser));
+                    } catch (e) {
+                        console.error("Failed to parse saved user:", e);
+                        localStorage.removeItem('user');
+                    }
                 }
                 if (savedAdmin) {
                     setAdminKey(savedAdmin);
                 }
                 if (savedPlayer) {
-                    setPlayerInfo(JSON.parse(savedPlayer));
+                    try {
+                        setPlayerInfo(JSON.parse(savedPlayer));
+                    } catch (e) {
+                        console.error("Failed to parse saved player info:", e);
+                        localStorage.removeItem('playerInfo');
+                    }
                 }
                 setLoading(false);
             }
@@ -119,7 +132,7 @@ export const AuthProvider = ({ children }) => {
         console.log('[AuthContext] Attempting registration...');
 
         // Ensure socket connection is initiated
-        if (!isConnected) {
+        if (!isConnected && connectSocket) {
             connectSocket();
         }
         
@@ -165,7 +178,7 @@ export const AuthProvider = ({ children }) => {
         setLoading(true);
         console.log('[AuthContext] Attempting player login...');
 
-        if (!isConnected) {
+        if (!isConnected && connectSocket) {
             connectSocket();
         }
 
@@ -208,7 +221,7 @@ export const AuthProvider = ({ children }) => {
         setLoading(true);
         console.log('[AuthContext] Attempting admin login...');
 
-        if (!isConnected) {
+        if (!isConnected && connectSocket) {
             connectSocket(); // Ensure socket connection for admin too
         }
         
@@ -249,6 +262,7 @@ export const AuthProvider = ({ children }) => {
         }
     }, [connectSocket, isConnected]); // Dependencies
 
+    // --- Logout Function ---
     const logout = useCallback(() => {
         console.log('[AuthContext] Logging out...');
         setUser(null);
@@ -256,7 +270,7 @@ export const AuthProvider = ({ children }) => {
         setPendingAuthPlayerId(null);
         localStorage.removeItem('userInfo');
         localStorage.removeItem('adminKey'); // Remove admin key on logout
-        if (isConnected) {
+        if (isConnected && disconnectSocket) {
             disconnectSocket(); // Disconnect socket only if it was connected
         }
         navigate('/'); // Redirect immediately on logout
@@ -270,7 +284,7 @@ export const AuthProvider = ({ children }) => {
 
         // Display doesn't strictly NEED a socket connection unless it needs
         // direct interaction later, but connecting might be useful for consistency.
-        if (!isConnected) {
+        if (!isConnected && connectSocket) {
             connectSocket();
         }
         

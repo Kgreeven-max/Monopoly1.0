@@ -105,6 +105,10 @@ app = Flask(__name__)
 environment = get_environment()
 configure_flask_app(app, environment)
 
+# Set database URI - Add SQLite database connection
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///monopoly.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 # Set up logging
 logging.basicConfig(
     level=logging.INFO if is_debug_mode() else logging.WARNING,
@@ -1264,10 +1268,24 @@ def handle_create_bot(data):
 def page_not_found(e):
     return render_template('error.html', error_code=404, error_message="Page not found"), 404
 
+# Set default configuration values for missing keys
+app.config.setdefault('ADAPTIVE_DIFFICULTY_ENABLED', False)
+app.config.setdefault('POLICE_PATROL_ENABLED', False)
+app.config.setdefault('REMOTE_PLAY_ENABLED', False)
+app.config.setdefault('ECONOMIC_CYCLE_ENABLED', True)
+app.config.setdefault('RANDOM_ECONOMIC_EVENTS_ENABLED', True)
+app.config.setdefault('ADAPTIVE_DIFFICULTY_INTERVAL', 15)
+app.config.setdefault('POLICE_PATROL_INTERVAL', 45)
+app.config.setdefault('ECONOMIC_CYCLE_INTERVAL', 5)
+app.config.setdefault('MIN_ECONOMIC_EVENT_INTERVAL', 30)
+app.config.setdefault('MAX_ECONOMIC_EVENT_INTERVAL', 60)
+app.config.setdefault('INITIAL_ECONOMIC_EVENT_DELAY', 15)
+
 # Run the app
 if __name__ == '__main__':
     setup_scheduled_tasks()
-    port = get_port()
+    # Use port 5001 directly to avoid conflicts with the src/app.py
+    port = 5001
     debug_mode = is_debug_mode()
     logging.info(f"Starting server on port {port} with debug mode {'enabled' if debug_mode else 'disabled'}")
     socketio.run(app, host='0.0.0.0', port=port, debug=debug_mode, allow_unsafe_werkzeug=True) 

@@ -1,8 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import io from 'socket.io-client';
 
-// Create context
-const SocketContext = createContext();
+// Create context with default values
+const SocketContext = createContext({
+  socket: null,
+  isConnected: false,
+  connectionError: null,
+  reconnectAttempts: 0,
+  connectSocket: () => {},
+  disconnectSocket: () => {},
+  emit: () => false,
+  on: () => () => {}
+});
 
 // Custom hook to use the socket context
 export const useSocket = () => useContext(SocketContext);
