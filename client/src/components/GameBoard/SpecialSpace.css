@@ -22,6 +22,8 @@
 .special-space-icon {
   font-size: var(--font-size-2xl);
   margin-bottom: var(--spacing-xs);
+  text-align: center;
+  width: 100%;
 }
 
 .special-space h3 {
@@ -31,11 +33,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: center;
+  width: 100%;
 }
 
 .special-space p {
   font-size: var(--font-size-xs);
   margin: 0;
+  text-align: center;
+  width: 100%;
 }
 
 /* Special space type styles */
@@ -114,4 +120,44 @@
   width: calc(var(--board-size) / 8);
   height: calc(var(--board-size) / 8);
   border-width: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Make GO text more centered and clearly visible */
+.special-space.go h3 {
+  font-size: var(--font-size-md);
+  font-weight: bold;
+  margin: var(--spacing-xs) 0;
+  text-transform: uppercase;
+  text-align: center;
+  width: 100%;
+}
+
+/* Specific improvements for Chance card styling */
+.special-space.chance h3,
+.special-space.communityChest h3 {
+  font-size: var(--font-size-sm);
+  font-weight: bold;
+  text-align: center;
+  margin: var(--spacing-xs) 0;
+  width: 100%;
+}
+
+.special-space.chance .card-count,
+.special-space.communityChest .card-count {
+  font-size: var(--font-size-xs);
+  text-align: center;
+  width: 100%;
+}
+
+.special-space.chance .special-space-icon,
+.special-space.communityChest .special-space-icon {
+  font-size: calc(var(--font-size-2xl) * 1.2);
+  margin-bottom: var(--spacing-xs);
+  text-align: center;
+  width: 100%;
 } 
