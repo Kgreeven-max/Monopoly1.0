@@ -64,6 +64,20 @@ function BoardPage() {
   const getSpaceContent = (space) => {
     const isCorner = space.type === 'corner';
     
+    // Format property name to fit better
+    const formatPropertyName = (name) => {
+      if (name.includes(' AVE')) {
+        return name.replace(' AVE', '').trim();
+      }
+      if (name.includes(' RAILROAD')) {
+        return name.replace(' RAILROAD', '').trim();
+      }
+      if (name.includes(' PLACE')) {
+        return name.replace(' PLACE', '').trim();
+      }
+      return name;
+    };
+    
     // Generic content for all spaces
     const genericContent = (
       <>
@@ -71,24 +85,24 @@ function BoardPage() {
         {space.type === 'property' && (
           <Box sx={{ 
             width: '100%', 
-            height: '30%', 
+            height: '25%', 
             backgroundColor: space.color,
-            borderBottom: '1px solid black',
+            borderBottom: '2px solid black',
           }} />
         )}
         
         {space.type === 'railroad' && (
           <Box sx={{ 
             width: '100%', 
-            height: '30%', 
+            height: '25%', 
             backgroundColor: '#000000',
             color: 'white',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            fontSize: isFullScreen ? '1.3vmin' : '1.2vmin',
+            fontSize: isFullScreen ? '1.4vmin' : '1.3vmin',
             fontWeight: 'bold',
-            borderBottom: '1px solid black',
+            borderBottom: '2px solid black',
           }}>
             RAILROAD
           </Box>
@@ -97,14 +111,14 @@ function BoardPage() {
         {space.type === 'utility' && (
           <Box sx={{ 
             width: '100%', 
-            height: '30%', 
+            height: '25%', 
             backgroundColor: '#CCCCCC',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            fontSize: isFullScreen ? '1.3vmin' : '1.2vmin',
+            fontSize: isFullScreen ? '1.4vmin' : '1.3vmin',
             fontWeight: 'bold',
-            borderBottom: '1px solid black',
+            borderBottom: '2px solid black',
           }}>
             UTILITY
           </Box>
@@ -118,9 +132,9 @@ function BoardPage() {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            fontSize: isFullScreen ? '1.6vmin' : '1.4vmin',
+            fontSize: isFullScreen ? '2.2vmin' : '2.0vmin',
             fontWeight: 'bold',
-            borderBottom: '1px solid black',
+            borderBottom: '2px solid black',
           }}>
             ?
           </Box>
@@ -134,25 +148,26 @@ function BoardPage() {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            fontSize: isFullScreen ? '1.1vmin' : '1.0vmin',
+            fontSize: isFullScreen ? '1.3vmin' : '1.2vmin',
             fontWeight: 'bold',
-            borderBottom: '1px solid black',
+            borderBottom: '2px solid black',
+            textTransform: 'uppercase',
           }}>
-            COMMUNITY CHEST
+            COMMUNITY
           </Box>
         )}
         
         {space.type === 'tax' && (
           <Box sx={{ 
             width: '100%', 
-            height: '30%', 
+            height: '25%', 
             backgroundColor: '#FFE5B4',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            fontSize: isFullScreen ? '1.4vmin' : '1.2vmin',
+            fontSize: isFullScreen ? '1.5vmin' : '1.3vmin',
             fontWeight: 'bold',
-            borderBottom: '1px solid black',
+            borderBottom: '2px solid black',
           }}>
             TAX
           </Box>
@@ -169,19 +184,36 @@ function BoardPage() {
           alignItems: 'center',
           textAlign: 'center',
         }}>
+          {space.type === 'chest' && (
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                fontSize: isFullScreen ? '1.3vmin' : '1.2vmin',
+                fontWeight: 'bold',
+                mb: 0.3,
+                textTransform: 'uppercase',
+              }}
+            >
+              CHEST
+            </Typography>
+          )}
+          
           <Typography 
             variant="caption" 
             sx={{ 
               fontSize: isCorner 
-                ? (isFullScreen ? '2.2vmin' : '2.0vmin') 
-                : (isFullScreen ? '1.4vmin' : '1.2vmin'),
+                ? (isFullScreen ? '2.3vmin' : '2.1vmin') 
+                : (isFullScreen ? '1.5vmin' : '1.3vmin'),
               fontWeight: 'bold',
               lineHeight: 1.1,
               wordBreak: 'break-word',
               width: '100%',
+              textTransform: 'uppercase',
+              letterSpacing: '-0.02em',
+              ...(space.type === 'chest' && {display: 'none'}) // Hide duplicate text for chest spaces
             }}
           >
-            {space.name}
+            {space.type === 'property' || space.type === 'railroad' ? formatPropertyName(space.name) : space.name}
           </Typography>
           
           {/* Price (if applicable) */}
@@ -189,9 +221,13 @@ function BoardPage() {
             <Typography 
               variant="caption" 
               sx={{ 
-                fontSize: isFullScreen ? '1.5vmin' : '1.3vmin', 
+                fontSize: isFullScreen ? '1.6vmin' : '1.4vmin', 
                 fontWeight: 'bold',
                 mt: 'auto',
+                padding: '2px 0',
+                width: '100%',
+                textAlign: 'center',
+                borderTop: '1px solid #ddd',
               }}
             >
               ${space.price}
@@ -206,20 +242,23 @@ function BoardPage() {
       switch(space.id) {
         case 0: // GO
           return (
-            <Box sx={{ transform: 'rotate(45deg)', textAlign: 'center' }}>
-              <Typography sx={{ fontSize: isFullScreen ? '2.4vmin' : '2.2vmin', fontWeight: 'bold', color: 'red' }}>
+            <Box sx={{ transform: 'rotate(45deg)', textAlign: 'center', padding: '5px' }}>
+              <Typography sx={{ fontSize: isFullScreen ? '2.6vmin' : '2.4vmin', fontWeight: 'bold', color: 'red' }}>
                 GO
               </Typography>
-              <Typography sx={{ fontSize: isFullScreen ? '1.6vmin' : '1.4vmin' }}>
+              <Typography sx={{ fontSize: isFullScreen ? '1.7vmin' : '1.5vmin', fontWeight: 'bold' }}>
                 COLLECT $200
               </Typography>
               <Box sx={{ 
                 position: 'absolute', 
-                bottom: '5px', 
-                right: '5px', 
+                bottom: '8px', 
+                right: '8px', 
                 transform: 'rotate(-45deg)',
-                fontSize: isFullScreen ? '1.4vmin' : '1.2vmin',
-                fontWeight: 'bold'
+                fontSize: isFullScreen ? '1.5vmin' : '1.3vmin',
+                fontWeight: 'bold',
+                backgroundColor: 'rgba(255,255,255,0.7)',
+                padding: '2px 5px',
+                borderRadius: '2px',
               }}>
                 $200
               </Box>
@@ -227,30 +266,30 @@ function BoardPage() {
           );
         case 10: // JAIL
           return (
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography sx={{ fontSize: isFullScreen ? '2.4vmin' : '2.2vmin', fontWeight: 'bold' }}>
+            <Box sx={{ textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
+              <Typography sx={{ fontSize: isFullScreen ? '2.8vmin' : '2.6vmin', fontWeight: 'bold' }}>
                 JAIL
               </Typography>
             </Box>
           );
         case 20: // FREE PARKING
           return (
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography sx={{ fontSize: isFullScreen ? '2.2vmin' : '2.0vmin', fontWeight: 'bold' }}>
+            <Box sx={{ textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
+              <Typography sx={{ fontSize: isFullScreen ? '2.4vmin' : '2.2vmin', fontWeight: 'bold' }}>
                 FREE
               </Typography>
-              <Typography sx={{ fontSize: isFullScreen ? '2.2vmin' : '2.0vmin', fontWeight: 'bold' }}>
+              <Typography sx={{ fontSize: isFullScreen ? '2.4vmin' : '2.2vmin', fontWeight: 'bold' }}>
                 PARKING
               </Typography>
             </Box>
           );
         case 30: // GO TO JAIL
           return (
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography sx={{ fontSize: isFullScreen ? '2.2vmin' : '2.0vmin', fontWeight: 'bold' }}>
+            <Box sx={{ textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
+              <Typography sx={{ fontSize: isFullScreen ? '2.4vmin' : '2.2vmin', fontWeight: 'bold' }}>
                 GO TO
               </Typography>
-              <Typography sx={{ fontSize: isFullScreen ? '2.2vmin' : '2.0vmin', fontWeight: 'bold' }}>
+              <Typography sx={{ fontSize: isFullScreen ? '2.4vmin' : '2.2vmin', fontWeight: 'bold' }}>
                 JAIL
               </Typography>
             </Box>
@@ -327,12 +366,12 @@ function BoardPage() {
             height: isFullScreen ? '99vmin' : '92vmin',
             maxWidth: isFullScreen ? 'none' : '900px',
             maxHeight: isFullScreen ? 'none' : '900px',
-            gap: 0.5,
-            border: '3px solid black',
+            gap: 0.7, // Increased gap between spaces
+            border: '4px solid #333',
             backgroundColor: '#C5E8D2', // Classic Monopoly green
-            padding: 0.5,
-            boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
-            borderRadius: 2,
+            padding: 0.7, // Increased padding
+            boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+            borderRadius: 3,
             position: 'relative',
             cursor: 'pointer',
             transition: 'all 0.3s ease'
@@ -348,10 +387,12 @@ function BoardPage() {
           }}>
             <Box sx={{ 
               transform: 'rotate(-45deg)',
-              fontSize: '5vmin',
+              fontSize: '6vmin',
               fontWeight: 'bold',
               color: '#CC0000', // Monopoly red
-              textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
+              textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
+              letterSpacing: '-0.05em',
+              fontFamily: 'Arial, sans-serif'
             }}>
               MONOPOLY
             </Box>
@@ -371,25 +412,28 @@ function BoardPage() {
                 sx={{
                   ...pos,
                   backgroundColor: 'white',
-                  border: '1px solid black',
+                  border: '1px solid #333',
+                  borderRadius: '2px',
                   ...(isCorner && {
                     gridRow: pos.gridRow,
                     gridColumn: pos.gridColumn,
                     backgroundColor: space.color,
-                    position: 'relative'
+                    position: 'relative',
+                    borderRadius: '4px',
                   }),
                   display: 'flex',
                   flexDirection: 'column',
                   padding: 0,
                   position: 'relative',
                   overflow: 'hidden', 
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                   // Make the corner spaces a bit larger
                   ...(isCorner && isFullScreen && {
                     transform: 'scale(1.05)',
                     zIndex: 5
                   }),
                   // Make all spaces slightly larger
-                  transform: isFullScreen ? 'scale(1.02)' : 'scale(1)',
+                  transform: isFullScreen ? 'scale(1.04)' : 'scale(1.02)', // Increased scale for better visibility
                   zIndex: 1
                 }}
               >
@@ -399,12 +443,12 @@ function BoardPage() {
                 {playersHere.length > 0 && (
                   <Box sx={{ 
                     position: 'absolute',
-                    bottom: '2px',
+                    bottom: '3px',
                     left: 0,
                     right: 0,
                     display: 'flex', 
                     flexWrap: 'wrap',
-                    gap: '2px',
+                    gap: '3px',
                     justifyContent: 'center',
                     zIndex: 10
                   }}>
@@ -412,13 +456,22 @@ function BoardPage() {
                       <Box 
                         key={player.id}
                         sx={{
-                          width: isFullScreen ? '2.5vmin' : '2.2vmin',
-                          height: isFullScreen ? '2.5vmin' : '2.2vmin',
+                          width: isFullScreen ? '2.6vmin' : '2.3vmin',
+                          height: isFullScreen ? '2.6vmin' : '2.3vmin',
                           borderRadius: '50%',
                           backgroundColor: player.color,
-                          border: player.id === currentPlayer.id ? '2px solid gold' : '1px solid #333'
+                          border: player.id === currentPlayer.id ? '2px solid gold' : '1px solid #333',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          color: '#fff',
+                          fontSize: isFullScreen ? '1.6vmin' : '1.4vmin',
+                          fontWeight: 'bold'
                         }}
-                      />
+                      >
+                        {player.id}
+                      </Box>
                     ))}
                   </Box>
                 )}
@@ -431,99 +484,145 @@ function BoardPage() {
       {/* Player Dashboard (right/bottom) */}
       <Box 
         sx={{ 
-          flex: { xs: 'auto', md: '0 0 300px' },
+          flex: { xs: 'auto', md: '0 0 320px' },
           height: { xs: 'auto', md: '100%' },
-          borderLeft: { xs: 'none', md: '1px solid #ccc' },
-          borderTop: { xs: '1px solid #ccc', md: 'none' },
+          borderLeft: { xs: 'none', md: '2px solid #ccc' },
+          borderTop: { xs: '2px solid #ccc', md: 'none' },
           overflow: 'auto',
-          backgroundColor: '#f8f8f8'
+          backgroundColor: '#f9f9f9',
+          boxShadow: '-2px 0 10px rgba(0,0,0,0.1)'
         }}
       >
         <Box sx={{ p: 2 }}>
-          <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>
+          <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2, textAlign: 'center', color: '#333' }}>
             Game Dashboard
           </Typography>
           
           {/* Current player */}
-          <Paper elevation={2} sx={{ p: 2, mb: 3, backgroundColor: alpha(currentPlayer.color, 0.1) }}>
-            <Typography variant="h6" gutterBottom>
+          <Paper elevation={3} sx={{ p: 2, mb: 3, backgroundColor: alpha(currentPlayer.color, 0.15), borderRadius: '10px' }}>
+            <Typography variant="h6" gutterBottom sx={{ textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.1)', pb: 1 }}>
               Current Turn
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Avatar sx={{ bgcolor: currentPlayer.color, mr: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, justifyContent: 'center' }}>
+              <Avatar sx={{ bgcolor: currentPlayer.color, mr: 2, width: 40, height: 40, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
                 {currentPlayer.name.charAt(0)}
               </Avatar>
-              <Typography variant="body1" fontWeight="bold">
+              <Typography variant="body1" fontWeight="bold" fontSize="1.1rem">
                 {currentPlayer.name}
               </Typography>
             </Box>
             
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2">Cash:</Typography>
-              <Typography variant="body2" fontWeight="bold">${currentPlayer.cash}</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, px: 1 }}>
+              <Typography variant="body2" fontWeight="medium">Cash:</Typography>
+              <Typography variant="body2" fontWeight="bold" fontSize="1rem">${currentPlayer.cash}</Typography>
             </Box>
             
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography variant="body2">Position:</Typography>
-              <Typography variant="body2" fontWeight="bold">Space {currentPlayer.position}</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1 }}>
+              <Typography variant="body2" fontWeight="medium">Position:</Typography>
+              <Typography variant="body2" fontWeight="bold" fontSize="1rem">Space {currentPlayer.position}</Typography>
             </Box>
             
             <Box sx={{ mt: 2 }}>
-              <Button variant="contained" fullWidth sx={{ mb: 1 }}>
+              <Button 
+                variant="contained" 
+                fullWidth 
+                sx={{ 
+                  mb: 1, 
+                  bgcolor: '#4CAF50', 
+                  '&:hover': { bgcolor: '#388E3C' },
+                  fontWeight: 'bold',
+                  py: 1,
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                }}
+              >
                 Roll Dice
               </Button>
-              <Button variant="outlined" fullWidth>
+              <Button 
+                variant="outlined" 
+                fullWidth
+                sx={{
+                  borderColor: '#4CAF50',
+                  color: '#4CAF50',
+                  '&:hover': { borderColor: '#388E3C', bgcolor: 'rgba(76, 175, 80, 0.05)' },
+                  fontWeight: 'medium'
+                }}
+              >
                 End Turn
               </Button>
             </Box>
           </Paper>
           
           {/* All players */}
-          <Typography variant="h6" gutterBottom>
-            Players
-          </Typography>
-          <Box sx={{ mb: 3 }}>
-            {players.map(player => (
-              <Box 
-                key={player.id}
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  p: 1,
-                  borderBottom: '1px solid #eee',
-                  bgcolor: player.id === currentPlayer.id ? alpha(player.color, 0.1) : 'transparent'
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Box 
-                    sx={{ 
-                      width: 12, 
-                      height: 12, 
-                      borderRadius: '50%', 
-                      bgcolor: player.color,
-                      mr: 1 
-                    }} 
-                  />
-                  <Typography variant="body2">{player.name}</Typography>
+          <Paper elevation={2} sx={{ mb: 3, borderRadius: '10px', overflow: 'hidden' }}>
+            <Typography variant="h6" sx={{ p: 1.5, fontWeight: 'bold', bgcolor: '#f5f5f5', borderBottom: '1px solid #eee' }}>
+              Players
+            </Typography>
+            <Box>
+              {players.map(player => (
+                <Box 
+                  key={player.id}
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    p: 1.5,
+                    borderBottom: '1px solid #eee',
+                    bgcolor: player.id === currentPlayer.id ? alpha(player.color, 0.1) : 'transparent',
+                    transition: 'background-color 0.3s ease'
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Box 
+                      sx={{ 
+                        width: 16, 
+                        height: 16, 
+                        borderRadius: '50%', 
+                        bgcolor: player.color,
+                        mr: 1.5,
+                        border: '1px solid rgba(0,0,0,0.2)',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                      }} 
+                    />
+                    <Typography variant="body2" fontWeight={player.id === currentPlayer.id ? 'bold' : 'medium'}>
+                      {player.name}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" fontWeight="bold" fontSize="0.95rem">${player.cash}</Typography>
                 </Box>
-                <Typography variant="body2" fontWeight="bold">${player.cash}</Typography>
-              </Box>
-            ))}
-          </Box>
+              ))}
+            </Box>
+          </Paper>
           
           {/* Game controls */}
-          <Typography variant="h6" gutterBottom>
-            Game Controls
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Button variant="outlined" size="small" onClick={toggleFullScreen}>
-              {isFullScreen ? 'Exit Fullscreen' : 'Fullscreen'}
-            </Button>
-            <Button variant="outlined" size="small" color="error">
-              Leave Game
-            </Button>
-          </Box>
+          <Paper elevation={2} sx={{ borderRadius: '10px', overflow: 'hidden' }}>
+            <Typography variant="h6" sx={{ p: 1.5, fontWeight: 'bold', bgcolor: '#f5f5f5', borderBottom: '1px solid #eee' }}>
+              Game Controls
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, p: 1.5 }}>
+              <Button 
+                variant="outlined" 
+                size="medium" 
+                onClick={toggleFullScreen}
+                startIcon={isFullScreen ? <span>⤧</span> : <span>⤢</span>}
+                sx={{ 
+                  fontWeight: 'medium',
+                  borderColor: '#2196F3',
+                  color: '#2196F3',
+                  '&:hover': { borderColor: '#1976D2', bgcolor: 'rgba(33, 150, 243, 0.05)' }
+                }}
+              >
+                {isFullScreen ? 'Exit Fullscreen' : 'Fullscreen'}
+              </Button>
+              <Button 
+                variant="outlined" 
+                size="medium" 
+                color="error"
+                sx={{ fontWeight: 'medium' }}
+              >
+                Leave Game
+              </Button>
+            </Box>
+          </Paper>
         </Box>
       </Box>
     </Box>
