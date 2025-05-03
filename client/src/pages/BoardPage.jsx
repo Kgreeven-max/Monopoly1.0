@@ -30,7 +30,7 @@ function BoardPage() {
     { id: 22, name: 'CHANCE', type: 'chance', color: '#FFC663' },
     { id: 23, name: 'INDIANA AVE', price: 220, type: 'property', color: '#ED1B24' },
     { id: 24, name: 'ILLINOIS AVE', price: 240, type: 'property', color: '#ED1B24' },
-    { id: 25, name: 'B & O RAILROAD', price: 200, type: 'railroad', color: '#000000' },
+    { id: 25, name: 'B & O RAILROAD', price: 100, type: 'railroad', color: '#000000' },
     { id: 26, name: 'ATLANTIC AVE', price: 260, type: 'property', color: '#FEF200' },
     { id: 27, name: 'VENTNOR AVE', price: 260, type: 'property', color: '#FEF200' },
     { id: 28, name: 'WATER WORKS', price: 150, type: 'utility', color: '#FFFFFF' },
@@ -43,7 +43,7 @@ function BoardPage() {
     { id: 35, name: 'SHORT LINE RAILROAD', price: 200, type: 'railroad', color: '#000000' },
     { id: 36, name: 'CHANCE', type: 'chance', color: '#FFC663' },
     { id: 37, name: 'PARK PLACE', price: 350, type: 'property', color: '#0072BC' },
-    { id: 38, name: 'LUXURY TAX', price: 100, type: 'tax', color: '#FFFFFF' },
+    { id: 38, name: 'LUXURY TAX', price: 112, type: 'tax', color: '#FFFFFF' },
     { id: 39, name: 'BOARDWALK', price: 400, type: 'property', color: '#0072BC' },
   ]);
 
@@ -504,7 +504,7 @@ function BoardPage() {
               letterSpacing: '-0.05em',
               fontFamily: 'Arial, sans-serif'
             }}>
-              MONOPOLY
+              CAPITAL WARS
             </Box>
           </Box>
           
