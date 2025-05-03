@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Divider, Paper, Avatar, Chip } from '@mui/material';
+import io from 'socket.io-client';
 
 function BoardPage() {
-  // Define board spaces with property info
-  const boardSpaces = [
+  // Initialize with default property data but will be updated from backend
+  const [boardSpaces, setBoardSpaces] = useState([
     { id: 0, name: 'GO', type: 'corner', color: '#FFECD6' },
     { id: 1, name: 'MEDITERRANEAN AVE', price: 60, type: 'property', color: '#955436' },
     { id: 2, name: 'COMMUNITY CHEST', type: 'chest', color: '#CBDFF8' },
@@ -44,7 +45,7 @@ function BoardPage() {
     { id: 37, name: 'PARK PLACE', price: 350, type: 'property', color: '#0072BC' },
     { id: 38, name: 'LUXURY TAX', price: 100, type: 'tax', color: '#FFFFFF' },
     { id: 39, name: 'BOARDWALK', price: 400, type: 'property', color: '#0072BC' },
-  ];
+  ]);
 
   // Function to get position for each space
   const getPosition = (index) => {
@@ -88,7 +89,22 @@ function BoardPage() {
             height: '25%', 
             backgroundColor: space.color,
             borderBottom: '2px solid black',
-          }} />
+            position: 'relative',
+          }}>
+            {space.owner && (
+              <Box 
+                sx={{ 
+                  position: 'absolute', 
+                  top: 0, 
+                  right: 0, 
+                  width: '25%', 
+                  height: '25%', 
+                  bgcolor: players.find(p => p.id === space.owner)?.color || '#777',
+                  borderBottomLeftRadius: '50%',
+                }}
+              />
+            )}
+          </Box>
         )}
         
         {space.type === 'railroad' && (
@@ -228,9 +244,12 @@ function BoardPage() {
                 width: '100%',
                 textAlign: 'center',
                 borderTop: '1px solid #ddd',
+                // Add visual indicator for inflation
+                color: inflation > 1.5 ? '#d32f2f' : 
+                       inflation > 1.2 ? '#f57c00' : 'inherit',
               }}
             >
-              ${space.price}
+              {formatMoney(space.price)}
             </Typography>
           )}
         </Box>
@@ -333,6 +352,97 @@ function BoardPage() {
   ];
   
   const currentPlayer = players[0]; // First player is current
+
+  // Socket connection for real-time updates
+  const [socket, setSocket] = useState(null);
+  const [economicState, setEconomicState] = useState('normal');
+  const [inflation, setInflation] = useState(1.0);
+
+  // Connect to socket and set up property updates
+  useEffect(() => {
+    const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5001');
+    setSocket(newSocket);
+
+    // Initial property data fetch
+    fetch('/api/properties')
+      .then(response => response.json())
+      .then(data => {
+        updatePropertyData(data);
+      })
+      .catch(error => console.error('Error fetching properties:', error));
+
+    // Listen for property updates via socket
+    newSocket.on('property_update', (updatedProperties) => {
+      updatePropertyData(updatedProperties);
+    });
+
+    // Listen for economic changes
+    newSocket.on('economic_update', (data) => {
+      setEconomicState(data.state);
+      setInflation(data.inflation || 1.0);
+      
+      // If we receive separate inflation data without property updates,
+      // update the prices based on current properties and new inflation
+      if (data.inflation && !data.properties) {
+        updatePricesWithInflation(data.inflation);
+      }
+    });
+
+    return () => {
+      if (newSocket) {
+        newSocket.disconnect();
+      }
+    };
+  }, []);
+
+  // Function to update all property data from backend
+  const updatePropertyData = (propertyData) => {
+    setBoardSpaces(prevSpaces => {
+      return prevSpaces.map(space => {
+        const updatedProperty = propertyData.find(p => p.id === space.id);
+        if (updatedProperty) {
+          return {
+            ...space,
+            name: updatedProperty.name || space.name,
+            price: updatedProperty.price || space.price,
+            owner: updatedProperty.owner
+          };
+        }
+        return space;
+      });
+    });
+  };
+
+  // Function to update just the prices based on inflation
+  const updatePricesWithInflation = (newInflation) => {
+    setBoardSpaces(prevSpaces => {
+      return prevSpaces.map(space => {
+        if (space.price) {
+          const basePrice = space.basePrice || space.price; // Store original price if not already stored
+          return {
+            ...space,
+            basePrice: space.basePrice || space.price,
+            price: Math.round(basePrice * newInflation)
+          };
+        }
+        return space;
+      });
+    });
+  };
+
+  // Function to format money with suffix based on economic state
+  const formatMoney = (amount) => {
+    if (!amount) return '$0';
+    
+    // Format based on economic state - add suffixes for very high inflation
+    if (inflation > 1000) {
+      return `$${Math.round(amount / 1000)}K`;
+    } else if (inflation > 1000000) {
+      return `$${Math.round(amount / 1000000)}M`;
+    }
+    
+    return `$${amount}`;
+  };
 
   return (
     <Box 
