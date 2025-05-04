@@ -345,11 +345,25 @@ function BoardPage() {
 
   // Mock player data (replace with actual data later)
   const players = [
-    { id: 1, name: 'Player 1', cash: 1500, position: 0, color: '#E53935' },
-    { id: 2, name: 'Player 2', cash: 1200, position: 5, color: '#1E88E5' },
-    { id: 3, name: 'Player 3', cash: 950, position: 12, color: '#43A047' },
-    { id: 4, name: 'Player 4', cash: 800, position: 24, color: '#FDD835' },
+    { id: 1, name: 'Player 1', cash: 1500, position: 0, color: '#E53935', token: 'coin' },
+    { id: 2, name: 'Player 2', cash: 1200, position: 5, color: '#1E88E5', token: 'chart' },
+    { id: 3, name: 'Player 3', cash: 950, position: 12, color: '#43A047', token: 'rocket' },
+    { id: 4, name: 'Player 4', cash: 800, position: 24, color: '#FDD835', token: 'device' },
   ];
+  
+  // Player token options
+  const tokenOptions = {
+    'coin': { icon: '₿', description: 'Cryptocurrency Coin' },
+    'device': { icon: '📱', description: 'Smart Device' },
+    'car': { icon: '🚗', description: 'Electric Vehicle' },
+    'building': { icon: '🏢', description: 'Corporate Tower' },
+    'laptop': { icon: '💻', description: 'Laptop' },
+    'card': { icon: '💳', description: 'Credit Card' },
+    'chart': { icon: '📈', description: 'Stock Chart' },
+    'robot': { icon: '🤖', description: 'AI Robot' },
+    'rocket': { icon: '🚀', description: 'Startup Rocket' },
+    'network': { icon: '🌐', description: 'Global Network' }
+  };
   
   const currentPlayer = players[0]; // First player is current
 
@@ -580,7 +594,7 @@ function BoardPage() {
                           fontWeight: 'bold'
                         }}
                       >
-                        {player.id}
+                        {tokenOptions[player.token]?.icon || player.id}
                       </Box>
                     ))}
                   </Box>
@@ -615,7 +629,7 @@ function BoardPage() {
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, justifyContent: 'center' }}>
               <Avatar sx={{ bgcolor: currentPlayer.color, mr: 2, width: 40, height: 40, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                {currentPlayer.name.charAt(0)}
+                {tokenOptions[currentPlayer.token]?.icon || currentPlayer.name.charAt(0)}
               </Avatar>
               <Typography variant="body1" fontWeight="bold" fontSize="1.1rem">
                 {currentPlayer.name}
@@ -684,15 +698,22 @@ function BoardPage() {
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Box 
                       sx={{ 
-                        width: 16, 
-                        height: 16, 
+                        width: 24, 
+                        height: 24, 
                         borderRadius: '50%', 
                         bgcolor: player.color,
                         mr: 1.5,
                         border: '1px solid rgba(0,0,0,0.2)',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        color: '#fff',
+                        fontSize: '16px'
                       }} 
-                    />
+                    >
+                      {tokenOptions[player.token]?.icon}
+                    </Box>
                     <Typography variant="body2" fontWeight={player.id === currentPlayer.id ? 'bold' : 'medium'}>
                       {player.name}
                     </Typography>
