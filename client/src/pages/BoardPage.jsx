@@ -345,24 +345,24 @@ function BoardPage() {
 
   // Mock player data (replace with actual data later)
   const players = [
-    { id: 1, name: 'Player 1', cash: 1500, position: 0, color: '#E53935', token: 'coin' },
-    { id: 2, name: 'Player 2', cash: 1200, position: 5, color: '#1E88E5', token: 'chart' },
-    { id: 3, name: 'Player 3', cash: 950, position: 12, color: '#43A047', token: 'rocket' },
-    { id: 4, name: 'Player 4', cash: 800, position: 24, color: '#FDD835', token: 'device' },
+    { id: 1, name: 'Player 1', cash: 1500, position: 0, color: '#E53935', token: 'car' },
+    { id: 2, name: 'Player 2', cash: 1200, position: 5, color: '#1E88E5', token: 'ship' },
+    { id: 3, name: 'Player 3', cash: 950, position: 12, color: '#43A047', token: 'hat' },
+    { id: 4, name: 'Player 4', cash: 800, position: 24, color: '#FDD835', token: 'boot' },
   ];
   
   // Player token options
   const tokenOptions = {
-    'coin': { icon: '₿', description: 'Cryptocurrency Coin' },
-    'device': { icon: '📱', description: 'Smart Device' },
-    'car': { icon: '🚗', description: 'Electric Vehicle' },
-    'building': { icon: '🏢', description: 'Corporate Tower' },
-    'laptop': { icon: '💻', description: 'Laptop' },
-    'card': { icon: '💳', description: 'Credit Card' },
-    'chart': { icon: '📈', description: 'Stock Chart' },
-    'robot': { icon: '🤖', description: 'AI Robot' },
-    'rocket': { icon: '🚀', description: 'Startup Rocket' },
-    'network': { icon: '🌐', description: 'Global Network' }
+    'car': { icon: '🚗', description: 'Sports Car' },
+    'ship': { icon: '🚢', description: 'Luxury Yacht' },
+    'hat': { icon: '🎩', description: 'Top Hat' },
+    'boot': { icon: '👢', description: 'Boot' },
+    'dog': { icon: '🐕', description: 'Scottish Terrier' },
+    'ring': { icon: '💍', description: 'Diamond Ring' },
+    'iron': { icon: '🧳', description: 'Iron' },
+    'thimble': { icon: '🧵', description: 'Thimble' },
+    'wheelbarrow': { icon: '🛒', description: 'Wheelbarrow' },
+    'cannon': { icon: '💣', description: 'Cannon' }
   };
   
   const currentPlayer = players[0]; // First player is current
@@ -580,21 +580,58 @@ function BoardPage() {
                       <Box 
                         key={player.id}
                         sx={{
-                          width: isFullScreen ? '2.6vmin' : '2.3vmin',
-                          height: isFullScreen ? '2.6vmin' : '2.3vmin',
+                          width: isFullScreen ? '3.2vmin' : '2.8vmin',
+                          height: isFullScreen ? '3.2vmin' : '2.8vmin',
                           borderRadius: '50%',
-                          backgroundColor: player.color,
-                          border: player.id === currentPlayer.id ? '2px solid gold' : '1px solid #333',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                          background: `radial-gradient(circle at 30% 30%, ${player.color}, ${darkenColor(player.color, 30)})`,
+                          border: player.id === currentPlayer.id ? '2px solid gold' : '1px solid rgba(0,0,0,0.5)',
+                          boxShadow: player.id === currentPlayer.id 
+                            ? '0 0 8px gold, 0 2px 5px rgba(0,0,0,0.4), inset 0 -2px 5px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.5)' 
+                            : '0 2px 5px rgba(0,0,0,0.4), inset 0 -2px 5px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.5)',
                           display: 'flex',
                           justifyContent: 'center',
                           alignItems: 'center',
-                          color: '#fff',
-                          fontSize: isFullScreen ? '1.6vmin' : '1.4vmin',
-                          fontWeight: 'bold'
+                          fontSize: isFullScreen ? '1.8vmin' : '1.6vmin',
+                          transform: 'translateY(-5px) perspective(500px) rotateX(10deg)',
+                          transformStyle: 'preserve-3d',
+                          transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                          position: 'relative',
+                          overflow: 'visible',
+                          '&:hover': {
+                            transform: 'translateY(-10px) perspective(500px) rotateX(15deg) scale(1.15)',
+                            boxShadow: player.id === currentPlayer.id 
+                              ? '0 0 12px gold, 0 8px 16px rgba(0,0,0,0.4), inset 0 -2px 5px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.5)'
+                              : '0 8px 16px rgba(0,0,0,0.4), inset 0 -2px 5px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.5)',
+                            zIndex: 10
+                          },
+                          '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            width: '100%',
+                            height: '20%',
+                            bottom: '-10%',
+                            left: '0',
+                            backgroundColor: 'rgba(0,0,0,0.2)',
+                            filter: 'blur(4px)',
+                            borderRadius: '50%',
+                            zIndex: -1,
+                            transition: 'all 0.3s ease',
+                            transform: 'rotateX(60deg) scale(0.8, 0.4)',
+                          },
+                          '&:hover::after': {
+                            width: '120%',
+                            left: '-10%',
+                            filter: 'blur(6px)',
+                          }
                         }}
                       >
-                        {tokenOptions[player.token]?.icon || player.id}
+                        <Box sx={{
+                          fontSize: isFullScreen ? '2.2vmin' : '2vmin',
+                          filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))',
+                          transform: 'translateZ(5px)',
+                        }}>
+                          {tokenOptions[player.token]?.icon || player.id}
+                        </Box>
                       </Box>
                     ))}
                   </Box>
@@ -698,21 +735,42 @@ function BoardPage() {
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Box 
                       sx={{ 
-                        width: 24, 
-                        height: 24, 
+                        width: 36, 
+                        height: 36, 
                         borderRadius: '50%', 
-                        bgcolor: player.color,
+                        background: `radial-gradient(circle at 30% 30%, ${player.color}, ${darkenColor(player.color, 30)})`,
                         mr: 1.5,
-                        border: '1px solid rgba(0,0,0,0.2)',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                        border: '1px solid rgba(0,0,0,0.3)',
+                        boxShadow: '0 3px 6px rgba(0,0,0,0.2), inset 0 -2px 5px rgba(0,0,0,0.2), inset 0 2px 5px rgba(255,255,255,0.4)',
                         display: 'flex',
                         justifyContent: 'center',
                         alignItems: 'center',
-                        color: '#fff',
-                        fontSize: '16px'
+                        fontSize: '20px',
+                        position: 'relative',
+                        transformStyle: 'preserve-3d',
+                        transform: 'perspective(500px) rotateX(10deg)',
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          width: '90%',
+                          height: '15%',
+                          bottom: '-8%',
+                          left: '5%',
+                          backgroundColor: 'rgba(0,0,0,0.2)',
+                          filter: 'blur(3px)',
+                          borderRadius: '50%',
+                          zIndex: -1,
+                          transform: 'rotateX(60deg) scale(1, 0.4)',
+                        }
                       }} 
                     >
-                      {tokenOptions[player.token]?.icon}
+                      <Box sx={{
+                        fontSize: '22px',
+                        filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))',
+                        transform: 'translateZ(2px)',
+                      }}>
+                        {tokenOptions[player.token]?.icon}
+                      </Box>
                     </Box>
                     <Typography variant="body2" fontWeight={player.id === currentPlayer.id ? 'bold' : 'medium'}>
                       {player.name}
@@ -764,6 +822,22 @@ function BoardPage() {
 function alpha(color, value) {
   // Simple alpha function for web colors
   return color + Math.round(value * 255).toString(16).padStart(2, '0');
+}
+
+// Helper function to darken a color
+function darkenColor(color, percent) {
+  // Convert hex to RGB
+  let r = parseInt(color.substr(1, 2), 16);
+  let g = parseInt(color.substr(3, 2), 16);
+  let b = parseInt(color.substr(5, 2), 16);
+  
+  // Darken
+  r = Math.floor(r * (100 - percent) / 100);
+  g = Math.floor(g * (100 - percent) / 100);
+  b = Math.floor(b * (100 - percent) / 100);
+  
+  // Convert back to hex
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
 export default BoardPage; 
