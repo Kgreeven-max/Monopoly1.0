@@ -506,19 +506,168 @@ function BoardPage() {
             gridRow: '2 / 11', 
             gridColumn: '2 / 11',
             display: 'flex',
+            flexDirection: 'column',
             justifyContent: 'center',
-            alignItems: 'center'
+            alignItems: 'center',
+            position: 'relative'
           }}>
+            {/* Game Title */}
             <Box sx={{ 
               transform: 'rotate(-45deg)',
-              fontSize: '6vmin',
+              fontSize: '5vmin', // Slightly smaller to make room for cards
               fontWeight: 'bold',
               color: '#CC0000', // Monopoly red
               textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
               letterSpacing: '-0.05em',
-              fontFamily: 'Arial, sans-serif'
+              fontFamily: 'Arial, sans-serif',
+              marginBottom: '6vmin' // Increased space between title and cards
             }}>
               CAPITAL WARS
+            </Box>
+            
+            {/* Card decks */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-around', 
+              width: '80%',
+              marginTop: '8vmin' // Increased to move cards down
+            }}>
+              {/* Community Chest */}
+              <Box sx={{
+                width: '15vmin',
+                height: '10vmin',
+                backgroundColor: '#CBDFF8', // Match Community Chest color
+                border: '2px solid #333',
+                borderRadius: '0.8vmin',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                boxShadow: '0 0.4vmin 0.8vmin rgba(0,0,0,0.3)',
+                position: 'relative',
+                transform: 'rotate(-5deg)',
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  top: '0.5vmin',
+                  left: '0.5vmin',
+                  right: '0.5vmin',
+                  bottom: '0.5vmin',
+                  border: '1px solid rgba(0,0,0,0.2)',
+                  borderRadius: '0.4vmin',
+                  pointerEvents: 'none'
+                }
+              }}>
+                <Typography sx={{ 
+                  fontSize: '1.6vmin', 
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  color: '#333',
+                  mb: '0.3vmin',
+                  textTransform: 'uppercase'
+                }}>
+                  Community
+                </Typography>
+                <Typography sx={{ 
+                  fontSize: '1.6vmin', 
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  color: '#333',
+                  textTransform: 'uppercase'
+                }}>
+                  Chest
+                </Typography>
+                
+                {/* Card stack effect */}
+                <Box sx={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: '#CBDFF8',
+                  border: '2px solid #333',
+                  borderRadius: '0.8vmin',
+                  transform: 'rotate(3deg) translate(-0.2vmin, -0.2vmin)',
+                  zIndex: -1
+                }} />
+                <Box sx={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: '#CBDFF8',
+                  border: '2px solid #333',
+                  borderRadius: '0.8vmin',
+                  transform: 'rotate(6deg) translate(-0.4vmin, -0.4vmin)',
+                  zIndex: -2
+                }} />
+              </Box>
+              
+              {/* Chance */}
+              <Box sx={{
+                width: '15vmin',
+                height: '10vmin',
+                backgroundColor: '#FFC663', // Match Chance color
+                border: '2px solid #333',
+                borderRadius: '0.8vmin',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                boxShadow: '0 0.4vmin 0.8vmin rgba(0,0,0,0.3)',
+                position: 'relative',
+                transform: 'rotate(5deg)',
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  top: '0.5vmin',
+                  left: '0.5vmin',
+                  right: '0.5vmin',
+                  bottom: '0.5vmin',
+                  border: '1px solid rgba(0,0,0,0.2)',
+                  borderRadius: '0.4vmin',
+                  pointerEvents: 'none'
+                }
+              }}>
+                <Typography sx={{ 
+                  fontSize: '4vmin', 
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  color: '#333'
+                }}>
+                  ?
+                </Typography>
+                <Typography sx={{ 
+                  fontSize: '1.6vmin', 
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  color: '#333',
+                  position: 'absolute',
+                  bottom: '0.8vmin',
+                  textTransform: 'uppercase'
+                }}>
+                  Chance
+                </Typography>
+                
+                {/* Card stack effect */}
+                <Box sx={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: '#FFC663',
+                  border: '2px solid #333',
+                  borderRadius: '0.8vmin',
+                  transform: 'rotate(-3deg) translate(0.2vmin, -0.2vmin)',
+                  zIndex: -1
+                }} />
+                <Box sx={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: '#FFC663',
+                  border: '2px solid #333',
+                  borderRadius: '0.8vmin',
+                  transform: 'rotate(-6deg) translate(0.4vmin, -0.4vmin)',
+                  zIndex: -2
+                }} />
+              </Box>
             </Box>
           </Box>
           
