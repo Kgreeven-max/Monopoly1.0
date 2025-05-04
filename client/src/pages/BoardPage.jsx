@@ -2,6 +2,165 @@ import React, { useState, useEffect } from 'react';
 import { Box, Typography, Button, Divider, Paper, Avatar, Chip } from '@mui/material';
 import io from 'socket.io-client';
 
+// Card data - moved to top level for easy editing
+// Add new cards by simply adding new objects to these arrays
+const CHANCE_CARDS = [
+  { 
+    id: 1, 
+    title: "Advance to Go", 
+    description: "Collect $200", 
+    action: "move", 
+    value: 0,
+    color: "#FFC663"  // Standard Chance yellow color
+  },
+  { 
+    id: 2, 
+    title: "Bank error in your favor", 
+    description: "Collect $200", 
+    action: "collect", 
+    value: 200,
+    color: "#FFC663"
+  },
+  { 
+    id: 3, 
+    title: "Doctor's fees", 
+    description: "Pay $50", 
+    action: "pay", 
+    value: 50,
+    color: "#FFC663"
+  },
+  { 
+    id: 4, 
+    title: "Get out of jail free", 
+    description: "This card may be kept until needed", 
+    action: "getOutOfJail", 
+    value: null,
+    color: "#FFC663"
+  },
+  { 
+    id: 5, 
+    title: "Go to jail", 
+    description: "Go directly to jail. Do not pass Go. Do not collect $200.", 
+    action: "goToJail", 
+    value: null,
+    color: "#FFC663"
+  },
+  // Add more Chance cards here
+  { 
+    id: 6, 
+    title: "Speeding fine", 
+    description: "Pay $15", 
+    action: "pay", 
+    value: 15,
+    color: "#FFC663"
+  },
+  { 
+    id: 7, 
+    title: "You've been elected", 
+    description: "Pay each player $50", 
+    action: "payEach", 
+    value: 50,
+    color: "#FFC663"
+  },
+  { 
+    id: 8, 
+    title: "Building loan matures", 
+    description: "Collect $150", 
+    action: "collect", 
+    value: 150,
+    color: "#FFC663"
+  },
+];
+
+const COMMUNITY_CHEST_CARDS = [
+  { 
+    id: 1, 
+    title: "Income tax refund", 
+    description: "Collect $20", 
+    action: "collect", 
+    value: 20,
+    color: "#CBDFF8"  // Standard Community Chest blue color
+  },
+  { 
+    id: 2, 
+    title: "Holiday fund matures", 
+    description: "Collect $100", 
+    action: "collect", 
+    value: 100,
+    color: "#CBDFF8"
+  },
+  { 
+    id: 3, 
+    title: "Pay hospital fees", 
+    description: "Pay $100", 
+    action: "pay", 
+    value: 100,
+    color: "#CBDFF8"
+  },
+  { 
+    id: 4, 
+    title: "Go to jail", 
+    description: "Go directly to jail. Do not pass Go. Do not collect $200.", 
+    action: "goToJail", 
+    value: null,
+    color: "#CBDFF8"
+  },
+  { 
+    id: 5, 
+    title: "It's your birthday", 
+    description: "Collect $10 from each player", 
+    action: "collectFromEach", 
+    value: 10,
+    color: "#CBDFF8"
+  },
+  // Add more Community Chest cards here
+  { 
+    id: 6, 
+    title: "Life insurance matures", 
+    description: "Collect $100", 
+    action: "collect", 
+    value: 100,
+    color: "#CBDFF8"
+  },
+  { 
+    id: 7, 
+    title: "School fees", 
+    description: "Pay $50", 
+    action: "pay", 
+    value: 50,
+    color: "#CBDFF8"
+  },
+  { 
+    id: 8, 
+    title: "You inherit", 
+    description: "Collect $100", 
+    action: "collect", 
+    value: 100,
+    color: "#CBDFF8"
+  },
+  { 
+    id: 9, 
+    title: "From sale of stock", 
+    description: "Collect $50", 
+    action: "collect", 
+    value: 50,
+    color: "#CBDFF8"
+  },
+];
+
+/*
+  CARD TEMPLATE - Copy this to add new cards:
+  
+  { 
+    id: 0,                       // Unique ID (increment from the last one)
+    title: "Card title",         // Main card title
+    description: "Description",  // Card text
+    action: "action_type",       // Action type: "move", "collect", "pay", "goToJail", etc.
+    value: 100,                  // Value associated with the action (amount to pay/collect, space to move to)
+    color: "#CBDFF8"             // Card color - use #FFC663 for Chance, #CBDFF8 for Community Chest
+  },
+*/
+
 function BoardPage() {
   // Initialize with default property data but will be updated from backend
   const [boardSpaces, setBoardSpaces] = useState([
@@ -458,55 +617,80 @@ function BoardPage() {
     return `$${amount}`;
   };
 
-  // Add states for card animation
+  // Card system
   const [showCard, setShowCard] = useState(false);
   const [cardType, setCardType] = useState(null); // 'chance' or 'chest'
   const [cardContent, setCardContent] = useState(null);
   const [cardAnimation, setCardAnimation] = useState('initial'); // 'initial', 'flipping', 'showing', 'flying'
   
-  // Sample card data (will be replaced with actual API data)
-  const chanceCards = [
-    { id: 1, title: "Advance to Go", description: "Collect $200", action: "move", value: 0 },
-    { id: 2, title: "Bank error in your favor", description: "Collect $200", action: "collect", value: 200 },
-    { id: 3, title: "Doctor's fees", description: "Pay $50", action: "pay", value: 50 },
-    { id: 4, title: "Get out of jail free", description: "This card may be kept until needed", action: "getOutOfJail", value: null },
-    { id: 5, title: "Go to jail", description: "Go directly to jail. Do not pass Go. Do not collect $200.", action: "goToJail", value: null },
-  ];
-  
-  const communityChestCards = [
-    { id: 1, title: "Income tax refund", description: "Collect $20", action: "collect", value: 20 },
-    { id: 2, title: "Holiday fund matures", description: "Collect $100", action: "collect", value: 100 },
-    { id: 3, title: "Pay hospital fees", description: "Pay $100", action: "pay", value: 100 },
-    { id: 4, title: "Go to jail", description: "Go directly to jail. Do not pass Go. Do not collect $200.", action: "goToJail", value: null },
-    { id: 5, title: "It's your birthday", description: "Collect $10 from each player", action: "collectFromEach", value: 10 },
-  ];
-  
-  // Function to draw a random card
+  /**
+   * Draw a random card of specified type
+   * @param {string} type - Either 'chance' or 'chest'
+   */
   const drawCard = (type) => {
-    const cards = type === 'chance' ? chanceCards : communityChestCards;
+    const cards = type === 'chance' ? CHANCE_CARDS : COMMUNITY_CHEST_CARDS;
     const randomCard = cards[Math.floor(Math.random() * cards.length)];
     
     setCardType(type);
     setCardContent(randomCard);
     setShowCard(true);
     
-    // Start animation sequence with automatic timing
+    // Animation sequence
     setCardAnimation('initial');
     setTimeout(() => setCardAnimation('flipping'), 800);
     setTimeout(() => setCardAnimation('showing'), 2000);
-    
-    // Auto-dismiss after giving time to read (8 seconds total display time)
     setTimeout(() => setCardAnimation('flying'), 8000);
     setTimeout(() => setShowCard(false), 9500);
+    
+    // Execute card action (to be implemented)
+    processCardAction(randomCard);
   };
   
-  // Function to handle closing the card - only used for test buttons, not in normal gameplay
+  /**
+   * Process the card's action
+   * @param {Object} card - The card object with action and value
+   */
+  const processCardAction = (card) => {
+    // This function will be called when the animation starts
+    // We can implement actual game logic based on card.action and card.value
+    console.log(`Processing card action: ${card.action}, value: ${card.value}`);
+    
+    // Implementation can be added later based on game rules
+    switch(card.action) {
+      case 'move':
+        // Move player to position card.value
+        break;
+      case 'collect':
+        // Player collects card.value amount
+        break;
+      case 'pay':
+        // Player pays card.value amount
+        break;
+      case 'goToJail':
+        // Move player to jail
+        break;
+      case 'collectFromEach':
+        // Collect from each player
+        break;
+      case 'payEach':
+        // Pay each player
+        break;
+      default:
+        // Special cases
+        break;
+    }
+  };
+  
+  // Function for testing only
   const handleCardClose = () => {
     setCardAnimation('flying');
     setTimeout(() => setShowCard(false), 1500);
   };
   
-  // Function to handle player landing on a space
+  /**
+   * Handle when a player lands on a space
+   * @param {number} spaceId - The ID of the space landed on
+   */
   const handleLanding = (spaceId) => {
     const space = boardSpaces.find(s => s.id === spaceId);
     
@@ -517,7 +701,7 @@ function BoardPage() {
     }
   };
   
-  // Test function to simulate landing on spaces (will be replaced with actual game logic)
+  // Test functions
   const testChanceCard = () => drawCard('chance');
   const testChestCard = () => drawCard('chest');
 
