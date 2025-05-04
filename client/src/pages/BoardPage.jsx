@@ -458,6 +458,69 @@ function BoardPage() {
     return `$${amount}`;
   };
 
+  // Add states for card animation
+  const [showCard, setShowCard] = useState(false);
+  const [cardType, setCardType] = useState(null); // 'chance' or 'chest'
+  const [cardContent, setCardContent] = useState(null);
+  const [cardAnimation, setCardAnimation] = useState('initial'); // 'initial', 'flipping', 'showing', 'flying'
+  
+  // Sample card data (will be replaced with actual API data)
+  const chanceCards = [
+    { id: 1, title: "Advance to Go", description: "Collect $200", action: "move", value: 0 },
+    { id: 2, title: "Bank error in your favor", description: "Collect $200", action: "collect", value: 200 },
+    { id: 3, title: "Doctor's fees", description: "Pay $50", action: "pay", value: 50 },
+    { id: 4, title: "Get out of jail free", description: "This card may be kept until needed", action: "getOutOfJail", value: null },
+    { id: 5, title: "Go to jail", description: "Go directly to jail. Do not pass Go. Do not collect $200.", action: "goToJail", value: null },
+  ];
+  
+  const communityChestCards = [
+    { id: 1, title: "Income tax refund", description: "Collect $20", action: "collect", value: 20 },
+    { id: 2, title: "Holiday fund matures", description: "Collect $100", action: "collect", value: 100 },
+    { id: 3, title: "Pay hospital fees", description: "Pay $100", action: "pay", value: 100 },
+    { id: 4, title: "Go to jail", description: "Go directly to jail. Do not pass Go. Do not collect $200.", action: "goToJail", value: null },
+    { id: 5, title: "It's your birthday", description: "Collect $10 from each player", action: "collectFromEach", value: 10 },
+  ];
+  
+  // Function to draw a random card
+  const drawCard = (type) => {
+    const cards = type === 'chance' ? chanceCards : communityChestCards;
+    const randomCard = cards[Math.floor(Math.random() * cards.length)];
+    
+    setCardType(type);
+    setCardContent(randomCard);
+    setShowCard(true);
+    
+    // Start animation sequence with automatic timing
+    setCardAnimation('initial');
+    setTimeout(() => setCardAnimation('flipping'), 800);
+    setTimeout(() => setCardAnimation('showing'), 2000);
+    
+    // Auto-dismiss after giving time to read (8 seconds total display time)
+    setTimeout(() => setCardAnimation('flying'), 8000);
+    setTimeout(() => setShowCard(false), 9500);
+  };
+  
+  // Function to handle closing the card - only used for test buttons, not in normal gameplay
+  const handleCardClose = () => {
+    setCardAnimation('flying');
+    setTimeout(() => setShowCard(false), 1500);
+  };
+  
+  // Function to handle player landing on a space
+  const handleLanding = (spaceId) => {
+    const space = boardSpaces.find(s => s.id === spaceId);
+    
+    if (space.type === 'chance') {
+      drawCard('chance');
+    } else if (space.type === 'chest') {
+      drawCard('chest');
+    }
+  };
+  
+  // Test function to simulate landing on spaces (will be replaced with actual game logic)
+  const testChanceCard = () => drawCard('chance');
+  const testChestCard = () => drawCard('chest');
+
   return (
     <Box 
       ref={containerRef}
@@ -468,6 +531,7 @@ function BoardPage() {
         width: '100vw',
         overflow: 'hidden',
         backgroundColor: '#C5E8D2', // Add Monopoly green background
+        position: 'relative' // Added for absolute positioning of cards
       }}
     >
       {/* Board Container (left/top) */}
@@ -951,6 +1015,39 @@ function BoardPage() {
               >
                 {isFullScreen ? 'Exit Fullscreen' : 'Fullscreen'}
               </Button>
+              
+              {/* Test Card Buttons */}
+              <Button 
+                variant="outlined"
+                size="medium"
+                onClick={testChanceCard}
+                sx={{ 
+                  fontWeight: 'medium',
+                  borderColor: '#FFC663',
+                  color: '#333',
+                  bgcolor: 'rgba(255, 198, 99, 0.1)',
+                  '&:hover': { bgcolor: 'rgba(255, 198, 99, 0.2)' },
+                  mb: 1
+                }}
+              >
+                Test Chance Card
+              </Button>
+              <Button 
+                variant="outlined"
+                size="medium"
+                onClick={testChestCard}
+                sx={{ 
+                  fontWeight: 'medium',
+                  borderColor: '#CBDFF8',
+                  color: '#333',
+                  bgcolor: 'rgba(203, 223, 248, 0.1)',
+                  '&:hover': { bgcolor: 'rgba(203, 223, 248, 0.2)' },
+                  mb: 1
+                }}
+              >
+                Test Community Chest
+              </Button>
+              
               <Button 
                 variant="outlined" 
                 size="medium" 
@@ -963,6 +1060,129 @@ function BoardPage() {
           </Paper>
         </Box>
       </Box>
+      
+      {/* Animated Card */}
+      {showCard && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 1000,
+            perspective: '1000px'
+          }}
+        >
+          <Box
+            sx={{
+              width: '300px',
+              height: '200px',
+              position: 'relative',
+              transition: 'all 1.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              transformStyle: 'preserve-3d',
+              transform: cardAnimation === 'initial' 
+                ? 'scale(0.1) translateY(100px)' 
+                : cardAnimation === 'flipping' 
+                  ? 'scale(1) rotateY(180deg)' 
+                  : cardAnimation === 'showing'
+                    ? 'scale(1) rotateY(180deg)'
+                    : 'scale(0.8) rotateY(180deg) translateY(1000px)',
+              opacity: cardAnimation === 'initial' ? 0.5 : 
+                      cardAnimation === 'flying' ? 0 : 1
+            }}
+          >
+            {/* Card Back */}
+            <Box
+              sx={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backfaceVisibility: 'hidden',
+                backgroundColor: cardType === 'chance' ? '#FFC663' : '#CBDFF8',
+                border: '2px solid #333',
+                borderRadius: '10px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                boxShadow: '0 10px 20px rgba(0,0,0,0.4)',
+                transform: 'rotateY(0deg)'
+              }}
+            >
+              <Typography variant="h4">
+                {cardType === 'chance' ? '?' : 'COMMUNITY CHEST'}
+              </Typography>
+            </Box>
+            
+            {/* Card Front */}
+            <Box
+              sx={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backfaceVisibility: 'hidden',
+                backgroundColor: 'white',
+                border: '2px solid #333',
+                borderRadius: '10px',
+                padding: '15px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                boxShadow: '0 10px 20px rgba(0,0,0,0.4)',
+                transform: 'rotateY(180deg)'
+              }}
+            >
+              <Box sx={{ 
+                width: '100%', 
+                backgroundColor: cardType === 'chance' ? '#FFC663' : '#CBDFF8',
+                padding: '5px',
+                borderRadius: '5px',
+                textAlign: 'center'
+              }}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  {cardType === 'chance' ? 'CHANCE' : 'COMMUNITY CHEST'}
+                </Typography>
+              </Box>
+              
+              <Box sx={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  {cardContent?.title}
+                </Typography>
+                <Typography variant="body1">
+                  {cardContent?.description}
+                </Typography>
+              </Box>
+              
+              {/* Auto-dismiss timer visual indicator */}
+              <Box sx={{ 
+                position: 'absolute',
+                bottom: '10px',
+                left: '15px',
+                right: '15px',
+                height: '3px',
+                backgroundColor: '#eee',
+                borderRadius: '3px',
+                overflow: 'hidden'
+              }}>
+                <Box sx={{ 
+                  height: '100%',
+                  width: '100%',
+                  backgroundColor: cardType === 'chance' ? '#FFC663' : '#CBDFF8',
+                  animation: cardAnimation === 'showing' ? 'timer 6s linear forwards' : 'none',
+                  '@keyframes timer': {
+                    '0%': { width: '100%' },
+                    '100%': { width: '0%' }
+                  }
+                }} />
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }
