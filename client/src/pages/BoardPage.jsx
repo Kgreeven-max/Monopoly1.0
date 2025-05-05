@@ -705,6 +705,113 @@ function BoardPage() {
   const testChanceCard = () => drawCard('chance');
   const testChestCard = () => drawCard('chest');
 
+  // Dice roll state
+  const [isRolling, setIsRolling] = useState(false);
+  const [diceValues, setDiceValues] = useState([1, 1]);
+  const [diceAnimationStage, setDiceAnimationStage] = useState('idle'); // 'idle', 'rolling', 'result', 'moving'
+  const [showRollResult, setShowRollResult] = useState(false);
+  const [rollTotal, setRollTotal] = useState(0);
+  
+  // Dice roll function
+  const rollDice = () => {
+    if (isRolling) return; // Prevent multiple rolls
+    
+    setIsRolling(true);
+    setShowRollResult(false);
+    setDiceAnimationStage('rolling');
+    
+    // Schedule the dice animation stages
+    setTimeout(() => {
+      // Generate random dice values
+      const die1 = Math.floor(Math.random() * 6) + 1;
+      const die2 = Math.floor(Math.random() * 6) + 1;
+      const total = die1 + die2;
+      
+      setDiceValues([die1, die2]);
+      setRollTotal(total);
+      setDiceAnimationStage('result');
+      
+      // After showing result briefly, initiate throwing animation
+      setTimeout(() => {
+        setDiceAnimationStage('throwing');
+        
+        // After dice throw completes, show final result
+        setTimeout(() => {
+          setShowRollResult(true);
+          
+          // After showing the result, end the animation
+          setTimeout(() => {
+            console.log(`Player rolled ${total}`);
+            // handlePlayerMove(currentPlayer.id, total); - would be implemented later
+            
+            setDiceAnimationStage('idle');
+            setIsRolling(false);
+            setShowRollResult(false);
+          }, 2000); // Display the result for 2 seconds
+        }, 1500); // Time for dice to finish throwing
+      }, 1000); // Time to show the initial result
+    }, 1500); // Time for dice to roll
+  };
+  
+  // Function for 3D dice face
+  const getDiceFace = (value) => {
+    // Pattern of dots for each face value
+    const dotPositions = {
+      1: ['center'],
+      2: ['top-left', 'bottom-right'],
+      3: ['top-left', 'center', 'bottom-right'],
+      4: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+      5: ['top-left', 'top-right', 'center', 'bottom-left', 'bottom-right'],
+      6: ['top-left', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-right']
+    };
+    
+    const getPositionStyle = (position) => {
+      switch(position) {
+        case 'center': return { top: '50%', left: '50%' };
+        case 'top-left': return { top: '20%', left: '20%' };
+        case 'top-right': return { top: '20%', left: '80%' };
+        case 'middle-left': return { top: '50%', left: '20%' };
+        case 'middle-right': return { top: '50%', left: '80%' };
+        case 'bottom-left': return { top: '80%', left: '20%' };
+        case 'bottom-right': return { top: '80%', left: '80%' };
+        default: return {};
+      }
+    };
+    
+    return (
+      <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
+        {dotPositions[value].map((position, index) => (
+          <Box
+            key={index}
+            sx={{
+              position: 'absolute',
+              width: '18%',
+              height: '18%',
+              borderRadius: '50%',
+              backgroundColor: '#333',
+              transform: 'translate(-50%, -50%)',
+              ...getPositionStyle(position)
+            }}
+          />
+        ))}
+      </Box>
+    );
+  };
+  
+  // Helper function to get the final transform based on dice value
+  const getDiceFinalTransform = (value) => {
+    // Return the transform that will show the correct face value
+    switch(value) {
+      case 1: return 'rotateX(0deg) rotateY(0deg)';
+      case 2: return 'rotateX(0deg) rotateY(-90deg)';
+      case 3: return 'rotateX(-90deg) rotateY(0deg)';
+      case 4: return 'rotateX(90deg) rotateY(0deg)';
+      case 5: return 'rotateX(0deg) rotateY(90deg)';
+      case 6: return 'rotateX(180deg) rotateY(0deg)';
+      default: return 'rotateX(0deg) rotateY(0deg)';
+    }
+  };
+
   return (
     <Box 
       ref={containerRef}
@@ -1092,8 +1199,10 @@ function BoardPage() {
                   py: 1,
                   boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
                 }}
+                onClick={rollDice}
+                disabled={isRolling}
               >
-                Roll Dice
+                {isRolling ? 'Rolling...' : 'Roll Dice'}
               </Button>
               <Button 
                 variant="outlined" 
@@ -1244,6 +1353,366 @@ function BoardPage() {
           </Paper>
         </Box>
       </Box>
+      
+      {/* 3D Dice Animation */}
+      {diceAnimationStage !== 'idle' && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 900,
+            pointerEvents: 'none',
+          }}
+        >
+          {/* Dice container */}
+          <Box
+            sx={{
+              display: 'flex',
+              gap: '20px',
+              perspective: '1200px',
+              transformStyle: 'preserve-3d',
+              position: 'absolute',
+              // Different positioning based on animation stage
+              ...(diceAnimationStage === 'rolling' && {
+                bottom: '50%',
+                left: '50%',
+                transform: 'translate(-50%, 0)',
+              }),
+              ...(diceAnimationStage === 'result' && {
+                bottom: '50%',
+                left: '50%',
+                transform: 'translate(-50%, 0)',
+              }),
+              ...(diceAnimationStage === 'throwing' && {
+                animation: 'diceThrowing 1.5s ease-out forwards',
+                bottom: '50%',
+                left: '50%',
+                transform: 'translate(-50%, 0)',
+              }),
+              '@keyframes diceThrowing': {
+                '0%': {
+                  bottom: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, 0) scale(1)',
+                },
+                '50%': {
+                  bottom: '60%',
+                  left: '40%',
+                  transform: 'translate(-50%, -30px) scale(1.1)',
+                },
+                '100%': {
+                  bottom: '55%',
+                  left: '30%',
+                  transform: 'translate(-50%, 0) scale(1)',
+                }
+              }
+            }}
+          >
+            {/* First die */}
+            <Box
+              sx={{
+                width: '60px',
+                height: '60px',
+                position: 'relative',
+                transformStyle: 'preserve-3d',
+                animation: diceAnimationStage === 'rolling' 
+                  ? 'firstDiceRoll 1.5s ease-out forwards'
+                  : diceAnimationStage === 'throwing'
+                    ? 'firstDiceThrown 1.5s ease-out forwards'
+                    : diceAnimationStage === 'result'
+                      ? 'slowSpin 1s ease-out'
+                      : 'none',
+                transform: diceAnimationStage === 'result' || diceAnimationStage === 'throwing'
+                  ? getDiceFinalTransform(diceValues[0])
+                  : 'rotateX(0deg) rotateY(0deg) rotateZ(0deg)',
+                '@keyframes firstDiceRoll': {
+                  '0%': { transform: 'rotateX(0deg) rotateY(0deg) rotateZ(0deg)' },
+                  '20%': { transform: 'rotateX(180deg) rotateY(90deg) rotateZ(0deg)' },
+                  '40%': { transform: 'rotateX(360deg) rotateY(180deg) rotateZ(0deg)' },
+                  '60%': { transform: 'rotateX(540deg) rotateY(270deg) rotateZ(0deg)' },
+                  '80%': { transform: 'rotateX(720deg) rotateY(360deg) rotateZ(0deg)' },
+                  '100%': { transform: getDiceFinalTransform(diceValues[0]) }
+                },
+                '@keyframes firstDiceThrown': {
+                  '0%': { transform: `${getDiceFinalTransform(diceValues[0])}` },
+                  '50%': { transform: `${getDiceFinalTransform(diceValues[0])} rotateX(180deg)` },
+                  '100%': { transform: getDiceFinalTransform(diceValues[0]) }
+                },
+                '@keyframes slowSpin': {
+                  '0%': { transform: 'rotateX(0deg) rotateY(0deg) rotateZ(0deg)' },
+                  '100%': { transform: getDiceFinalTransform(diceValues[0]) }
+                },
+                '@keyframes diceSmallBounce': {
+                  '0%': { transform: `${getDiceFinalTransform(diceValues[0])} translateZ(0px)` },
+                  '50%': { transform: `${getDiceFinalTransform(diceValues[0])} translateZ(15px)` },
+                  '100%': { transform: `${getDiceFinalTransform(diceValues[0])} translateZ(5px)` }
+                },
+                boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+              }}
+            >
+              {/* Die faces */}
+              <Box sx={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'white',
+                border: '2px solid #333',
+                borderRadius: '8px',
+                transform: 'rotateY(0deg) translateZ(30px)',
+                boxShadow: '0 0 10px rgba(0,0,0,0.25)',
+              }}>
+                {getDiceFace(1)}
+              </Box>
+              <Box sx={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'white',
+                border: '2px solid #333',
+                borderRadius: '8px',
+                transform: 'rotateY(180deg) translateZ(30px)',
+                boxShadow: '0 0 10px rgba(0,0,0,0.25)',
+              }}>
+                {getDiceFace(6)}
+              </Box>
+              <Box sx={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'white',
+                border: '2px solid #333',
+                borderRadius: '8px',
+                transform: 'rotateY(90deg) translateZ(30px)',
+                boxShadow: '0 0 10px rgba(0,0,0,0.25)',
+              }}>
+                {getDiceFace(2)}
+              </Box>
+              <Box sx={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'white',
+                border: '2px solid #333',
+                borderRadius: '8px',
+                transform: 'rotateY(-90deg) translateZ(30px)',
+                boxShadow: '0 0 10px rgba(0,0,0,0.25)',
+              }}>
+                {getDiceFace(5)}
+              </Box>
+              <Box sx={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'white',
+                border: '2px solid #333',
+                borderRadius: '8px',
+                transform: 'rotateX(90deg) translateZ(30px)',
+                boxShadow: '0 0 10px rgba(0,0,0,0.25)',
+              }}>
+                {getDiceFace(3)}
+              </Box>
+              <Box sx={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'white',
+                border: '2px solid #333',
+                borderRadius: '8px',
+                transform: 'rotateX(-90deg) translateZ(30px)',
+                boxShadow: '0 0 10px rgba(0,0,0,0.25)',
+              }}>
+                {getDiceFace(4)}
+              </Box>
+            </Box>
+            
+            {/* Second die */}
+            <Box
+              sx={{
+                width: '60px',
+                height: '60px',
+                position: 'relative',
+                transformStyle: 'preserve-3d',
+                animation: diceAnimationStage === 'rolling' 
+                  ? 'secondDiceRoll 1.5s ease-out forwards'
+                  : diceAnimationStage === 'throwing'
+                    ? 'secondDiceThrown 1.5s ease-out forwards'
+                    : diceAnimationStage === 'result'
+                      ? 'slowSpin 1s ease-out'
+                      : 'none',
+                transform: diceAnimationStage === 'result' || diceAnimationStage === 'throwing'
+                  ? getDiceFinalTransform(diceValues[1])
+                  : 'rotateX(0deg) rotateY(0deg) rotateZ(0deg)',
+                '@keyframes secondDiceRoll': {
+                  '0%': { transform: 'rotateX(0deg) rotateY(0deg) rotateZ(0deg)' },
+                  '25%': { transform: 'rotateX(270deg) rotateY(90deg) rotateZ(0deg)' },
+                  '50%': { transform: 'rotateX(540deg) rotateY(180deg) rotateZ(0deg)' },
+                  '75%': { transform: 'rotateX(720deg) rotateY(270deg) rotateZ(0deg)' },
+                  '100%': { transform: getDiceFinalTransform(diceValues[1]) }
+                },
+                '@keyframes secondDiceThrown': {
+                  '0%': { transform: `${getDiceFinalTransform(diceValues[1])}` },
+                  '50%': { transform: `${getDiceFinalTransform(diceValues[1])} rotateY(180deg)` },
+                  '100%': { transform: getDiceFinalTransform(diceValues[1]) }
+                },
+                boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+              }}
+            >
+              {/* Die faces */}
+              <Box sx={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'white',
+                border: '2px solid #333',
+                borderRadius: '8px',
+                transform: 'rotateY(0deg) translateZ(30px)',
+                boxShadow: '0 0 10px rgba(0,0,0,0.25)',
+              }}>
+                {getDiceFace(1)}
+              </Box>
+              <Box sx={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'white',
+                border: '2px solid #333',
+                borderRadius: '8px',
+                transform: 'rotateY(180deg) translateZ(30px)',
+                boxShadow: '0 0 10px rgba(0,0,0,0.25)',
+              }}>
+                {getDiceFace(6)}
+              </Box>
+              <Box sx={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'white',
+                border: '2px solid #333',
+                borderRadius: '8px',
+                transform: 'rotateY(90deg) translateZ(30px)',
+                boxShadow: '0 0 10px rgba(0,0,0,0.25)',
+              }}>
+                {getDiceFace(2)}
+              </Box>
+              <Box sx={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'white',
+                border: '2px solid #333',
+                borderRadius: '8px',
+                transform: 'rotateY(-90deg) translateZ(30px)',
+                boxShadow: '0 0 10px rgba(0,0,0,0.25)',
+              }}>
+                {getDiceFace(5)}
+              </Box>
+              <Box sx={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'white',
+                border: '2px solid #333',
+                borderRadius: '8px',
+                transform: 'rotateX(90deg) translateZ(30px)',
+                boxShadow: '0 0 10px rgba(0,0,0,0.25)',
+              }}>
+                {getDiceFace(3)}
+              </Box>
+              <Box sx={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'white',
+                border: '2px solid #333',
+                borderRadius: '8px',
+                transform: 'rotateX(-90deg) translateZ(30px)',
+                boxShadow: '0 0 10px rgba(0,0,0,0.25)',
+              }}>
+                {getDiceFace(4)}
+              </Box>
+            </Box>
+          </Box>
+          
+          {/* Roll result display - Capital Wars themed */}
+          {showRollResult && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: '40%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                background: '#C5E8D2', // Match game background
+                borderRadius: '8px',
+                padding: '12px 15px',
+                display: 'flex',
+                alignItems: 'center',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+                border: '2px solid #333',
+                animation: 'fadeIn 0.3s ease-out',
+                zIndex: 1000,
+                gap: '12px',
+                minWidth: '120px',
+                '@keyframes fadeIn': {
+                  '0%': { opacity: 0 },
+                  '100%': { opacity: 1 }
+                }
+              }}
+            >
+              {/* Dice result */}
+              <Box sx={{
+                backgroundColor: rollTotal === 7 || rollTotal === 11 ? '#FFEB3B' : 'white',
+                borderRadius: '6px',
+                width: '50px',
+                height: '50px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                border: '1px solid #333',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }}>
+                <Typography sx={{
+                  fontWeight: 'bold',
+                  fontSize: '32px',
+                  color: '#333'
+                }}>
+                  {rollTotal}
+                </Typography>
+              </Box>
+              
+              {/* Simple text */}
+              <Box sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start'
+              }}>
+                <Typography sx={{
+                  fontWeight: 'bold',
+                  fontSize: '16px',
+                  color: '#333',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  {rollTotal === 7 || rollTotal === 11 ? 'Lucky!' : 'Move'}
+                </Typography>
+                
+                <Typography sx={{
+                  fontWeight: 'normal',
+                  fontSize: '14px',
+                  color: '#333'
+                }}>
+                  {rollTotal} spaces
+                </Typography>
+              </Box>
+            </Box>
+          )}
+        </Box>
+      )}
       
       {/* Animated Card */}
       {showCard && (
