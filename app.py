@@ -484,6 +484,11 @@ def add_security_headers(response):
     # XSS protection
     response.headers['X-XSS-Protection'] = '1; mode=block'
     
+    # Add CORS headers to allow all origins - for development
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    
     return response
 
 # ---- Static file route FIRST ----
@@ -1021,32 +1026,41 @@ def setup_scheduled_tasks():
 
 @socketio.on('get_all_players')
 def handle_get_all_players(data):
-    """Handles request from admin panel to get all players."""
+    """Handles request from admin panel or board view to get all players."""
     sid = request.sid
     admin_pin = data.get('admin_pin') # Get pin from data
+    request_type = data.get('request_type', 'admin') # Default to admin view if not specified
     
     # Create a local reference to the app logger
     logger = app.logger
     
-    # Primary authorization check for socket events
-    if not admin_pin or admin_pin != app.config.get('ADMIN_KEY'):
-        logger.warning(f"Unauthorized attempt to get_all_players from SID {sid}")
-        emit('auth_error', {'error': 'Invalid admin credentials for player list'}, room=sid)
-        return
+    # Skip auth check for board view requests
+    if request_type != 'board_view':
+        # Primary authorization check for socket events
+        if not admin_pin or admin_pin != app.config.get('ADMIN_KEY'):
+            logger.warning(f"Unauthorized attempt to get_all_players from SID {sid}")
+            emit('auth_error', {'error': 'Invalid admin credentials for player list'}, room=sid)
+            return
         
-    logger.info(f"Admin request for all players from SID {sid}")
+    logger.info(f"Request for all players from SID {sid}, type: {request_type}")
     try:
-        players = Player.query.order_by(Player.id).all()
-        logger.info(f"Found {len(players)} players in total for admin list")
+        # For board view, maybe we just want players that are in_game
+        if request_type == 'board_view':
+            # Get all players or filter by in_game if needed
+            players = Player.query.order_by(Player.id).all()
+            # Could filter: players = Player.query.filter_by(in_game=True).order_by(Player.id).all()
+        else:
+            # Admin view shows all players regardless of in_game status
+            players = Player.query.order_by(Player.id).all()
+            
+        logger.info(f"Found {len(players)} players in total for {request_type} list")
         
         players_data = []
         for p in players:
             # Get property count for this player
             property_count = Property.query.filter_by(owner_id=p.id).count()
             
-            logger.info(f"Adding player to list: ID {p.id}, Name: {p.username}, Is Bot: {p.is_bot}, In Game: {p.in_game}")
-            
-            players_data.append({
+            player_data = {
                 'id': p.id,
                 'name': p.username,
                 'money': p.money,
@@ -1056,7 +1070,18 @@ def handle_get_all_players(data):
                 'in_jail': p.in_jail,
                 'properties': property_count
                 # Add other relevant fields as needed
-            })
+            }
+            
+            if request_type == 'board_view':
+                # For board view, add some additional fields that might be needed for UI
+                player_data.update({
+                    'username': p.username,
+                    'color': getattr(p, 'color', None),  # Add if this field exists in Player model
+                    'token': getattr(p, 'token', None),  # Add if this field exists in Player model
+                    'get_out_of_jail_cards': getattr(p, 'get_out_of_jail_cards', 0)
+                })
+            
+            players_data.append(player_data)
         
         logger.info(f"Emitting all_players_list with {len(players_data)} players to client {sid}")
         # Emit to the specific client that requested it
@@ -1064,7 +1089,7 @@ def handle_get_all_players(data):
         logger.info(f"Successfully emitted all_players_list to {sid}")
         
     except Exception as e:
-        logger.error(f"Error fetching all players for admin: {str(e)}", exc_info=True)
+        logger.error(f"Error fetching all players for {request_type}: {str(e)}", exc_info=True)
         emit('event_error', {'error': 'Failed to retrieve player list.'}, room=sid)
 
 @socketio.on('remove_bot')
@@ -1289,3 +1314,140 @@ if __name__ == '__main__':
     debug_mode = is_debug_mode()
     logging.info(f"Starting server on port {port} with debug mode {'enabled' if debug_mode else 'disabled'}")
     socketio.run(app, host='0.0.0.0', port=port, debug=debug_mode, allow_unsafe_werkzeug=True) 
+
+# Add a new route for getting all players without authentication
+@app.route('/api/players', methods=['GET'])
+def get_all_players():
+    """Get all players without requiring authentication"""
+    try:
+        from src.controllers.player_controller import get_all_player_data
+        all_players = get_all_player_data()
+        return jsonify({
+            'success': True,
+            'players': all_players
+        })
+    except Exception as e:
+        logging.error(f"Error in get_all_players API: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500 
+
+# Add a new route for getting all properties without authentication
+@app.route('/api/properties', methods=['GET'])
+def get_all_properties():
+    """Get all properties without requiring authentication"""
+    try:
+        # Import Property model and query all properties
+        from src.models.property import Property
+        properties = Property.query.all()
+        
+        # Convert properties to dictionaries
+        properties_data = []
+        for prop in properties:
+            owner_id = getattr(prop, 'owner_id', None)
+            
+            property_data = {
+                'id': prop.id,
+                'name': prop.name,
+                'price': prop.price,
+                'owner_id': owner_id,
+                'houses': getattr(prop, 'houses', 0),
+                'hotel': getattr(prop, 'hotel', False),
+                'is_mortgaged': getattr(prop, 'is_mortgaged', False),
+                'group': getattr(prop, 'group', ''),
+                'type': getattr(prop, 'type', 'property')
+            }
+            properties_data.append(property_data)
+        
+        return jsonify(properties_data)
+    except Exception as e:
+        logging.error(f"Error in get_all_properties API: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500 
+
+# Add direct public routes for board data that bypass auth middleware
+@app.route('/public/board/players', methods=['GET'])
+def public_board_players():
+    """Public endpoint for getting players data for the board view"""
+    try:
+        # Directly query the database for players
+        from src.models.player import Player
+        players = Player.query.all()
+        
+        # Format player data
+        players_data = []
+        for p in players:
+            # Get property count for this player
+            from src.models.property import Property
+            property_count = Property.query.filter_by(owner_id=p.id).count()
+            
+            player_data = {
+                'id': p.id,
+                'name': p.username,
+                'username': p.username,
+                'money': p.money,
+                'is_bot': getattr(p, 'is_bot', False),
+                'in_game': getattr(p, 'in_game', False),
+                'position': getattr(p, 'position', 0),
+                'in_jail': getattr(p, 'in_jail', False),
+                'properties': property_count,
+                'color': getattr(p, 'color', None),
+                'token': getattr(p, 'token', None),
+                'get_out_of_jail_cards': getattr(p, 'get_out_of_jail_cards', 0)
+            }
+            players_data.append(player_data)
+        
+        return jsonify(players_data)
+    except Exception as e:
+        app.logger.error(f"Error in public players API: {str(e)}", exc_info=True)
+        return jsonify({
+            'error': str(e)
+        }), 500
+
+@app.route('/public/board/properties', methods=['GET'])
+def public_board_properties():
+    """Public endpoint for getting properties data for the board view"""
+    try:
+        # Directly query the database for properties
+        from src.models.property import Property
+        properties = Property.query.all()
+        
+        # Format property data
+        properties_data = []
+        for prop in properties:
+            owner_id = getattr(prop, 'owner_id', None)
+            
+            property_data = {
+                'id': prop.id,
+                'name': prop.name,
+                'price': prop.price,
+                'owner_id': owner_id,
+                'houses': getattr(prop, 'houses', 0),
+                'hotel': getattr(prop, 'hotel', False),
+                'is_mortgaged': getattr(prop, 'is_mortgaged', False),
+                'group': getattr(prop, 'group', ''),
+                'type': getattr(prop, 'type', 'property')
+            }
+            properties_data.append(property_data)
+        
+        return jsonify(properties_data)
+    except Exception as e:
+        app.logger.error(f"Error in public properties API: {str(e)}", exc_info=True)
+        return jsonify({
+            'error': str(e)
+        }), 500 
+
+@app.route('/test-endpoint', methods=['GET'])
+def test_endpoint():
+    """Simplest possible test endpoint with static data"""
+    return jsonify({
+        'success': True,
+        'message': 'This is a test endpoint',
+        'test_players': [
+            {'id': 1, 'name': 'Test Player 1', 'money': 1500, 'position': 0},
+            {'id': 2, 'name': 'Test Player 2', 'money': 1500, 'position': 10}
+        ]
+    }) 

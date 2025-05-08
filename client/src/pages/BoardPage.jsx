@@ -502,13 +502,11 @@ function BoardPage() {
     return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
   }, []);
 
-  // Mock player data (replace with actual data later)
-  const players = [
-    { id: 1, name: 'Player 1', cash: 1500, position: 0, color: '#E53935', token: 'car' },
-    { id: 2, name: 'Player 2', cash: 1200, position: 5, color: '#1E88E5', token: 'ship' },
-    { id: 3, name: 'Player 3', cash: 950, position: 12, color: '#43A047', token: 'hat' },
-    { id: 4, name: 'Player 4', cash: 800, position: 24, color: '#FDD835', token: 'boot' },
-  ];
+  // Replace mock player data with state
+  const [players, setPlayers] = useState([]);
+  const [currentPlayerId, setCurrentPlayerId] = useState(null);
+  const [gameId, setGameId] = useState(null);
+  const [gameStarted, setGameStarted] = useState(false);
   
   // Player token options
   const tokenOptions = {
@@ -524,25 +522,191 @@ function BoardPage() {
     'cannon': { icon: '💣', description: 'Cannon' }
   };
   
-  const currentPlayer = players[0]; // First player is current
+  // Get current player from players array
+  const currentPlayer = players.find(p => p.id === currentPlayerId) || (players.length > 0 ? players[0] : null);
 
   // Socket connection for real-time updates
   const [socket, setSocket] = useState(null);
   const [economicState, setEconomicState] = useState('normal');
   const [inflation, setInflation] = useState(1.0);
+  const [isConnected, setIsConnected] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   // Connect to socket and set up property updates
   useEffect(() => {
-    const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5001');
+    const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5001', {
+      path: "/ws",
+      reconnectionDelayMax: 10000,
+      transports: ['websocket']
+    });
+    
     setSocket(newSocket);
 
-    // Initial property data fetch
-    fetch('/api/properties')
-      .then(response => response.json())
+    // Connection events
+    newSocket.on('connect', () => {
+      console.log('Connected to game server');
+      setIsConnected(true);
+      setErrorMessage(null);
+      
+      // Request initial game state and player list separately
+      newSocket.emit('request_game_state');
+      
+      // Specifically request all players - even ones not in current game
+      newSocket.emit('get_all_players', { request_type: 'board_view' });
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Disconnected from game server');
+      setIsConnected(false);
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+      setErrorMessage(`Connection error: ${error.message}`);
+    });
+
+    // Handle game state
+    newSocket.on('game_state', (data) => {
+      console.log('Received game state:', data);
+      
+      if (data.gameId) {
+        setGameId(data.gameId);
+      }
+      
+      if (data.gameStarted !== undefined) {
+        setGameStarted(data.gameStarted);
+      }
+      
+      if (data.currentPlayerId) {
+        setCurrentPlayerId(data.currentPlayerId);
+      }
+      
+      if (data.players) {
+        setPlayers(data.players.map(player => ({
+          id: player.id,
+          name: player.username || player.name,
+          cash: player.money || player.cash,
+          position: player.position,
+          color: player.color || getDefaultPlayerColor(player.id),
+          token: player.token || getDefaultPlayerToken(player.id),
+          inJail: player.in_jail,
+          getOutOfJailCards: player.get_out_of_jail_cards || 0
+        })));
+      }
+      
+      if (data.properties) {
+        updatePropertyData(data.properties);
+      }
+
+      if (data.economicState) {
+        setEconomicState(data.economicState);
+      }
+
+      if (data.inflation) {
+        setInflation(data.inflation);
+      }
+    });
+
+    // Listen for player updates
+    newSocket.on('player_moved', (data) => {
+      console.log('Player moved:', data);
+      
+      setPlayers(prevPlayers => prevPlayers.map(player => {
+        if (player.id === data.playerId) {
+          // Trigger landing actions when player moves
+          setTimeout(() => handleLanding(data.newPosition), 500);
+          
+          return {
+            ...player,
+            position: data.newPosition
+          };
+        }
+        return player;
+      }));
+    });
+
+    newSocket.on('player_jailed', (data) => {
+      console.log('Player jailed:', data);
+      
+      setPlayers(prevPlayers => prevPlayers.map(player => {
+        if (player.id === data.playerId) {
+          return {
+            ...player,
+            position: 10, // Jail position
+            inJail: true
+          };
+        }
+        return player;
+      }));
+    });
+
+    newSocket.on('player_update', (data) => {
+      console.log('Player update:', data);
+      
+      setPlayers(prevPlayers => {
+        const playerIndex = prevPlayers.findIndex(p => p.id === data.playerId);
+        
+        if (playerIndex === -1) {
+          // New player joined
+          return [...prevPlayers, {
+            id: data.playerId,
+            name: data.username || data.name || `Player ${data.playerId}`,
+            cash: data.money || 1500,
+            position: data.position || 0,
+            color: data.color || getDefaultPlayerColor(data.playerId),
+            token: data.token || getDefaultPlayerToken(data.playerId),
+            inJail: data.in_jail || false,
+            getOutOfJailCards: data.get_out_of_jail_cards || 0
+          }];
+        }
+        
+        // Update existing player
+        return prevPlayers.map(player => {
+          if (player.id === data.playerId) {
+            return {
+              ...player,
+              cash: data.money !== undefined ? data.money : player.cash,
+              position: data.position !== undefined ? data.position : player.position,
+              inJail: data.in_jail !== undefined ? data.in_jail : player.inJail,
+              getOutOfJailCards: data.get_out_of_jail_cards !== undefined ? 
+                data.get_out_of_jail_cards : player.getOutOfJailCards
+            };
+          }
+          return player;
+        });
+      });
+    });
+
+    // Initial property data fetch with improved error handling
+    console.log('Attempting to fetch properties...');
+    
+    // Try the test endpoint first to verify server connectivity
+    fetch('http://localhost:5001/test-endpoint')
+      .then(response => {
+        console.log('Test endpoint status for properties:', response.status);
+        if (response.ok) {
+          console.log('Test endpoint working, trying properties endpoint...');
+          // Now try the real properties endpoint
+          return fetch('http://localhost:5001/public/board/properties')
+            .then(response => {
+              console.log('Properties endpoint status:', response.status);
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              return response.json();
+            });
+        } else {
+          throw new Error('Test endpoint failed');
+        }
+      })
       .then(data => {
+        console.log('Properties data received:', data);
         updatePropertyData(data);
       })
-      .catch(error => console.error('Error fetching properties:', error));
+      .catch(error => {
+        console.error('Error fetching properties:', error);
+        setErrorMessage('Failed to load property data. Please refresh the page.');
+      });
 
     // Listen for property updates via socket
     newSocket.on('property_update', (updatedProperties) => {
@@ -561,12 +725,54 @@ function BoardPage() {
       }
     });
 
+    // Listen for turn change
+    newSocket.on('turn_changed', (data) => {
+      console.log('Turn changed:', data);
+      setCurrentPlayerId(data.playerId);
+    });
+
+    // Additional event listener for all_players_list event
+    newSocket.on('all_players_list', (data) => {
+      console.log('Received all players list:', data);
+      
+      if (data.success && data.players) {
+        // Convert the server's player format to our local format
+        const formattedPlayers = data.players.map(serverPlayer => ({
+          id: serverPlayer.id,
+          name: serverPlayer.name || serverPlayer.username,
+          cash: serverPlayer.money,
+          position: serverPlayer.position || 0,
+          color: serverPlayer.color || getDefaultPlayerColor(serverPlayer.id),
+          token: serverPlayer.token || getDefaultPlayerToken(serverPlayer.id),
+          inJail: serverPlayer.in_jail || false,
+          getOutOfJailCards: serverPlayer.get_out_of_jail_cards || 0,
+          isBot: serverPlayer.is_bot || false
+        }));
+        
+        setPlayers(formattedPlayers);
+      }
+    });
+
     return () => {
       if (newSocket) {
+        // Also disconnect the all_players_list event
+        newSocket.off('all_players_list');
         newSocket.disconnect();
       }
     };
   }, []);
+
+  // Helper function to get a default color for a player
+  const getDefaultPlayerColor = (playerId) => {
+    const colors = ['#E53935', '#1E88E5', '#43A047', '#FDD835', '#8E24AA', '#FB8C00', '#00ACC1', '#F06292'];
+    return colors[playerId % colors.length];
+  };
+
+  // Helper function to get a default token for a player
+  const getDefaultPlayerToken = (playerId) => {
+    const tokens = ['car', 'ship', 'hat', 'boot', 'dog', 'ring', 'iron', 'thimble'];
+    return tokens[playerId % tokens.length];
+  };
 
   // Function to update all property data from backend
   const updatePropertyData = (propertyData) => {
@@ -578,7 +784,12 @@ function BoardPage() {
             ...space,
             name: updatedProperty.name || space.name,
             price: updatedProperty.price || space.price,
-            owner: updatedProperty.owner
+            owner: updatedProperty.owner_id,
+            houses: updatedProperty.houses || 0,
+            hotel: updatedProperty.hotel || false,
+            is_mortgaged: updatedProperty.is_mortgaged || false,
+            // Store original price for inflation calculations if not already stored
+            basePrice: space.basePrice || updatedProperty.price || space.price
           };
         }
         return space;
@@ -591,11 +802,10 @@ function BoardPage() {
     setBoardSpaces(prevSpaces => {
       return prevSpaces.map(space => {
         if (space.price) {
-          const basePrice = space.basePrice || space.price; // Store original price if not already stored
+          // Use basePrice stored from initial load to calculate current price
           return {
             ...space,
-            basePrice: space.basePrice || space.price,
-            price: Math.round(basePrice * newInflation)
+            price: Math.round((space.basePrice || space.price) * newInflation)
           };
         }
         return space;
@@ -624,61 +834,64 @@ function BoardPage() {
   const [cardAnimation, setCardAnimation] = useState('initial'); // 'initial', 'flipping', 'showing', 'flying'
   
   /**
-   * Draw a random card of specified type
+   * Draw a card from the backend
    * @param {string} type - Either 'chance' or 'chest'
    */
   const drawCard = (type) => {
-    const cards = type === 'chance' ? CHANCE_CARDS : COMMUNITY_CHEST_CARDS;
-    const randomCard = cards[Math.floor(Math.random() * cards.length)];
+    if (!socket) return;
     
-    setCardType(type);
-    setCardContent(randomCard);
-    setShowCard(true);
-    
-    // Animation sequence
-    setCardAnimation('initial');
-    setTimeout(() => setCardAnimation('flipping'), 800);
-    setTimeout(() => setCardAnimation('showing'), 2000);
-    setTimeout(() => setCardAnimation('flying'), 8000);
-    setTimeout(() => setShowCard(false), 9500);
-    
-    // Execute card action (to be implemented)
-    processCardAction(randomCard);
+    // Request card draw from backend
+    socket.emit('draw_card', { 
+      cardType: type, 
+      playerId: currentPlayerId,
+      gameId: gameId
+    });
   };
+  
+  // Listen for card draw events
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleCardDrawn = (data) => {
+      console.log('Card drawn:', data);
+      
+      // Set card data
+      setCardType(data.cardType);
+      setCardContent({
+        id: data.id || Math.floor(Math.random() * 1000),
+        title: data.title,
+        description: data.description,
+        action: data.action,
+        value: data.value,
+        color: data.cardType === 'chance' ? '#FFC663' : '#CBDFF8'
+      });
+      
+      // Show the card with animation
+      setShowCard(true);
+      setCardAnimation('initial');
+      
+      // Animation sequence
+      setTimeout(() => setCardAnimation('flipping'), 800);
+      setTimeout(() => setCardAnimation('showing'), 2000);
+      setTimeout(() => setCardAnimation('flying'), 8000);
+      setTimeout(() => setShowCard(false), 9500);
+    };
+    
+    socket.on('card_drawn', handleCardDrawn);
+    
+    return () => {
+      socket.off('card_drawn', handleCardDrawn);
+    };
+  }, [socket, currentPlayerId]);
   
   /**
    * Process the card's action
    * @param {Object} card - The card object with action and value
    */
   const processCardAction = (card) => {
-    // This function will be called when the animation starts
-    // We can implement actual game logic based on card.action and card.value
-    console.log(`Processing card action: ${card.action}, value: ${card.value}`);
-    
-    // Implementation can be added later based on game rules
-    switch(card.action) {
-      case 'move':
-        // Move player to position card.value
-        break;
-      case 'collect':
-        // Player collects card.value amount
-        break;
-      case 'pay':
-        // Player pays card.value amount
-        break;
-      case 'goToJail':
-        // Move player to jail
-        break;
-      case 'collectFromEach':
-        // Collect from each player
-        break;
-      case 'payEach':
-        // Pay each player
-        break;
-      default:
-        // Special cases
-        break;
-    }
+    // Card actions are now processed by the backend
+    // This function is kept for reference and can be removed
+    console.log(`Card action ${card.action} with value ${card.value} will be processed by the server`);
   };
   
   // Function for testing only
@@ -694,16 +907,69 @@ function BoardPage() {
   const handleLanding = (spaceId) => {
     const space = boardSpaces.find(s => s.id === spaceId);
     
-    if (space.type === 'chance') {
-      drawCard('chance');
-    } else if (space.type === 'chest') {
-      drawCard('chest');
+    // In real implementation, the backend will trigger these events
+    // This is just to maintain the visual feedback when using local player movement
+    if (space && (space.type === 'chance' || space.type === 'chest')) {
+      if (!socket) {
+        // Fallback to local card drawing if socket unavailable
+        console.log(`Fallback: Local card draw for ${space.type}`);
+        const cards = space.type === 'chance' ? CHANCE_CARDS : COMMUNITY_CHEST_CARDS;
+        const randomCard = cards[Math.floor(Math.random() * cards.length)];
+        
+        setCardType(space.type);
+        setCardContent(randomCard);
+        setShowCard(true);
+        
+        // Animation sequence
+        setCardAnimation('initial');
+        setTimeout(() => setCardAnimation('flipping'), 800);
+        setTimeout(() => setCardAnimation('showing'), 2000);
+        setTimeout(() => setCardAnimation('flying'), 8000);
+        setTimeout(() => setShowCard(false), 9500);
+      }
     }
   };
   
-  // Test functions
-  const testChanceCard = () => drawCard('chance');
-  const testChestCard = () => drawCard('chest');
+  // Test functions for local testing
+  const testChanceCard = () => {
+    if (socket) {
+      drawCard('chance');
+    } else {
+      // Fallback to local card handling
+      console.log('No socket connection, using local card logic');
+      const randomCard = CHANCE_CARDS[Math.floor(Math.random() * CHANCE_CARDS.length)];
+      setCardType('chance');
+      setCardContent(randomCard);
+      setShowCard(true);
+      
+      // Animation sequence
+      setCardAnimation('initial');
+      setTimeout(() => setCardAnimation('flipping'), 800);
+      setTimeout(() => setCardAnimation('showing'), 2000);
+      setTimeout(() => setCardAnimation('flying'), 8000);
+      setTimeout(() => setShowCard(false), 9500);
+    }
+  };
+  
+  const testChestCard = () => {
+    if (socket) {
+      drawCard('chest');
+    } else {
+      // Fallback to local card handling
+      console.log('No socket connection, using local card logic');
+      const randomCard = COMMUNITY_CHEST_CARDS[Math.floor(Math.random() * COMMUNITY_CHEST_CARDS.length)];
+      setCardType('chest');
+      setCardContent(randomCard);
+      setShowCard(true);
+      
+      // Animation sequence
+      setCardAnimation('initial');
+      setTimeout(() => setCardAnimation('flipping'), 800);
+      setTimeout(() => setCardAnimation('showing'), 2000);
+      setTimeout(() => setCardAnimation('flying'), 8000);
+      setTimeout(() => setShowCard(false), 9500);
+    }
+  };
 
   // Dice roll state
   const [isRolling, setIsRolling] = useState(false);
@@ -712,46 +978,85 @@ function BoardPage() {
   const [showRollResult, setShowRollResult] = useState(false);
   const [rollTotal, setRollTotal] = useState(0);
   
-  // Dice roll function
+  // Updated dice roll function to use socket
   const rollDice = () => {
-    if (isRolling) return; // Prevent multiple rolls
+    if (isRolling || !socket || !currentPlayerId) return; // Prevent multiple rolls or if no connection
     
+    // Start local animation immediately for better UX
     setIsRolling(true);
     setShowRollResult(false);
     setDiceAnimationStage('rolling');
     
-    // Schedule the dice animation stages
-    setTimeout(() => {
-      // Generate random dice values
-      const die1 = Math.floor(Math.random() * 6) + 1;
-      const die2 = Math.floor(Math.random() * 6) + 1;
+    // Request roll from backend
+    socket.emit('roll_dice', {
+      playerId: currentPlayerId,
+      gameId: gameId
+    });
+    
+    console.log(`Requesting dice roll for player ${currentPlayerId} in game ${gameId}`);
+  };
+  
+  // Listen for dice roll events
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleDiceRolled = (data) => {
+      console.log('Dice rolled:', data);
+      
+      // Extract roll data
+      const roll = data.roll || [1, 1];
+      const die1 = roll[0];
+      const die2 = roll[1];
       const total = die1 + die2;
       
+      // Update dice state
       setDiceValues([die1, die2]);
       setRollTotal(total);
-      setDiceAnimationStage('result');
       
-      // After showing result briefly, initiate throwing animation
+      // Animation sequence
       setTimeout(() => {
-        setDiceAnimationStage('throwing');
+        setDiceAnimationStage('result');
         
-        // After dice throw completes, show final result
+        // After showing result briefly, initiate throwing animation
         setTimeout(() => {
-          setShowRollResult(true);
+          setDiceAnimationStage('throwing');
           
-          // After showing the result, end the animation
+          // After dice throw completes, show final result
           setTimeout(() => {
-            console.log(`Player rolled ${total}`);
-            // handlePlayerMove(currentPlayer.id, total); - would be implemented later
+            setShowRollResult(true);
             
-            setDiceAnimationStage('idle');
-            setIsRolling(false);
-            setShowRollResult(false);
-          }, 2000); // Display the result for 2 seconds
-        }, 1500); // Time for dice to finish throwing
-      }, 1000); // Time to show the initial result
-    }, 1500); // Time for dice to roll
-  };
+            // After showing the result, end the animation
+            setTimeout(() => {
+              setDiceAnimationStage('idle');
+              setIsRolling(false);
+              setShowRollResult(false);
+            }, 2000); // Display the result for 2 seconds
+          }, 1500); // Time for dice to finish throwing
+        }, 1000); // Time to show the initial result
+      }, 1500); // Time for dice to roll
+    };
+    
+    // Handle errors with dice roll
+    const handleDiceError = (data) => {
+      console.error('Dice roll error:', data.error);
+      setIsRolling(false);
+      setDiceAnimationStage('idle');
+      
+      // Display error message
+      setErrorMessage(data.error || 'Error with dice roll');
+      
+      // Auto-clear error after a few seconds
+      setTimeout(() => setErrorMessage(null), 3000);
+    };
+    
+    socket.on('dice_rolled', handleDiceRolled);
+    socket.on('roll_error', handleDiceError);
+    
+    return () => {
+      socket.off('dice_rolled', handleDiceRolled);
+      socket.off('roll_error', handleDiceError);
+    };
+  }, [socket, currentPlayerId]);
   
   // Function for 3D dice face
   const getDiceFace = (value) => {
@@ -812,6 +1117,133 @@ function BoardPage() {
     }
   };
 
+  // Function to handle ending the current player's turn
+  const endTurn = () => {
+    if (!socket || !currentPlayerId || !gameId) return;
+    
+    socket.emit('end_turn', {
+      playerId: currentPlayerId,
+      gameId: gameId
+    });
+    
+    console.log(`Player ${currentPlayerId} ended their turn`);
+  };
+
+  // Determine if current player can roll dice
+  const canRollDice = () => {
+    if (!isConnected || !gameStarted || !currentPlayer) return false;
+    
+    // Only current player can roll dice on their turn
+    return currentPlayer.id === currentPlayerId && !isRolling;
+  };
+
+  // Determine if current player can end turn
+  const canEndTurn = () => {
+    if (!isConnected || !gameStarted || !currentPlayer) return false;
+    
+    // Only current player can end turn
+    return currentPlayer.id === currentPlayerId && !isRolling;
+  };
+
+  // Function to leave the game
+  const leaveGame = () => {
+    if (!socket || !currentPlayerId) return;
+    
+    socket.emit('leave_game', {
+      playerId: currentPlayerId,
+      gameId: gameId
+    });
+    
+    // Redirect to home or another page after leaving
+    // window.location.href = '/'; // Uncomment to enable redirecting
+  };
+
+  // Function to manually refresh the player list
+  const refreshPlayers = () => {
+    console.log('Attempting to refresh players...');
+    
+    // Try the simplest test endpoint first
+    fetch('http://localhost:5001/test-endpoint')
+      .then(response => {
+        console.log('Test endpoint response status:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('Test endpoint data:', data);
+        
+        if (data && data.success) {
+          // If we get successful test data, we know server is working
+          console.log('Test endpoint working, trying public board players...');
+          
+          // Now try the real endpoint
+          return fetch('http://localhost:5001/public/board/players')
+            .then(response => {
+              console.log('Board players response status:', response.status);
+              return response.json();
+            });
+        } else {
+          throw new Error('Test endpoint failed');
+        }
+      })
+      .then(data => {
+        if (data && Array.isArray(data)) {
+          console.log('Players refreshed from public API:', data);
+          
+          // Format players from API response
+          const formattedPlayers = data.map(player => ({
+            id: player.id,
+            name: player.username || player.name,
+            cash: player.money,
+            position: player.position || 0,
+            color: player.color || getDefaultPlayerColor(player.id),
+            token: player.token || getDefaultPlayerToken(player.id),
+            inJail: player.in_jail || false,
+            getOutOfJailCards: player.get_out_of_jail_cards || 0,
+            isBot: player.is_bot || false
+          }));
+          
+          setPlayers(formattedPlayers);
+        } else {
+          console.log('Unexpected data format from players API');
+          
+          // Fallback to socket if API fails
+          if (socket) {
+            console.log('Falling back to socket.emit...');
+            socket.emit('get_all_players', { request_type: 'board_view' });
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error in player refresh process:', error);
+        
+        // Fallback to socket
+        if (socket) {
+          console.log('Falling back to socket after error...');
+          socket.emit('get_all_players', { request_type: 'board_view' });
+        }
+      });
+    
+    console.log('Manually requested player list refresh');
+  };
+
+  // Direct fetch test for debugging - can be called from console
+  window.testServerConnection = () => {
+    console.log('Testing server connection...');
+    
+    // Test basic endpoint directly
+    fetch('http://localhost:5001/test-endpoint')
+      .then(response => {
+        console.log('Direct test endpoint status:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('Direct test endpoint data:', data);
+      })
+      .catch(error => {
+        console.error('Direct test endpoint error:', error);
+      });
+  };
+
   return (
     <Box 
       ref={containerRef}
@@ -825,6 +1257,52 @@ function BoardPage() {
         position: 'relative' // Added for absolute positioning of cards
       }}
     >
+      {/* Connection status and errors */}
+      {!isConnected && (
+        <Box sx={{
+          position: 'absolute',
+          top: '10px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <Box sx={{ 
+            width: '10px', 
+            height: '10px', 
+            borderRadius: '50%', 
+            backgroundColor: 'red',
+            animation: 'pulse 1.5s infinite' 
+          }} />
+          <Typography variant="body2">
+            Connecting to game server...
+          </Typography>
+        </Box>
+      )}
+
+      {errorMessage && (
+        <Box sx={{
+          position: 'absolute',
+          top: '10px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000,
+          backgroundColor: 'rgba(220,0,0,0.8)',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
+        }}>
+          <Typography variant="body2">{errorMessage}</Typography>
+        </Box>
+      )}
+
       {/* Board Container (left/top) */}
       <Box sx={{ 
         flex: { xs: '1', md: '3' }, 
@@ -1163,128 +1641,295 @@ function BoardPage() {
             Game Dashboard
           </Typography>
           
-          {/* Current player */}
-          <Paper elevation={3} sx={{ p: 2, mb: 3, backgroundColor: alpha(currentPlayer.color, 0.15), borderRadius: '10px' }}>
-            <Typography variant="h6" gutterBottom sx={{ textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.1)', pb: 1 }}>
-              Current Turn
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, justifyContent: 'center' }}>
-              <Avatar sx={{ bgcolor: currentPlayer.color, mr: 2, width: 40, height: 40, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                {tokenOptions[currentPlayer.token]?.icon || currentPlayer.name.charAt(0)}
-              </Avatar>
-              <Typography variant="body1" fontWeight="bold" fontSize="1.1rem">
-                {currentPlayer.name}
+          {/* Game not started message */}
+          {!gameStarted && (
+            <Paper elevation={3} sx={{ p: 2, mb: 3, textAlign: 'center' }}>
+              <Typography variant="h6" gutterBottom>
+                Waiting for Game to Start
               </Typography>
-            </Box>
-            
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, px: 1 }}>
-              <Typography variant="body2" fontWeight="medium">Cash:</Typography>
-              <Typography variant="body2" fontWeight="bold" fontSize="1rem">${currentPlayer.cash}</Typography>
-            </Box>
-            
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1 }}>
-              <Typography variant="body2" fontWeight="medium">Position:</Typography>
-              <Typography variant="body2" fontWeight="bold" fontSize="1rem">Space {currentPlayer.position}</Typography>
-            </Box>
-            
-            <Box sx={{ mt: 2 }}>
-              <Button 
-                variant="contained" 
-                fullWidth 
-                sx={{ 
-                  mb: 1, 
-                  bgcolor: '#4CAF50', 
-                  '&:hover': { bgcolor: '#388E3C' },
-                  fontWeight: 'bold',
-                  py: 1,
-                  boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
-                }}
-                onClick={rollDice}
-                disabled={isRolling}
-              >
-                {isRolling ? 'Rolling...' : 'Roll Dice'}
-              </Button>
-              <Button 
-                variant="outlined" 
-                fullWidth
-                sx={{
-                  borderColor: '#4CAF50',
-                  color: '#4CAF50',
-                  '&:hover': { borderColor: '#388E3C', bgcolor: 'rgba(76, 175, 80, 0.05)' },
-                  fontWeight: 'medium'
-                }}
-              >
-                End Turn
-              </Button>
-            </Box>
-          </Paper>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                The game has not started yet. Please wait for an admin to start the game.
+              </Typography>
+              <Box sx={{ 
+                width: '20px', 
+                height: '20px', 
+                borderRadius: '50%', 
+                backgroundColor: isConnected ? '#4CAF50' : '#f44336',
+                margin: '0 auto',
+                boxShadow: '0 0 10px rgba(0,0,0,0.2)'
+              }} />
+              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                Status: {isConnected ? 'Connected' : 'Disconnected'}
+              </Typography>
+            </Paper>
+          )}
+          
+          {/* Current player */}
+          {gameStarted && currentPlayer && (
+            <Paper elevation={3} sx={{ 
+              p: 2, 
+              mb: 3, 
+              backgroundColor: alpha(currentPlayer.color, 0.15), 
+              borderRadius: '10px',
+              border: currentPlayer.id === currentPlayerId ? '2px solid gold' : 'none' 
+            }}>
+              <Typography variant="h6" gutterBottom sx={{ textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.1)', pb: 1 }}>
+                {currentPlayer.id === currentPlayerId ? 'Your Turn' : 'Current Turn'}
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, justifyContent: 'center' }}>
+                <Avatar sx={{ bgcolor: currentPlayer.color, mr: 2, width: 40, height: 40, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                  {tokenOptions[currentPlayer.token]?.icon || currentPlayer.name.charAt(0)}
+                </Avatar>
+                <Typography variant="body1" fontWeight="bold" fontSize="1.1rem">
+                  {currentPlayer.name}
+                </Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, px: 1 }}>
+                <Typography variant="body2" fontWeight="medium">Cash:</Typography>
+                <Typography variant="body2" fontWeight="bold" fontSize="1rem">${currentPlayer.cash}</Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1 }}>
+                <Typography variant="body2" fontWeight="medium">Position:</Typography>
+                <Typography variant="body2" fontWeight="bold" fontSize="1rem">
+                  Space {currentPlayer.position}
+                  {boardSpaces[currentPlayer.position]?.name && ` (${boardSpaces[currentPlayer.position].name})`}
+                </Typography>
+              </Box>
+              
+              {currentPlayer.inJail && (
+                <Box sx={{ 
+                  mt: 1, 
+                  p: 1, 
+                  backgroundColor: 'rgba(244, 67, 54, 0.1)', 
+                  borderRadius: '4px',
+                  border: '1px dashed #f44336'
+                }}>
+                  <Typography variant="body2" sx={{ color: '#d32f2f', textAlign: 'center' }}>
+                    In Jail {currentPlayer.getOutOfJailCards > 0 && `(${currentPlayer.getOutOfJailCards} Get Out of Jail Free card${currentPlayer.getOutOfJailCards > 1 ? 's' : ''})`}
+                  </Typography>
+                </Box>
+              )}
+              
+              <Box sx={{ mt: 2 }}>
+                <Button 
+                  variant="contained" 
+                  fullWidth 
+                  sx={{ 
+                    mb: 1, 
+                    bgcolor: '#4CAF50', 
+                    '&:hover': { bgcolor: '#388E3C' },
+                    fontWeight: 'bold',
+                    py: 1,
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                  }}
+                  onClick={rollDice}
+                  disabled={!canRollDice()}
+                >
+                  {isRolling ? 'Rolling...' : 'Roll Dice'}
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  fullWidth
+                  sx={{
+                    borderColor: '#4CAF50',
+                    color: '#4CAF50',
+                    '&:hover': { borderColor: '#388E3C', bgcolor: 'rgba(76, 175, 80, 0.05)' },
+                    fontWeight: 'medium'
+                  }}
+                  onClick={endTurn}
+                  disabled={!canEndTurn()}
+                >
+                  End Turn
+                </Button>
+              </Box>
+            </Paper>
+          )}
           
           {/* All players */}
           <Paper elevation={2} sx={{ mb: 3, borderRadius: '10px', overflow: 'hidden' }}>
-            <Typography variant="h6" sx={{ p: 1.5, fontWeight: 'bold', bgcolor: '#f5f5f5', borderBottom: '1px solid #eee' }}>
-              Players
-            </Typography>
+            <Box sx={{ 
+              p: 1.5, 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              bgcolor: '#f5f5f5', 
+              borderBottom: '1px solid #eee' 
+            }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                Players {players.length > 0 ? `(${players.length})` : ''}
+              </Typography>
+              <Button 
+                size="small" 
+                variant="text" 
+                onClick={refreshPlayers}
+                startIcon={<span>🔄</span>}
+                disabled={!isConnected}
+              >
+                Refresh
+              </Button>
+            </Box>
             <Box>
-              {players.map(player => (
-                <Box 
-                  key={player.id}
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    p: 1.5,
-                    borderBottom: '1px solid #eee',
-                    bgcolor: player.id === currentPlayer.id ? alpha(player.color, 0.1) : 'transparent',
-                    transition: 'background-color 0.3s ease'
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Box 
-                      sx={{ 
-                        width: 36, 
-                        height: 36, 
-                        borderRadius: '50%', 
-                        background: `radial-gradient(circle at 30% 30%, ${player.color}, ${darkenColor(player.color, 30)})`,
-                        mr: 1.5,
-                        border: '1px solid rgba(0,0,0,0.3)',
-                        boxShadow: '0 3px 6px rgba(0,0,0,0.2), inset 0 -2px 5px rgba(0,0,0,0.2), inset 0 2px 5px rgba(255,255,255,0.4)',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        fontSize: '20px',
-                        position: 'relative',
-                        transformStyle: 'preserve-3d',
-                        transform: 'perspective(500px) rotateX(10deg)',
-                        '&::after': {
-                          content: '""',
-                          position: 'absolute',
-                          width: '90%',
-                          height: '15%',
-                          bottom: '-8%',
-                          left: '5%',
-                          backgroundColor: 'rgba(0,0,0,0.2)',
-                          filter: 'blur(3px)',
-                          borderRadius: '50%',
-                          zIndex: -1,
-                          transform: 'rotateX(60deg) scale(1, 0.4)',
-                        }
-                      }} 
-                    >
-                      <Box sx={{
-                        fontSize: '22px',
-                        filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))',
-                        transform: 'translateZ(2px)',
-                      }}>
-                        {tokenOptions[player.token]?.icon}
+              {players.length > 0 ? (
+                players.map(player => (
+                  <Box 
+                    key={player.id}
+                    sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between',
+                      p: 1.5,
+                      borderBottom: '1px solid #eee',
+                      bgcolor: player.id === currentPlayerId ? alpha(player.color, 0.1) : 'transparent',
+                      transition: 'background-color 0.3s ease'
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Box 
+                        sx={{ 
+                          width: 36, 
+                          height: 36, 
+                          borderRadius: '50%', 
+                          background: `radial-gradient(circle at 30% 30%, ${player.color}, ${darkenColor(player.color, 30)})`,
+                          mr: 1.5,
+                          border: '1px solid rgba(0,0,0,0.3)',
+                          boxShadow: '0 3px 6px rgba(0,0,0,0.2), inset 0 -2px 5px rgba(0,0,0,0.2), inset 0 2px 5px rgba(255,255,255,0.4)',
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          fontSize: '20px',
+                          position: 'relative',
+                          transformStyle: 'preserve-3d',
+                          transform: 'perspective(500px) rotateX(10deg)',
+                          '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            width: '90%',
+                            height: '15%',
+                            bottom: '-8%',
+                            left: '5%',
+                            backgroundColor: 'rgba(0,0,0,0.2)',
+                            filter: 'blur(3px)',
+                            borderRadius: '50%',
+                            zIndex: -1,
+                            transform: 'rotateX(60deg) scale(1, 0.4)',
+                          }
+                        }} 
+                      >
+                        <Box sx={{
+                          fontSize: '22px',
+                          filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))',
+                          transform: 'translateZ(2px)',
+                        }}>
+                          {tokenOptions[player.token]?.icon}
+                        </Box>
+                      </Box>
+                      <Box>
+                        <Typography variant="body2" fontWeight={player.id === currentPlayerId ? 'bold' : 'medium'}>
+                          {player.name}
+                          {player.id === currentPlayerId && " (You)"}
+                        </Typography>
+                        {player.isBot && (
+                          <Typography variant="caption" sx={{ 
+                            display: 'inline-block',
+                            bgcolor: 'rgba(33, 150, 243, 0.1)',
+                            color: '#1976d2',
+                            px: 0.8,
+                            py: 0.2,
+                            borderRadius: 1,
+                            fontSize: '0.65rem'
+                          }}>
+                            Bot
+                          </Typography>
+                        )}
                       </Box>
                     </Box>
-                    <Typography variant="body2" fontWeight={player.id === currentPlayer.id ? 'bold' : 'medium'}>
-                      {player.name}
-                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                      <Typography variant="body2" fontWeight="bold" fontSize="0.95rem">${player.cash}</Typography>
+                      {player.inJail && (
+                        <Chip
+                          label="In Jail"
+                          size="small"
+                          sx={{ 
+                            height: '18px', 
+                            fontSize: '0.65rem', 
+                            mt: 0.5,
+                            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                            color: '#d32f2f',
+                            border: '1px solid #d32f2f'
+                          }}
+                        />
+                      )}
+                    </Box>
                   </Box>
-                  <Typography variant="body2" fontWeight="bold" fontSize="0.95rem">${player.cash}</Typography>
+                ))
+              ) : (
+                <Box sx={{ p: 2, textAlign: 'center' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {isConnected ? 
+                      "No players found. Add players or bots from the Admin panel." : 
+                      "Connecting to server..."}
+                  </Typography>
+                  {isConnected && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      sx={{ mt: 1 }}
+                      onClick={refreshPlayers}
+                    >
+                      Refresh Players
+                    </Button>
+                  )}
                 </Box>
-              ))}
+              )}
+            </Box>
+          </Paper>
+          
+          {/* Game state and economic info */}
+          <Paper elevation={2} sx={{ mb: 3, borderRadius: '10px', overflow: 'hidden' }}>
+            <Typography variant="h6" sx={{ p: 1.5, fontWeight: 'bold', bgcolor: '#f5f5f5', borderBottom: '1px solid #eee' }}>
+              Game Info
+            </Typography>
+            <Box sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" fontWeight="medium">Economy:</Typography>
+                <Typography 
+                  variant="body2" 
+                  fontWeight="bold" 
+                  sx={{ 
+                    color: economicState === 'recession' ? '#d32f2f' : 
+                           economicState === 'boom' ? '#388E3C' : 
+                           economicState === 'unstable' ? '#FB8C00' : '#1976D2'
+                  }}
+                >
+                  {economicState.charAt(0).toUpperCase() + economicState.slice(1)}
+                </Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2" fontWeight="medium">Inflation:</Typography>
+                <Typography 
+                  variant="body2" 
+                  fontWeight="bold"
+                  sx={{ 
+                    color: inflation > 2 ? '#d32f2f' : 
+                           inflation > 1.5 ? '#FB8C00' : 
+                           inflation < 0.7 ? '#1976D2' : 'inherit'
+                  }}
+                >
+                  {(inflation * 100).toFixed(1)}%
+                </Typography>
+              </Box>
+              
+              {gameId && (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                  <Typography variant="body2" fontWeight="medium">Game ID:</Typography>
+                  <Typography variant="body2" fontSize="0.75rem" sx={{ opacity: 0.7 }}>
+                    {gameId.slice(0, 8)}...
+                  </Typography>
+                </Box>
+              )}
             </Box>
           </Paper>
           
@@ -1322,6 +1967,7 @@ function BoardPage() {
                   '&:hover': { bgcolor: 'rgba(255, 198, 99, 0.2)' },
                   mb: 1
                 }}
+                disabled={!isConnected}
               >
                 Test Chance Card
               </Button>
@@ -1337,6 +1983,7 @@ function BoardPage() {
                   '&:hover': { bgcolor: 'rgba(203, 223, 248, 0.2)' },
                   mb: 1
                 }}
+                disabled={!isConnected}
               >
                 Test Community Chest
               </Button>
@@ -1346,6 +1993,8 @@ function BoardPage() {
                 size="medium" 
                 color="error"
                 sx={{ fontWeight: 'medium' }}
+                onClick={leaveGame}
+                disabled={!isConnected || !gameStarted}
               >
                 Leave Game
               </Button>
