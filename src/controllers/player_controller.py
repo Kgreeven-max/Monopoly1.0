@@ -3,6 +3,7 @@ from flask import jsonify
 from src.models.player import Player
 from src.models import db
 from flask import current_app
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,7 @@ class PlayerController:
     def __init__(self, db_session):
         self.db = db_session # Pass the db session or SQLAlchemy instance
 
-    def _authenticate_player(self, player_id, pin) -> Player | None:
+    def _authenticate_player(self, player_id, pin) -> Optional[Player]:
         """Helper method to authenticate player by ID and PIN."""
         player = Player.query.get(player_id)
         if not player:

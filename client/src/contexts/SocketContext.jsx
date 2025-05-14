@@ -16,8 +16,8 @@ const SocketContext = createContext({
 // Custom hook to use the socket context
 export const useSocket = () => useContext(SocketContext);
 
-// Use port 8080 for WebSocket connection
-const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8080';
+// Default socket URL - will be determined at runtime based on tests
+let WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:5001';
 
 // Socket provider component
 export const SocketProvider = ({ children }) => {
@@ -48,13 +48,19 @@ export const SocketProvider = ({ children }) => {
     // Allow direct override of connection options
     const finalOptions = {
       // Default options
-      path: '/ws/socket.io', // Path configured in Flask-SocketIO
+      path: '/ws/socket.io', // Match the path in app.py
       transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
       reconnection: true,
       reconnectionAttempts: maxReconnectAttempts,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 20000, // Increase timeout
+      autoConnect: true,
+      debug: true, // Enable debug mode
+      withCredentials: true, // Send cookies
+      query: {
+        token: 'display-mode', // Pass a token for display mode
+      },
       // Override with any user-provided options
       ...options
     };
@@ -63,6 +69,7 @@ export const SocketProvider = ({ children }) => {
     
     try {
       // Create a new socket connection
+      console.log(`[SocketContext] Creating new socket connection to: ${WS_URL}${finalOptions.path}`);
       const newSocket = io(WS_URL, finalOptions);
       socketRef.current = newSocket;
 
@@ -210,6 +217,92 @@ export const SocketProvider = ({ children }) => {
       }
     };
   }, []);
+
+  // Automatically connect when the component mounts
+  useEffect(() => {
+    console.log('[SocketContext] Automatically connecting to socket on mount...');
+    
+    // Try different connection methods
+    const testConnection = async () => {
+      // First try the default port 5001
+      await testPort('http://localhost:5001');
+      
+      // Then try port 8080 which is mentioned in app.py and run_server.py
+      await testPort('http://localhost:8080');
+    };
+    
+    // Test connections with various paths on a specific port
+    const testPort = async (url) => {
+      console.log(`[SocketContext] Testing connection to ${url}...`);
+      
+      // Try with default path
+      console.log(`[SocketContext] Testing connection to ${url} with default path /socket.io...`);
+      try {
+        const testSocket1 = io(url, {
+          path: '/socket.io',
+          transports: ['websocket', 'polling'],
+          timeout: 5000,
+          autoConnect: true,
+          withCredentials: true
+        });
+        
+        testSocket1.on('connect', () => {
+          console.log(`[SocketContext] Test CONNECTED SUCCESSFULLY to ${url} with path /socket.io`);
+        });
+        
+        testSocket1.on('connect_error', (err) => {
+          console.error(`[SocketContext] Connection error to ${url} with path /socket.io:`, err.message);
+          testSocket1.disconnect();
+        });
+        
+        // Try with /ws path
+        console.log(`[SocketContext] Testing connection to ${url} with /ws path...`);
+        const testSocket2 = io(url, {
+          path: '/ws',
+          transports: ['websocket', 'polling'],
+          timeout: 5000,
+          autoConnect: true,
+          withCredentials: true
+        });
+        
+        testSocket2.on('connect', () => {
+          console.log(`[SocketContext] Test CONNECTED SUCCESSFULLY to ${url} with path /ws`);
+        });
+        
+        testSocket2.on('connect_error', (err) => {
+          console.error(`[SocketContext] Connection error to ${url} with path /ws:`, err.message);
+          testSocket2.disconnect();
+        });
+        
+        // Try with /ws/socket.io path
+        console.log(`[SocketContext] Testing connection to ${url} with /ws/socket.io path...`);
+        const testSocket3 = io(url, {
+          path: '/ws/socket.io',
+          transports: ['websocket', 'polling'],
+          timeout: 5000,
+          autoConnect: true,
+          withCredentials: true
+        });
+        
+        testSocket3.on('connect', () => {
+          console.log(`[SocketContext] Test CONNECTED SUCCESSFULLY to ${url} with path /ws/socket.io`);
+        });
+        
+        testSocket3.on('connect_error', (err) => {
+          console.error(`[SocketContext] Connection error to ${url} with path /ws/socket.io:`, err.message);
+          testSocket3.disconnect();
+        });
+      } catch (err) {
+        console.error(`[SocketContext] Test socket creation error for ${url}:`, err);
+      }
+    };
+    
+    // Run the test
+    testConnection();
+    
+    // Also try normal connection
+    connectSocket();
+  }, [connectSocket]);
 
   // Expose socket context values
   const value = {

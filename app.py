@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory, render_template
+from flask import Flask, jsonify, request, send_from_directory, render_template, make_response
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import os
 import logging
@@ -1293,50 +1293,55 @@ def handle_create_bot(data):
 def page_not_found(e):
     return render_template('error.html', error_code=404, error_message="Page not found"), 404
 
-# Set default configuration values for missing keys
-app.config.setdefault('ADAPTIVE_DIFFICULTY_ENABLED', False)
-app.config.setdefault('POLICE_PATROL_ENABLED', False)
-app.config.setdefault('REMOTE_PLAY_ENABLED', False)
-app.config.setdefault('ECONOMIC_CYCLE_ENABLED', True)
-app.config.setdefault('RANDOM_ECONOMIC_EVENTS_ENABLED', True)
-app.config.setdefault('ADAPTIVE_DIFFICULTY_INTERVAL', 15)
-app.config.setdefault('POLICE_PATROL_INTERVAL', 45)
-app.config.setdefault('ECONOMIC_CYCLE_INTERVAL', 5)
-app.config.setdefault('MIN_ECONOMIC_EVENT_INTERVAL', 30)
-app.config.setdefault('MAX_ECONOMIC_EVENT_INTERVAL', 60)
-app.config.setdefault('INITIAL_ECONOMIC_EVENT_DELAY', 15)
-
-# Run the app
-if __name__ == '__main__':
-    setup_scheduled_tasks()
-    # Use port 5001 directly to avoid conflicts with the src/app.py
-    port = 5001
-    debug_mode = is_debug_mode()
-    logging.info(f"Starting server on port {port} with debug mode {'enabled' if debug_mode else 'disabled'}")
-    socketio.run(app, host='0.0.0.0', port=port, debug=debug_mode, allow_unsafe_werkzeug=True) 
-
 # Add a new route for getting all players without authentication
-@app.route('/api/players', methods=['GET'])
+@app.route('/api/players', methods=['GET', 'OPTIONS'])
 def get_all_players():
     """Get all players without requiring authentication"""
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
+        return response
+        
     try:
         from src.controllers.player_controller import get_all_player_data
         all_players = get_all_player_data()
-        return jsonify({
+        
+        response = jsonify({
             'success': True,
             'players': all_players
         })
+        
+        # Add CORS headers to allow access from any origin
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
+        
+        app.logger.info(f"Successfully returned {len(all_players)} players via API")
+        return response
     except Exception as e:
         logging.error(f"Error in get_all_players API: {str(e)}")
-        return jsonify({
+        error_response = jsonify({
             'success': False,
             'error': str(e)
-        }), 500 
+        })
+        error_response.headers.add("Access-Control-Allow-Origin", "*")
+        return error_response, 500
 
 # Add a new route for getting all properties without authentication
-@app.route('/api/properties', methods=['GET'])
+@app.route('/api/properties', methods=['GET', 'OPTIONS'])
 def get_all_properties():
     """Get all properties without requiring authentication"""
+    # Handle OPTIONS request for CORS preflight
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
+        return response
+        
     try:
         # Import Property model and query all properties
         from src.models.property import Property
@@ -1360,13 +1365,20 @@ def get_all_properties():
             }
             properties_data.append(property_data)
         
-        return jsonify(properties_data)
+        response = jsonify(properties_data)
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
+        
+        return response
     except Exception as e:
         logging.error(f"Error in get_all_properties API: {str(e)}")
-        return jsonify({
+        error_response = jsonify({
             'success': False,
             'error': str(e)
-        }), 500 
+        })
+        error_response.headers.add("Access-Control-Allow-Origin", "*")
+        return error_response, 500
 
 # Add direct public routes for board data that bypass auth middleware
 @app.route('/public/board/players', methods=['GET'])
@@ -1400,12 +1412,16 @@ def public_board_players():
             }
             players_data.append(player_data)
         
-        return jsonify(players_data)
+        response = jsonify(players_data)
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        return response
     except Exception as e:
         app.logger.error(f"Error in public players API: {str(e)}", exc_info=True)
-        return jsonify({
+        error_response = jsonify({
             'error': str(e)
-        }), 500
+        })
+        error_response.headers.add("Access-Control-Allow-Origin", "*")
+        return error_response, 500
 
 @app.route('/public/board/properties', methods=['GET'])
 def public_board_properties():
@@ -1433,21 +1449,35 @@ def public_board_properties():
             }
             properties_data.append(property_data)
         
-        return jsonify(properties_data)
+        response = jsonify(properties_data)
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        return response
     except Exception as e:
         app.logger.error(f"Error in public properties API: {str(e)}", exc_info=True)
-        return jsonify({
+        error_response = jsonify({
             'error': str(e)
-        }), 500 
+        })
+        error_response.headers.add("Access-Control-Allow-Origin", "*")
+        return error_response, 500
 
-@app.route('/test-endpoint', methods=['GET'])
-def test_endpoint():
-    """Simplest possible test endpoint with static data"""
-    return jsonify({
-        'success': True,
-        'message': 'This is a test endpoint',
-        'test_players': [
-            {'id': 1, 'name': 'Test Player 1', 'money': 1500, 'position': 0},
-            {'id': 2, 'name': 'Test Player 2', 'money': 1500, 'position': 10}
-        ]
-    }) 
+# Set default configuration values for missing keys
+app.config.setdefault('ADAPTIVE_DIFFICULTY_ENABLED', False)
+app.config.setdefault('POLICE_PATROL_ENABLED', False)
+app.config.setdefault('REMOTE_PLAY_ENABLED', False)
+app.config.setdefault('ECONOMIC_CYCLE_ENABLED', True)
+app.config.setdefault('RANDOM_ECONOMIC_EVENTS_ENABLED', True)
+app.config.setdefault('ADAPTIVE_DIFFICULTY_INTERVAL', 15)
+app.config.setdefault('POLICE_PATROL_INTERVAL', 45)
+app.config.setdefault('ECONOMIC_CYCLE_INTERVAL', 5)
+app.config.setdefault('MIN_ECONOMIC_EVENT_INTERVAL', 30)
+app.config.setdefault('MAX_ECONOMIC_EVENT_INTERVAL', 60)
+app.config.setdefault('INITIAL_ECONOMIC_EVENT_DELAY', 15)
+
+# Run the app
+if __name__ == '__main__':
+    setup_scheduled_tasks()
+    # Use port 5001 directly to avoid conflicts with the src/app.py
+    port = 5001
+    debug_mode = is_debug_mode()
+    logging.info(f"Starting server on port {port} with debug mode {'enabled' if debug_mode else 'disabled'}")
+    socketio.run(app, host='0.0.0.0', port=port, debug=debug_mode, allow_unsafe_werkzeug=True) 

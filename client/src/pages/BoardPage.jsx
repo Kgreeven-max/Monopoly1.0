@@ -1,6 +1,169 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Typography, Button, Divider, Paper, Avatar, Chip } from '@mui/material';
 import io from 'socket.io-client';
+import gsap from 'gsap';
+import { useSocket } from '../contexts/SocketContext';
+
+// Custom hook for player movement animation
+const usePlayerAnimation = (onCompleteLanding) => {
+  const [isAnimatingMovement, setIsAnimatingMovement] = useState(false);
+  const [playerMoving, setPlayerMoving] = useState(null);
+  const [startPosition, setStartPosition] = useState(null);
+  const [targetPosition, setTargetPosition] = useState(null);
+  const [remainingSteps, setRemainingSteps] = useState(0);
+  const playerTokenRefs = useRef({});
+  const animationTimelineRef = useRef(null);
+  
+  const getPlayerTokenRef = (playerId) => (element) => {
+    if (element) {
+      playerTokenRefs.current[playerId] = element;
+    } else {
+      // Remove reference if element is unmounted
+      delete playerTokenRefs.current[playerId];
+    }
+  };
+  
+  const animatePlayerMovement = (playerId, fromPosition, toPosition, steps) => {
+    if (!playerTokenRefs.current[playerId]) {
+      console.error(`No ref found for player ${playerId}`);
+      return Promise.reject('No player ref found');
+    }
+    
+    // Clear any existing timeline
+    if (animationTimelineRef.current) {
+      animationTimelineRef.current.kill();
+    }
+    
+    // Calculate path around the board
+    const path = [];
+    let currentPosition = fromPosition;
+    
+    // Generate each step along the path
+    for (let i = 0; i < steps; i++) {
+      currentPosition = (currentPosition + 1) % 40; // Wrap around the board
+      path.push(currentPosition);
+    }
+    
+    setPlayerMoving(playerId);
+    setIsAnimatingMovement(true);
+    setStartPosition(fromPosition);
+    setTargetPosition(toPosition);
+    setRemainingSteps(steps);
+    
+    // Create animation timeline
+    const timeline = gsap.timeline({
+      onComplete: () => {
+        setIsAnimatingMovement(false);
+        setPlayerMoving(null);
+        setRemainingSteps(0);
+        
+        // Call the landing callback if provided
+        if (typeof onCompleteLanding === 'function') {
+          onCompleteLanding(toPosition);
+        }
+      }
+    });
+    
+    // Find all space elements
+    const spaceElements = document.querySelectorAll('[data-space-id]');
+    const spaceMap = {};
+    
+    // Create a map of spaces by ID
+    spaceElements.forEach(el => {
+      const id = parseInt(el.getAttribute('data-space-id'));
+      spaceMap[id] = el;
+    });
+    
+    // Define starting position - player is already here in the DOM
+    // We need to get its current computed transform to use as a starting point
+    // This avoids jumps at the beginning of the animation
+    const startStyle = window.getComputedStyle(playerTokenRefs.current[playerId]);
+    const startTransform = startStyle.transform;
+    
+    // Reset position to allow GSAP to handle transforms
+    gsap.set(playerTokenRefs.current[playerId], {
+      clearProps: "transform",
+      position: "absolute",
+      zIndex: 100
+    });
+    
+    // Add sequential animations for each step
+    path.forEach((pos, index) => {
+      const spaceElement = spaceMap[pos];
+      
+      if (!spaceElement) {
+        console.error(`Could not find element for space ${pos}`);
+        return;
+      }
+      
+      // Get space position relative to the board
+      const spaceRect = spaceElement.getBoundingClientRect();
+      const playerRect = playerTokenRefs.current[playerId].getBoundingClientRect();
+      
+      // Calculate center position
+      const x = spaceRect.left + (spaceRect.width / 2) - (playerRect.width / 2);
+      const y = spaceRect.top + (spaceRect.height * 0.7) - (playerRect.height / 2);
+      
+      timeline.to(playerTokenRefs.current[playerId], {
+        duration: 0.4, // Duration for each step
+        top: 0,
+        left: 0,
+        x: x,
+        y: y,
+        ease: "power2.inOut",
+        onStart: () => {
+          setRemainingSteps(steps - index - 1);
+          
+          // If passing Go (position 0), add visual effect
+          if (pos === 0 && fromPosition !== 0) {
+            gsap.to(playerTokenRefs.current[playerId], {
+              duration: 0.2,
+              scale: 1.3,
+              backgroundColor: 'gold',
+              boxShadow: '0 0 15px gold',
+              yoyo: true,
+              repeat: 1
+            });
+          }
+        },
+        onComplete: () => {
+          // Bounce effect when landing on final space
+          if (index === path.length - 1) {
+            gsap.to(playerTokenRefs.current[playerId], {
+              duration: 0.3,
+              y: `-=10px`,
+              yoyo: true,
+              repeat: 1,
+              ease: "power2.inOut"
+            });
+          }
+        }
+      });
+    });
+    
+    // Store the timeline for potential interruption
+    animationTimelineRef.current = timeline;
+    
+    // Return a promise that resolves when animation completes
+    return new Promise((resolve) => {
+      timeline.eventCallback('onComplete', () => {
+        // Reset to original style with regular transitions
+        gsap.set(playerTokenRefs.current[playerId], {
+          clearProps: "transform,position,zIndex,x,y,top,left",
+        });
+        resolve();
+      });
+    });
+  };
+  
+  return {
+    isAnimatingMovement,
+    playerMoving,
+    remainingSteps,
+    getPlayerTokenRef,
+    animatePlayerMovement
+  };
+};
 
 // Card data - moved to top level for easy editing
 // Add new cards by simply adding new objects to these arrays
@@ -148,6 +311,38 @@ const COMMUNITY_CHEST_CARDS = [
   },
 ];
 
+// Token options for player pieces
+const tokenOptions = {
+  car: { icon: '🚗', name: 'Car' },
+  ship: { icon: '🚢', name: 'Ship' },
+  hat: { icon: '🎩', name: 'Top Hat' },
+  dog: { icon: '🐕', name: 'Dog' },
+  cat: { icon: '🐈', name: 'Cat' },
+  plane: { icon: '✈️', name: 'Airplane' },
+  money: { icon: '💰', name: 'Money Bag' },
+  crown: { icon: '👑', name: 'Crown' },
+  boot: { icon: '👢', name: 'Boot' },
+  robot: { icon: '🤖', name: 'Robot' }
+};
+
+// Helper function to get default color for a player
+const getDefaultPlayerColor = (playerId) => {
+  const colors = ['#ff5722', '#9c27b0', '#2196f3', '#4caf50', '#ffeb3b', '#795548', '#607d8b', '#e91e63', '#00bcd4', '#ff9800'];
+  const index = typeof playerId === 'string' ? 
+    Math.abs(playerId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % colors.length : 
+    Math.abs(playerId) % colors.length;
+  return colors[index];
+};
+
+// Helper function to get default token for a player
+const getDefaultPlayerToken = (playerId) => {
+  const tokens = Object.keys(tokenOptions);
+  const index = typeof playerId === 'string' ? 
+    Math.abs(playerId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % tokens.length : 
+    Math.abs(playerId) % tokens.length;
+  return tokens[index];
+};
+
 /*
   CARD TEMPLATE - Copy this to add new cards:
   
@@ -206,6 +401,9 @@ function BoardPage() {
     { id: 39, name: 'BOARDWALK', price: 400, type: 'property', color: '#0072BC' },
   ]);
 
+  // Get socket from context
+  const { socket, emit, isConnected } = useSocket();
+
   // Function to get position for each space
   const getPosition = (index) => {
     const side = Math.floor(index / 10); // 0=bottom, 1=left, 2=top, 3=right
@@ -258,7 +456,9 @@ function BoardPage() {
                   right: 0, 
                   width: '25%', 
                   height: '25%', 
-                  bgcolor: players.find(p => p.id === space.owner)?.color || '#777',
+                  bgcolor: (players && players.length > 0) ? 
+                    players.find(p => p.id === space.owner)?.color || '#777' : 
+                    '#777',
                   borderBottomLeftRadius: '50%',
                 }}
               />
@@ -480,447 +680,54 @@ function BoardPage() {
     return genericContent;
   };
 
-  // Function to handle full screen
-  const [isFullScreen, setIsFullScreen] = useState(false);
-  const containerRef = React.useRef(null);
-
-  const toggleFullScreen = () => {
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable fullscreen: ${err.message}`);
-      });
-    } else {
-      document.exitFullscreen();
-    }
-  };
-
-  useEffect(() => {
-    const handleFullScreenChange = () => {
-      setIsFullScreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFullScreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
-  }, []);
-
-  // Replace mock player data with state
-  const [players, setPlayers] = useState([]);
-  const [currentPlayerId, setCurrentPlayerId] = useState(null);
-  const [gameId, setGameId] = useState(null);
-  const [gameStarted, setGameStarted] = useState(false);
-  
-  // Player token options
-  const tokenOptions = {
-    'car': { icon: '🚗', description: 'Sports Car' },
-    'ship': { icon: '🚢', description: 'Luxury Yacht' },
-    'hat': { icon: '🎩', description: 'Top Hat' },
-    'boot': { icon: '👢', description: 'Boot' },
-    'dog': { icon: '🐕', description: 'Scottish Terrier' },
-    'ring': { icon: '💍', description: 'Diamond Ring' },
-    'iron': { icon: '🧳', description: 'Iron' },
-    'thimble': { icon: '🧵', description: 'Thimble' },
-    'wheelbarrow': { icon: '🛒', description: 'Wheelbarrow' },
-    'cannon': { icon: '💣', description: 'Cannon' }
-  };
-  
-  // Get current player from players array
-  const currentPlayer = players.find(p => p.id === currentPlayerId) || (players.length > 0 ? players[0] : null);
-
-  // Socket connection for real-time updates
-  const [socket, setSocket] = useState(null);
-  const [economicState, setEconomicState] = useState('normal');
-  const [inflation, setInflation] = useState(1.0);
-  const [isConnected, setIsConnected] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(null);
-
-  // Connect to socket and set up property updates
-  useEffect(() => {
-    const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5001', {
-      path: "/ws",
-      reconnectionDelayMax: 10000,
-      transports: ['websocket']
-    });
-    
-    setSocket(newSocket);
-
-    // Connection events
-    newSocket.on('connect', () => {
-      console.log('Connected to game server');
-      setIsConnected(true);
-      setErrorMessage(null);
-      
-      // Request initial game state and player list separately
-      newSocket.emit('request_game_state');
-      
-      // Specifically request all players - even ones not in current game
-      newSocket.emit('get_all_players', { request_type: 'board_view' });
-    });
-
-    newSocket.on('disconnect', () => {
-      console.log('Disconnected from game server');
-      setIsConnected(false);
-    });
-
-    newSocket.on('connect_error', (error) => {
-      console.error('Connection error:', error);
-      setErrorMessage(`Connection error: ${error.message}`);
-    });
-
-    // Handle game state
-    newSocket.on('game_state', (data) => {
-      console.log('Received game state:', data);
-      
-      if (data.gameId) {
-        setGameId(data.gameId);
-      }
-      
-      if (data.gameStarted !== undefined) {
-        setGameStarted(data.gameStarted);
-      }
-      
-      if (data.currentPlayerId) {
-        setCurrentPlayerId(data.currentPlayerId);
-      }
-      
-      if (data.players) {
-        setPlayers(data.players.map(player => ({
-          id: player.id,
-          name: player.username || player.name,
-          cash: player.money || player.cash,
-          position: player.position,
-          color: player.color || getDefaultPlayerColor(player.id),
-          token: player.token || getDefaultPlayerToken(player.id),
-          inJail: player.in_jail,
-          getOutOfJailCards: player.get_out_of_jail_cards || 0
-        })));
-      }
-      
-      if (data.properties) {
-        updatePropertyData(data.properties);
-      }
-
-      if (data.economicState) {
-        setEconomicState(data.economicState);
-      }
-
-      if (data.inflation) {
-        setInflation(data.inflation);
-      }
-    });
-
-    // Listen for player updates
-    newSocket.on('player_moved', (data) => {
-      console.log('Player moved:', data);
-      
-      setPlayers(prevPlayers => prevPlayers.map(player => {
-        if (player.id === data.playerId) {
-          // Trigger landing actions when player moves
-          setTimeout(() => handleLanding(data.newPosition), 500);
-          
-          return {
-            ...player,
-            position: data.newPosition
-          };
-        }
-        return player;
-      }));
-    });
-
-    newSocket.on('player_jailed', (data) => {
-      console.log('Player jailed:', data);
-      
-      setPlayers(prevPlayers => prevPlayers.map(player => {
-        if (player.id === data.playerId) {
-          return {
-            ...player,
-            position: 10, // Jail position
-            inJail: true
-          };
-        }
-        return player;
-      }));
-    });
-
-    newSocket.on('player_update', (data) => {
-      console.log('Player update:', data);
-      
-      setPlayers(prevPlayers => {
-        const playerIndex = prevPlayers.findIndex(p => p.id === data.playerId);
-        
-        if (playerIndex === -1) {
-          // New player joined
-          return [...prevPlayers, {
-            id: data.playerId,
-            name: data.username || data.name || `Player ${data.playerId}`,
-            cash: data.money || 1500,
-            position: data.position || 0,
-            color: data.color || getDefaultPlayerColor(data.playerId),
-            token: data.token || getDefaultPlayerToken(data.playerId),
-            inJail: data.in_jail || false,
-            getOutOfJailCards: data.get_out_of_jail_cards || 0
-          }];
-        }
-        
-        // Update existing player
-        return prevPlayers.map(player => {
-          if (player.id === data.playerId) {
-            return {
-              ...player,
-              cash: data.money !== undefined ? data.money : player.cash,
-              position: data.position !== undefined ? data.position : player.position,
-              inJail: data.in_jail !== undefined ? data.in_jail : player.inJail,
-              getOutOfJailCards: data.get_out_of_jail_cards !== undefined ? 
-                data.get_out_of_jail_cards : player.getOutOfJailCards
-            };
-          }
-          return player;
-        });
-      });
-    });
-
-    // Initial property data fetch with improved error handling
-    console.log('Attempting to fetch properties...');
-    
-    // Try the test endpoint first to verify server connectivity
-    fetch('http://localhost:5001/test-endpoint')
-      .then(response => {
-        console.log('Test endpoint status for properties:', response.status);
-        if (response.ok) {
-          console.log('Test endpoint working, trying properties endpoint...');
-          // Now try the real properties endpoint
-          return fetch('http://localhost:5001/public/board/properties')
-            .then(response => {
-              console.log('Properties endpoint status:', response.status);
-              if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-              }
-              return response.json();
-            });
-        } else {
-          throw new Error('Test endpoint failed');
-        }
-      })
-      .then(data => {
-        console.log('Properties data received:', data);
-        updatePropertyData(data);
-      })
-      .catch(error => {
-        console.error('Error fetching properties:', error);
-        setErrorMessage('Failed to load property data. Please refresh the page.');
-      });
-
-    // Listen for property updates via socket
-    newSocket.on('property_update', (updatedProperties) => {
-      updatePropertyData(updatedProperties);
-    });
-
-    // Listen for economic changes
-    newSocket.on('economic_update', (data) => {
-      setEconomicState(data.state);
-      setInflation(data.inflation || 1.0);
-      
-      // If we receive separate inflation data without property updates,
-      // update the prices based on current properties and new inflation
-      if (data.inflation && !data.properties) {
-        updatePricesWithInflation(data.inflation);
-      }
-    });
-
-    // Listen for turn change
-    newSocket.on('turn_changed', (data) => {
-      console.log('Turn changed:', data);
-      setCurrentPlayerId(data.playerId);
-    });
-
-    // Additional event listener for all_players_list event
-    newSocket.on('all_players_list', (data) => {
-      console.log('Received all players list:', data);
-      
-      if (data.success && data.players) {
-        // Convert the server's player format to our local format
-        const formattedPlayers = data.players.map(serverPlayer => ({
-          id: serverPlayer.id,
-          name: serverPlayer.name || serverPlayer.username,
-          cash: serverPlayer.money,
-          position: serverPlayer.position || 0,
-          color: serverPlayer.color || getDefaultPlayerColor(serverPlayer.id),
-          token: serverPlayer.token || getDefaultPlayerToken(serverPlayer.id),
-          inJail: serverPlayer.in_jail || false,
-          getOutOfJailCards: serverPlayer.get_out_of_jail_cards || 0,
-          isBot: serverPlayer.is_bot || false
-        }));
-        
-        setPlayers(formattedPlayers);
-      }
-    });
-
-    return () => {
-      if (newSocket) {
-        // Also disconnect the all_players_list event
-        newSocket.off('all_players_list');
-        newSocket.disconnect();
-      }
-    };
-  }, []);
-
-  // Helper function to get a default color for a player
-  const getDefaultPlayerColor = (playerId) => {
-    const colors = ['#E53935', '#1E88E5', '#43A047', '#FDD835', '#8E24AA', '#FB8C00', '#00ACC1', '#F06292'];
-    return colors[playerId % colors.length];
-  };
-
-  // Helper function to get a default token for a player
-  const getDefaultPlayerToken = (playerId) => {
-    const tokens = ['car', 'ship', 'hat', 'boot', 'dog', 'ring', 'iron', 'thimble'];
-    return tokens[playerId % tokens.length];
-  };
-
-  // Function to update all property data from backend
-  const updatePropertyData = (propertyData) => {
-    setBoardSpaces(prevSpaces => {
-      return prevSpaces.map(space => {
-        const updatedProperty = propertyData.find(p => p.id === space.id);
-        if (updatedProperty) {
-          return {
-            ...space,
-            name: updatedProperty.name || space.name,
-            price: updatedProperty.price || space.price,
-            owner: updatedProperty.owner_id,
-            houses: updatedProperty.houses || 0,
-            hotel: updatedProperty.hotel || false,
-            is_mortgaged: updatedProperty.is_mortgaged || false,
-            // Store original price for inflation calculations if not already stored
-            basePrice: space.basePrice || updatedProperty.price || space.price
-          };
-        }
-        return space;
-      });
-    });
-  };
-
-  // Function to update just the prices based on inflation
-  const updatePricesWithInflation = (newInflation) => {
-    setBoardSpaces(prevSpaces => {
-      return prevSpaces.map(space => {
-        if (space.price) {
-          // Use basePrice stored from initial load to calculate current price
-          return {
-            ...space,
-            price: Math.round((space.basePrice || space.price) * newInflation)
-          };
-        }
-        return space;
-      });
-    });
-  };
-
-  // Function to format money with suffix based on economic state
-  const formatMoney = (amount) => {
-    if (!amount) return '$0';
-    
-    // Format based on economic state - add suffixes for very high inflation
-    if (inflation > 1000) {
-      return `$${Math.round(amount / 1000)}K`;
-    } else if (inflation > 1000000) {
-      return `$${Math.round(amount / 1000000)}M`;
-    }
-    
-    return `$${amount}`;
-  };
-
-  // Card system
-  const [showCard, setShowCard] = useState(false);
-  const [cardType, setCardType] = useState(null); // 'chance' or 'chest'
-  const [cardContent, setCardContent] = useState(null);
-  const [cardAnimation, setCardAnimation] = useState('initial'); // 'initial', 'flipping', 'showing', 'flying'
-  
-  /**
-   * Draw a card from the backend
-   * @param {string} type - Either 'chance' or 'chest'
-   */
-  const drawCard = (type) => {
-    if (!socket) return;
-    
-    // Request card draw from backend
-    socket.emit('draw_card', { 
-      cardType: type, 
-      playerId: currentPlayerId,
-      gameId: gameId
-    });
-  };
-  
-  // Listen for card draw events
-  useEffect(() => {
-    if (!socket) return;
-    
-    const handleCardDrawn = (data) => {
-      console.log('Card drawn:', data);
-      
-      // Set card data
-      setCardType(data.cardType);
-      setCardContent({
-        id: data.id || Math.floor(Math.random() * 1000),
-        title: data.title,
-        description: data.description,
-        action: data.action,
-        value: data.value,
-        color: data.cardType === 'chance' ? '#FFC663' : '#CBDFF8'
-      });
-      
-      // Show the card with animation
-      setShowCard(true);
-      setCardAnimation('initial');
-      
-      // Animation sequence
-      setTimeout(() => setCardAnimation('flipping'), 800);
-      setTimeout(() => setCardAnimation('showing'), 2000);
-      setTimeout(() => setCardAnimation('flying'), 8000);
-      setTimeout(() => setShowCard(false), 9500);
-    };
-    
-    socket.on('card_drawn', handleCardDrawn);
-    
-    return () => {
-      socket.off('card_drawn', handleCardDrawn);
-    };
-  }, [socket, currentPlayerId]);
-  
-  /**
-   * Process the card's action
-   * @param {Object} card - The card object with action and value
-   */
-  const processCardAction = (card) => {
-    // Card actions are now processed by the backend
-    // This function is kept for reference and can be removed
-    console.log(`Card action ${card.action} with value ${card.value} will be processed by the server`);
-  };
-  
-  // Function for testing only
-  const handleCardClose = () => {
-    setCardAnimation('flying');
-    setTimeout(() => setShowCard(false), 1500);
-  };
-  
   /**
    * Handle when a player lands on a space
    * @param {number} spaceId - The ID of the space landed on
    */
   const handleLanding = (spaceId) => {
+    console.log(`Player landed on space ${spaceId}`);
     const space = boardSpaces.find(s => s.id === spaceId);
     
+    if (!space) {
+      console.error(`Could not find space with ID ${spaceId}`);
+      return;
+    }
+    
     // In real implementation, the backend will trigger these events
-    // This is just to maintain the visual feedback when using local player movement
-    if (space && (space.type === 'chance' || space.type === 'chest')) {
-      if (!socket) {
-        // Fallback to local card drawing if socket unavailable
-        console.log(`Fallback: Local card draw for ${space.type}`);
-        const cards = space.type === 'chance' ? CHANCE_CARDS : COMMUNITY_CHEST_CARDS;
-        const randomCard = cards[Math.floor(Math.random() * cards.length)];
-        
-        setCardType(space.type);
+    // This is just to provide immediate feedback for landing actions
+    if (space.type === 'chance') {
+      console.log('Landed on Chance space');
+      // After animation completes, draw a Chance card
+      if (socket) {
+        setTimeout(() => drawCard('chance'), 300);
+      } else {
+        // Local fallback
+        const randomCard = CHANCE_CARDS[Math.floor(Math.random() * CHANCE_CARDS.length)];
+        setCardType('chance');
         setCardContent(randomCard);
         setShowCard(true);
         
-        // Animation sequence
+        // Animation sequence for the card
+        setCardAnimation('initial');
+        setTimeout(() => setCardAnimation('flipping'), 800);
+        setTimeout(() => setCardAnimation('showing'), 2000);
+        setTimeout(() => setCardAnimation('flying'), 8000);
+        setTimeout(() => setShowCard(false), 9500);
+      }
+    } 
+    else if (space.type === 'chest') {
+      console.log('Landed on Community Chest space');
+      // After animation completes, draw a Community Chest card
+      if (socket) {
+        setTimeout(() => drawCard('chest'), 300);
+      } else {
+        // Local fallback
+        const randomCard = COMMUNITY_CHEST_CARDS[Math.floor(Math.random() * COMMUNITY_CHEST_CARDS.length)];
+        setCardType('chest');
+        setCardContent(randomCard);
+        setShowCard(true);
+        
+        // Animation sequence for the card
         setCardAnimation('initial');
         setTimeout(() => setCardAnimation('flipping'), 800);
         setTimeout(() => setCardAnimation('showing'), 2000);
@@ -928,6 +735,26 @@ function BoardPage() {
         setTimeout(() => setShowCard(false), 9500);
       }
     }
+    else if (space.type === 'corner' && space.id === 30) {
+      console.log('Landed on Go To Jail space');
+      // Visual feedback for going to jail
+      // In real implementation, backend would handle this
+      if (socket) {
+        // Backend handles movement to jail
+        console.log('Backend will handle movement to jail');
+      } else {
+        // Local fallback animation
+        alert('Go to jail! Moving to jail space...');
+        // In a real implementation, we would animate the move to jail here
+      }
+    }
+    else if (space.type === 'tax') {
+      console.log(`Landed on Tax space: ${space.name}`);
+      // Visual feedback for paying tax
+      // In real implementation, backend would handle this
+    }
+    
+    // Additional landing actions can be added here
   };
   
   // Test functions for local testing
@@ -971,6 +798,17 @@ function BoardPage() {
     }
   };
 
+  // State for game variables
+  const [players, setPlayers] = useState([]);
+  const [currentPlayerId, setCurrentPlayerId] = useState(null);
+  const [currentPlayer, setCurrentPlayer] = useState(null);
+  const [gameId, setGameId] = useState(null);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [inflation, setInflation] = useState(1.0);
+  const [economicState, setEconomicState] = useState('stable');
+  
   // Dice roll state
   const [isRolling, setIsRolling] = useState(false);
   const [diceValues, setDiceValues] = useState([1, 1]);
@@ -978,9 +816,46 @@ function BoardPage() {
   const [showRollResult, setShowRollResult] = useState(false);
   const [rollTotal, setRollTotal] = useState(0);
   
+  // Card display state
+  const [showCard, setShowCard] = useState(false);
+  const [cardType, setCardType] = useState('chance');
+  const [cardContent, setCardContent] = useState(null);
+  const [cardAnimation, setCardAnimation] = useState('initial');
+  
+  // Container ref for fullscreen
+  const containerRef = useRef(null);
+  
+  // Toggle fullscreen function
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen);
+  };
+  
+  // Utility function to format money
+  const formatMoney = (amount) => {
+    return `$${amount}`;
+  };
+  
+  // Draw card function
+  const drawCard = (type) => {
+    if (!socket) return;
+    
+    socket.emit('draw_card', {
+      playerId: currentPlayerId,
+      gameId: gameId,
+      cardType: type
+    });
+  };
+  
   // Updated dice roll function to use socket
   const rollDice = () => {
-    if (isRolling || !socket || !currentPlayerId) return; // Prevent multiple rolls or if no connection
+    if (isRolling || !socket) return; // Prevent multiple rolls or if no connection
+    
+    // Also check that currentPlayerId and gameId are defined
+    if (!currentPlayerId || !gameId) {
+      console.log('Cannot roll dice: Player ID or Game ID not initialized');
+      setErrorMessage('Cannot roll dice: waiting for game initialization');
+      return;
+    }
     
     // Start local animation immediately for better UX
     setIsRolling(true);
@@ -1025,25 +900,126 @@ function BoardPage() {
           setTimeout(() => {
             setShowRollResult(true);
             
-            // After showing the result, end the animation
+            // At this point, the dice roll is complete
+            // The player_moved event will be handled separately with animation
+            
+            // After showing the result for a moment, end dice animation
+            // But keep isRolling true until movement animation completes
             setTimeout(() => {
               setDiceAnimationStage('idle');
-              setIsRolling(false);
               setShowRollResult(false);
+              
+              // Note: isRolling will be set to false after movement animation completes
             }, 2000); // Display the result for 2 seconds
           }, 1500); // Time for dice to finish throwing
         }, 1000); // Time to show the initial result
       }, 1500); // Time for dice to roll
     };
     
+    // Handle player movement event
+    const handlePlayerMoved = (data) => {
+      console.log('Player moved:', data);
+      
+      if (!data || !data.playerId) {
+        console.error('Invalid player movement data received');
+        setIsRolling(false);
+        return;
+      }
+      
+      // Extract movement data
+      const playerId = data.playerId;
+      const newPosition = data.newPosition || 0;
+      const diceTotal = data.diceTotal || 1;
+      
+      // Find the player - with safeguards
+      const playersList = players || [];
+      
+      // Fallback case if players state isn't set yet
+      if (playersList.length === 0) {
+        console.warn('No players loaded yet, creating temporary player');
+        const tempPlayer = {
+          id: playerId,
+          position: 0,
+          name: `Player ${playerId}`,
+          color: getDefaultPlayerColor(playerId),
+          token: getDefaultPlayerToken(playerId)
+        };
+        
+        // Update with new position immediately
+        const updatedPlayer = { ...tempPlayer, position: newPosition };
+        setPlayers([updatedPlayer]);
+        setIsRolling(false);
+        return;
+      }
+      
+      const player = playersList.find(p => p.id === playerId);
+      if (!player) {
+        console.error(`Player ${playerId} not found.`);
+        setIsRolling(false);
+        return;
+      }
+      
+      const oldPosition = player.position || 0;
+      
+      // Create a local copy of player data to be updated after animation
+      const updatedPlayer = { ...player, position: newPosition };
+      
+      // Update local player state immediately for other players
+      // but animate for the current player or if we're in observer mode
+      try {
+        if (playerId === currentPlayerId || !currentPlayerId) {
+          // Start the animation sequence
+          console.log(`Animating player ${playerId} movement from ${oldPosition} to ${newPosition}`);
+          
+          if (typeof animatePlayerMovement === 'function') {
+            // Delay the state update until animation completes
+            animatePlayerMovement(playerId, oldPosition, newPosition, diceTotal)
+              .then(() => {
+                console.log(`Animation complete for player ${playerId}`);
+                setPlayers(prevPlayers => 
+                  prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
+                );
+                setIsRolling(false);
+              })
+              .catch(error => {
+                console.error(`Animation failed: ${error}`);
+                setPlayers(prevPlayers => 
+                  prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
+                );
+                setIsRolling(false);
+              });
+          } else {
+            console.warn('animatePlayerMovement function not available');
+            setPlayers(prevPlayers => 
+              prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
+            );
+            setIsRolling(false);
+          }
+        } else {
+          // For other players, just update position without special animation
+          console.log(`Updating position for player ${playerId} without animation`);
+          setPlayers(prevPlayers => 
+            prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
+          );
+          setIsRolling(false);
+        }
+      } catch (error) {
+        console.error('Error in player movement handler:', error);
+        setPlayers(prevPlayers => 
+          prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
+        );
+        setIsRolling(false);
+      }
+    };
+    
     // Handle errors with dice roll
     const handleDiceError = (data) => {
-      console.error('Dice roll error:', data.error);
+      console.error('Dice roll error:', data?.error || 'Unknown error');
       setIsRolling(false);
       setDiceAnimationStage('idle');
       
       // Display error message
-      setErrorMessage(data.error || 'Error with dice roll');
+      setErrorMessage(data?.error || 'Error with dice roll');
       
       // Auto-clear error after a few seconds
       setTimeout(() => setErrorMessage(null), 3000);
@@ -1051,12 +1027,14 @@ function BoardPage() {
     
     socket.on('dice_rolled', handleDiceRolled);
     socket.on('roll_error', handleDiceError);
+    socket.on('player_moved', handlePlayerMoved);
     
     return () => {
       socket.off('dice_rolled', handleDiceRolled);
       socket.off('roll_error', handleDiceError);
+      socket.off('player_moved', handlePlayerMoved);
     };
-  }, [socket, currentPlayerId]);
+  }, [socket]); // Remove dependencies that can cause circular references or uninitialized variables
   
   // Function for 3D dice face
   const getDiceFace = (value) => {
@@ -1119,7 +1097,14 @@ function BoardPage() {
 
   // Function to handle ending the current player's turn
   const endTurn = () => {
-    if (!socket || !currentPlayerId || !gameId) return;
+    if (!socket) return;
+    
+    // Also check that currentPlayerId and gameId are defined
+    if (!currentPlayerId || !gameId) {
+      console.log('Cannot end turn: Player ID or Game ID not initialized');
+      setErrorMessage('Cannot end turn: waiting for game initialization');
+      return;
+    }
     
     socket.emit('end_turn', {
       playerId: currentPlayerId,
@@ -1141,8 +1126,8 @@ function BoardPage() {
   const canEndTurn = () => {
     if (!isConnected || !gameStarted || !currentPlayer) return false;
     
-    // Only current player can end turn
-    return currentPlayer.id === currentPlayerId && !isRolling;
+    // Only current player can end turn, and not during animations
+    return currentPlayer.id === currentPlayerId && !isRolling && !isAnimatingMovement;
   };
 
   // Function to leave the game
@@ -1157,40 +1142,37 @@ function BoardPage() {
     // Redirect to home or another page after leaving
     // window.location.href = '/'; // Uncomment to enable redirecting
   };
-
+  
   // Function to manually refresh the player list
   const refreshPlayers = () => {
     console.log('Attempting to refresh players...');
     
-    // Try the simplest test endpoint first
-    fetch('http://localhost:5001/test-endpoint')
+    // Try socket method first for reliability
+    if (socket && isConnected) {
+      console.log('Using socket to get player list...');
+      socket.emit('get_all_players', { request_type: 'board_view' });
+      return;
+    }
+    
+    // Fallback to HTTP API if socket is unavailable
+    // Use API_BASE_URL from environment or default to current host
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${window.location.protocol}//${window.location.host}`;
+    
+    // Use the correct API endpoint directly
+    fetch(`${API_BASE_URL}/api/players`)
       .then(response => {
-        console.log('Test endpoint response status:', response.status);
+        console.log('Players API response status:', response.status);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         return response.json();
       })
       .then(data => {
-        console.log('Test endpoint data:', data);
-        
-        if (data && data.success) {
-          // If we get successful test data, we know server is working
-          console.log('Test endpoint working, trying public board players...');
-          
-          // Now try the real endpoint
-          return fetch('http://localhost:5001/public/board/players')
-            .then(response => {
-              console.log('Board players response status:', response.status);
-              return response.json();
-            });
-        } else {
-          throw new Error('Test endpoint failed');
-        }
-      })
-      .then(data => {
-        if (data && Array.isArray(data)) {
-          console.log('Players refreshed from public API:', data);
+        if (data && Array.isArray(data.players)) {
+          console.log('Players refreshed from API:', data.players);
           
           // Format players from API response
-          const formattedPlayers = data.map(player => ({
+          const formattedPlayers = data.players.map(player => ({
             id: player.id,
             name: player.username || player.name,
             cash: player.money,
@@ -1207,7 +1189,7 @@ function BoardPage() {
           console.log('Unexpected data format from players API');
           
           // Fallback to socket if API fails
-          if (socket) {
+          if (socket && isConnected) {
             console.log('Falling back to socket.emit...');
             socket.emit('get_all_players', { request_type: 'board_view' });
           }
@@ -1217,7 +1199,7 @@ function BoardPage() {
         console.error('Error in player refresh process:', error);
         
         // Fallback to socket
-        if (socket) {
+        if (socket && isConnected) {
           console.log('Falling back to socket after error...');
           socket.emit('get_all_players', { request_type: 'board_view' });
         }
@@ -1226,23 +1208,206 @@ function BoardPage() {
     console.log('Manually requested player list refresh');
   };
 
-  // Direct fetch test for debugging - can be called from console
-  window.testServerConnection = () => {
-    console.log('Testing server connection...');
+  // Initialize game data from server
+  useEffect(() => {
+    if (!socket || !isConnected) return;
     
-    // Test basic endpoint directly
-    fetch('http://localhost:5001/test-endpoint')
-      .then(response => {
-        console.log('Direct test endpoint status:', response.status);
-        return response.json();
-      })
-      .then(data => {
-        console.log('Direct test endpoint data:', data);
-      })
-      .catch(error => {
-        console.error('Direct test endpoint error:', error);
-      });
-  };
+    console.log('Socket connected, initializing game data...');
+    
+    // Socket event handler for player list
+    const handlePlayerList = (data) => {
+      if (data && data.success && Array.isArray(data.players)) {
+        console.log('Received player list via socket:', data.players);
+        
+        // Format players from socket response
+        const formattedPlayers = data.players.map(player => ({
+          id: player.id,
+          name: player.username || player.name,
+          cash: player.money,
+          position: player.position || 0,
+          color: player.color || getDefaultPlayerColor(player.id),
+          token: player.token || getDefaultPlayerToken(player.id),
+          inJail: player.in_jail || false,
+          getOutOfJailCards: player.get_out_of_jail_cards || 0,
+          isBot: player.is_bot || false
+        }));
+        
+        setPlayers(formattedPlayers);
+      }
+    };
+    
+    // Fetch game state
+    socket.emit('get_game_state', {}, (response) => {
+      if (response && response.success) {
+        console.log('Game state received:', response.data);
+        
+        // Set game ID
+        if (response.data.gameId) {
+          setGameId(response.data.gameId);
+        }
+        
+        // Set game started status
+        setGameStarted(response.data.started || false);
+        
+        // Set economic data if available
+        if (response.data.economicState) {
+          setEconomicState(response.data.economicState);
+        }
+        
+        if (response.data.inflation !== undefined) {
+          setInflation(response.data.inflation);
+        }
+      }
+    });
+    
+    // Get player ID from authentication
+    socket.emit('get_current_player', {}, (response) => {
+      if (response && response.success && response.player) {
+        console.log('Current player received:', response.player);
+        setCurrentPlayerId(response.player.id);
+      }
+    });
+    
+    // Fetch all players
+    socket.emit('get_all_players', { request_type: 'board_view' });
+    
+    // Listen for player updates
+    const handlePlayersUpdate = (data) => {
+      if (data && Array.isArray(data.players)) {
+        console.log('Players updated:', data);
+        setPlayers(data.players);
+      }
+    };
+    
+    // Listen for game state updates
+    const handleGameStateUpdate = (data) => {
+      console.log('Game state updated:', data);
+      
+      if (data) {
+        // Update game started status
+        if (data.started !== undefined) {
+          setGameStarted(data.started);
+        }
+        
+        // Update economic state
+        if (data.economicState) {
+          setEconomicState(data.economicState);
+        }
+        
+        if (data.inflation !== undefined) {
+          setInflation(data.inflation);
+        }
+        
+        // Update current player ID if turn changed
+        if (data.currentPlayerId) {
+          setCurrentPlayerId(data.currentPlayerId);
+        }
+      }
+    };
+    
+    socket.on('players_updated', handlePlayersUpdate);
+    socket.on('game_state_updated', handleGameStateUpdate);
+    socket.on('all_players_list', handlePlayerList);
+    
+    // Auto-refresh players every 5 seconds
+    const playerRefreshInterval = setInterval(refreshPlayers, 5000);
+    
+    return () => {
+      socket.off('players_updated', handlePlayersUpdate);
+      socket.off('game_state_updated', handleGameStateUpdate);
+      socket.off('all_players_list', handlePlayerList);
+      clearInterval(playerRefreshInterval);
+    };
+  }, [socket, isConnected]);
+  
+  // Update current player whenever players or currentPlayerId changes
+  useEffect(() => {
+    if (currentPlayerId && players && players.length > 0) {
+      const player = players.find(p => p.id === currentPlayerId);
+      if (player) {
+        setCurrentPlayer(player);
+      }
+    }
+  }, [players, currentPlayerId]);
+
+  // Use our custom animation hook
+  const {
+    isAnimatingMovement,
+    playerMoving,
+    remainingSteps,
+    getPlayerTokenRef,
+    animatePlayerMovement
+  } = usePlayerAnimation((spaceId) => {
+    // Handle landing on special spaces
+    console.log(`Player landed on space ${spaceId}`);
+    const space = boardSpaces.find(s => s.id === spaceId);
+    
+    if (!space) {
+      console.error(`Could not find space with ID ${spaceId}`);
+      return;
+    }
+    
+    // In real implementation, the backend will trigger these events
+    // This is just to provide immediate feedback for landing actions
+    if (space.type === 'chance') {
+      console.log('Landed on Chance space');
+      // After animation completes, draw a Chance card
+      if (socket) {
+        setTimeout(() => drawCard('chance'), 300);
+      } else {
+        // Local fallback
+        const randomCard = CHANCE_CARDS[Math.floor(Math.random() * CHANCE_CARDS.length)];
+        setCardType('chance');
+        setCardContent(randomCard);
+        setShowCard(true);
+        
+        // Animation sequence for the card
+        setCardAnimation('initial');
+        setTimeout(() => setCardAnimation('flipping'), 800);
+        setTimeout(() => setCardAnimation('showing'), 2000);
+        setTimeout(() => setCardAnimation('flying'), 8000);
+        setTimeout(() => setShowCard(false), 9500);
+      }
+    } 
+    else if (space.type === 'chest') {
+      console.log('Landed on Community Chest space');
+      // After animation completes, draw a Community Chest card
+      if (socket) {
+        setTimeout(() => drawCard('chest'), 300);
+      } else {
+        // Local fallback
+        const randomCard = COMMUNITY_CHEST_CARDS[Math.floor(Math.random() * COMMUNITY_CHEST_CARDS.length)];
+        setCardType('chest');
+        setCardContent(randomCard);
+        setShowCard(true);
+        
+        // Animation sequence for the card
+        setCardAnimation('initial');
+        setTimeout(() => setCardAnimation('flipping'), 800);
+        setTimeout(() => setCardAnimation('showing'), 2000);
+        setTimeout(() => setCardAnimation('flying'), 8000);
+        setTimeout(() => setShowCard(false), 9500);
+      }
+    }
+    else if (space.type === 'corner' && space.id === 30) {
+      console.log('Landed on Go To Jail space');
+      // Visual feedback for going to jail
+      // In real implementation, backend would handle this
+      if (socket) {
+        // Backend handles movement to jail
+        console.log('Backend will handle movement to jail');
+      } else {
+        // Local fallback animation
+        alert('Go to jail! Moving to jail space...');
+        // In a real implementation, we would animate the move to jail here
+      }
+    }
+    else if (space.type === 'tax') {
+      console.log(`Landed on Tax space: ${space.name}`);
+      // Visual feedback for paying tax
+      // In real implementation, backend would handle this
+    }
+  });
 
   return (
     <Box 
@@ -1300,6 +1465,38 @@ function BoardPage() {
           boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
         }}>
           <Typography variant="body2">{errorMessage}</Typography>
+        </Box>
+      )}
+      
+      {/* Player movement animation indicator */}
+      {isAnimatingMovement && (
+        <Box sx={{
+          position: 'absolute',
+          top: '70px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000,
+          backgroundColor: 'rgba(255,255,255,0.9)',
+          color: '#333',
+          padding: '8px 16px',
+          borderRadius: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          boxShadow: '0 0 15px rgba(255, 215, 0, 0.5)',
+          border: '2px solid gold',
+          animation: 'pulse 1s infinite alternate'
+        }}>
+          <Box sx={{ 
+            width: '12px', 
+            height: '12px', 
+            borderRadius: '50%', 
+            backgroundColor: 'gold',
+            animation: 'pulse 0.8s infinite alternate' 
+          }} />
+          <Typography variant="body1" fontWeight="bold">
+            Moving {remainingSteps > 0 ? `(${remainingSteps} steps remaining)` : '...'}
+          </Typography>
         </Box>
       )}
 
@@ -1515,6 +1712,7 @@ function BoardPage() {
             return (
               <Box 
                 key={space.id}
+                data-space-id={space.id}
                 sx={{
                   ...pos,
                   backgroundColor: 'white',
@@ -1561,13 +1759,15 @@ function BoardPage() {
                     {playersHere.map(player => (
                       <Box 
                         key={player.id}
+                        ref={getPlayerTokenRef(player.id)}
+                        data-player-id={player.id}
                         sx={{
                           width: isFullScreen ? '3.2vmin' : '2.8vmin',
                           height: isFullScreen ? '3.2vmin' : '2.8vmin',
                           borderRadius: '50%',
-                          background: `radial-gradient(circle at 30% 30%, ${player.color}, ${darkenColor(player.color, 30)})`,
-                          border: player.id === currentPlayer.id ? '2px solid gold' : '1px solid rgba(0,0,0,0.5)',
-                          boxShadow: player.id === currentPlayer.id 
+                          background: `radial-gradient(circle at 30% 30%, ${player.color || '#cccccc'}, ${darkenColor(player.color || '#cccccc', 30)})`,
+                          border: player.id === currentPlayerId ? '2px solid gold' : '1px solid rgba(0,0,0,0.5)',
+                          boxShadow: player.id === currentPlayerId 
                             ? '0 0 8px gold, 0 2px 5px rgba(0,0,0,0.4), inset 0 -2px 5px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.5)' 
                             : '0 2px 5px rgba(0,0,0,0.4), inset 0 -2px 5px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.5)',
                           display: 'flex',
@@ -1576,12 +1776,14 @@ function BoardPage() {
                           fontSize: isFullScreen ? '1.8vmin' : '1.6vmin',
                           transform: 'translateY(-5px) perspective(500px) rotateX(10deg)',
                           transformStyle: 'preserve-3d',
-                          transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                          transition: isAnimatingMovement && player.id === playerMoving 
+                            ? 'none' // Disable transition during GSAP animation
+                            : 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
                           position: 'relative',
                           overflow: 'visible',
                           '&:hover': {
                             transform: 'translateY(-10px) perspective(500px) rotateX(15deg) scale(1.15)',
-                            boxShadow: player.id === currentPlayer.id 
+                            boxShadow: player.id === currentPlayerId 
                               ? '0 0 12px gold, 0 8px 16px rgba(0,0,0,0.4), inset 0 -2px 5px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.5)'
                               : '0 8px 16px rgba(0,0,0,0.4), inset 0 -2px 5px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.5)',
                             zIndex: 10
@@ -1612,7 +1814,7 @@ function BoardPage() {
                           filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))',
                           transform: 'translateZ(5px)',
                         }}>
-                          {tokenOptions[player.token]?.icon || player.id}
+                          {(tokenOptions[player.token] && tokenOptions[player.token].icon) || player.id || '?'}
                         </Box>
                       </Box>
                     ))}
@@ -1669,36 +1871,36 @@ function BoardPage() {
             <Paper elevation={3} sx={{ 
               p: 2, 
               mb: 3, 
-              backgroundColor: alpha(currentPlayer.color, 0.15), 
+              backgroundColor: alpha(currentPlayer?.color || '#cccccc', 0.15), 
               borderRadius: '10px',
-              border: currentPlayer.id === currentPlayerId ? '2px solid gold' : 'none' 
+              border: currentPlayer?.id === currentPlayerId ? '2px solid gold' : 'none' 
             }}>
               <Typography variant="h6" gutterBottom sx={{ textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.1)', pb: 1 }}>
-                {currentPlayer.id === currentPlayerId ? 'Your Turn' : 'Current Turn'}
+                {currentPlayer?.id === currentPlayerId ? 'Your Turn' : 'Current Turn'}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, justifyContent: 'center' }}>
-                <Avatar sx={{ bgcolor: currentPlayer.color, mr: 2, width: 40, height: 40, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                  {tokenOptions[currentPlayer.token]?.icon || currentPlayer.name.charAt(0)}
+                <Avatar sx={{ bgcolor: currentPlayer?.color || '#cccccc', mr: 2, width: 40, height: 40, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                  {tokenOptions[currentPlayer?.token || 'car']?.icon || currentPlayer?.name?.charAt(0) || '?'}
                 </Avatar>
                 <Typography variant="body1" fontWeight="bold" fontSize="1.1rem">
-                  {currentPlayer.name}
+                  {currentPlayer?.name || 'Player'}
                 </Typography>
               </Box>
               
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, px: 1 }}>
                 <Typography variant="body2" fontWeight="medium">Cash:</Typography>
-                <Typography variant="body2" fontWeight="bold" fontSize="1rem">${currentPlayer.cash}</Typography>
+                <Typography variant="body2" fontWeight="bold" fontSize="1rem">${currentPlayer?.cash || 0}</Typography>
               </Box>
               
               <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1 }}>
                 <Typography variant="body2" fontWeight="medium">Position:</Typography>
                 <Typography variant="body2" fontWeight="bold" fontSize="1rem">
-                  Space {currentPlayer.position}
-                  {boardSpaces[currentPlayer.position]?.name && ` (${boardSpaces[currentPlayer.position].name})`}
+                  Space {currentPlayer?.position || 0}
+                  {currentPlayer?.position !== undefined && boardSpaces[currentPlayer.position]?.name && ` (${boardSpaces[currentPlayer.position].name})`}
                 </Typography>
               </Box>
               
-              {currentPlayer.inJail && (
+              {currentPlayer?.inJail && (
                 <Box sx={{ 
                   mt: 1, 
                   p: 1, 
@@ -1707,7 +1909,7 @@ function BoardPage() {
                   border: '1px dashed #f44336'
                 }}>
                   <Typography variant="body2" sx={{ color: '#d32f2f', textAlign: 'center' }}>
-                    In Jail {currentPlayer.getOutOfJailCards > 0 && `(${currentPlayer.getOutOfJailCards} Get Out of Jail Free card${currentPlayer.getOutOfJailCards > 1 ? 's' : ''})`}
+                    In Jail {currentPlayer?.getOutOfJailCards > 0 && `(${currentPlayer.getOutOfJailCards} Get Out of Jail Free card${currentPlayer.getOutOfJailCards > 1 ? 's' : ''})`}
                   </Typography>
                 </Box>
               )}
