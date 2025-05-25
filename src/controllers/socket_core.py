@@ -204,7 +204,18 @@ class SocketController:
     def handle_authenticate_socket(self, data):
         """Associates an authenticated player ID with the current socket connection."""
         player_id = data.get('player_id')
+        mode = data.get('mode')
         sid = request.sid
+        
+        # Handle display mode authentication
+        if mode == 'display':
+            logger.info(f"[AuthSocket] Display mode authentication from SID: {sid}")
+            game_state = GameState.get_instance()
+            if game_state:
+                join_room(game_state.game_id)  # Join game room for broadcasts
+                logger.info(f"[AuthSocket] Display SID {sid} joined game room {game_state.game_id}")
+            emit('auth_socket_response', {'success': True, 'mode': 'display'}, room=sid)
+            return
         
         if not player_id:
             logger.warning(f"[AuthSocket] Received authenticate request without player_id from SID: {sid}")

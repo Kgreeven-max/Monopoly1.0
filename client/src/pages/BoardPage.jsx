@@ -24,6 +24,8 @@ const usePlayerAnimation = (onCompleteLanding) => {
   };
   
   const animatePlayerMovement = (playerId, fromPosition, toPosition, steps) => {
+    console.log(`[animatePlayerMovement] Starting animation for player ${playerId} from ${fromPosition} to ${toPosition} (${steps} steps)`);
+    
     if (!playerTokenRefs.current[playerId]) {
       console.error(`No ref found for player ${playerId}`);
       return Promise.reject('No player ref found');
@@ -43,6 +45,8 @@ const usePlayerAnimation = (onCompleteLanding) => {
       currentPosition = (currentPosition + 1) % 40; // Wrap around the board
       path.push(currentPosition);
     }
+    
+    console.log(`[animatePlayerMovement] Path: ${path.join(' -> ')}`)
     
     setPlayerMoving(playerId);
     setIsAnimatingMovement(true);
@@ -80,11 +84,36 @@ const usePlayerAnimation = (onCompleteLanding) => {
     const startStyle = window.getComputedStyle(playerTokenRefs.current[playerId]);
     const startTransform = startStyle.transform;
     
-    // Reset position to allow GSAP to handle transforms
-    gsap.set(playerTokenRefs.current[playerId], {
-      clearProps: "transform",
+    // Get the token element and find the board container
+    const tokenElement = playerTokenRefs.current[playerId];
+    // The board is the grid container that contains all spaces
+    const boardElement = document.querySelector('[data-space-id="0"]')?.parentElement;
+    
+    if (!boardElement) {
+      console.error('Could not find board element');
+      return Promise.reject('No board found');
+    }
+    
+    // Clone the token for animation
+    const animatedToken = tokenElement.cloneNode(true);
+    animatedToken.style.position = 'absolute';
+    animatedToken.style.zIndex = '1000';
+    boardElement.appendChild(animatedToken);
+    
+    // Hide original token during animation
+    tokenElement.style.opacity = '0';
+    
+    // Get initial position
+    const startRect = tokenElement.getBoundingClientRect();
+    const boardRect = boardElement.getBoundingClientRect();
+    
+    // Set clone to start position
+    gsap.set(animatedToken, {
       position: "absolute",
-      zIndex: 100
+      left: startRect.left - boardRect.left,
+      top: startRect.top - boardRect.top,
+      width: startRect.width,
+      height: startRect.height
     });
     
     // Add sequential animations for each step
@@ -98,27 +127,42 @@ const usePlayerAnimation = (onCompleteLanding) => {
       
       // Get space position relative to the board
       const spaceRect = spaceElement.getBoundingClientRect();
-      const playerRect = playerTokenRefs.current[playerId].getBoundingClientRect();
       
-      // Calculate center position
-      const x = spaceRect.left + (spaceRect.width / 2) - (playerRect.width / 2);
-      const y = spaceRect.top + (spaceRect.height * 0.7) - (playerRect.height / 2);
+      // Calculate center position relative to board
+      const x = spaceRect.left - boardRect.left + (spaceRect.width / 2) - (startRect.width / 2);
+      const y = spaceRect.top - boardRect.top + (spaceRect.height * 0.7) - (startRect.height / 2);
       
-      timeline.to(playerTokenRefs.current[playerId], {
-        duration: 0.4, // Duration for each step
-        top: 0,
-        left: 0,
-        x: x,
-        y: y,
+      timeline.to(animatedToken, {
+        duration: 0.6, // Duration for each step (increased for visibility)
+        left: x,
+        top: y,
         ease: "power2.inOut",
         onStart: () => {
           setRemainingSteps(steps - index - 1);
           
+          // Add hopping effect for each move
+          gsap.to(animatedToken, {
+            duration: 0.3,
+            top: y - 40, // Hop up 40px
+            scale: 1.2,
+            ease: "power2.out",
+            yoyo: true,
+            repeat: 1,
+            onRepeat: () => {
+              // Add shadow effect during hop
+              gsap.to(animatedToken, {
+                duration: 0.15,
+                boxShadow: '0 20px 30px rgba(0,0,0,0.3)',
+                yoyo: true,
+                repeat: 1
+              });
+            }
+          });
+          
           // If passing Go (position 0), add visual effect
           if (pos === 0 && fromPosition !== 0) {
-            gsap.to(playerTokenRefs.current[playerId], {
+            gsap.to(animatedToken, {
               duration: 0.2,
-              scale: 1.3,
               backgroundColor: 'gold',
               boxShadow: '0 0 15px gold',
               yoyo: true,
@@ -129,9 +173,9 @@ const usePlayerAnimation = (onCompleteLanding) => {
         onComplete: () => {
           // Bounce effect when landing on final space
           if (index === path.length - 1) {
-            gsap.to(playerTokenRefs.current[playerId], {
+            gsap.to(animatedToken, {
               duration: 0.3,
-              y: `-=10px`,
+              top: y - 10,
               yoyo: true,
               repeat: 1,
               ease: "power2.inOut"
@@ -147,10 +191,16 @@ const usePlayerAnimation = (onCompleteLanding) => {
     // Return a promise that resolves when animation completes
     return new Promise((resolve) => {
       timeline.eventCallback('onComplete', () => {
-        // Reset to original style with regular transitions
-        gsap.set(playerTokenRefs.current[playerId], {
-          clearProps: "transform,position,zIndex,x,y,top,left",
-        });
+        // Remove the animated clone
+        if (animatedToken && animatedToken.parentNode) {
+          animatedToken.parentNode.removeChild(animatedToken);
+        }
+        
+        // Show the original token again
+        if (tokenElement) {
+          tokenElement.style.opacity = '1';
+        }
+        
         resolve();
       });
     });
@@ -2188,6 +2238,87 @@ function BoardPage() {
                 disabled={!isConnected}
               >
                 Test Community Chest
+              </Button>
+              
+              {/* Test Movement Buttons */}
+              <Button 
+                variant="outlined"
+                size="medium"
+                onClick={() => {
+                  console.log('[TEST] Simulating player movement');
+                  if (players.length > 0) {
+                    const testPlayer = players[0];
+                    const newPos = (testPlayer.position + 10) % 40;
+                    console.log(`[TEST] Moving player ${testPlayer.id} from ${testPlayer.position} to ${newPos}`);
+                    
+                    // Simulate the player_moved event
+                    if (typeof animatePlayerMovement === 'function') {
+                      animatePlayerMovement(testPlayer.id, testPlayer.position, newPos, 10)
+                        .then(() => {
+                          console.log('[TEST] Animation complete');
+                          setPlayers(prevPlayers => 
+                            prevPlayers.map(p => p.id === testPlayer.id ? {...p, position: newPos} : p)
+                          );
+                        });
+                    }
+                  }
+                }}
+                sx={{ 
+                  fontWeight: 'medium',
+                  borderColor: '#4CAF50',
+                  color: '#4CAF50',
+                  '&:hover': { borderColor: '#388E3C', bgcolor: 'rgba(76, 175, 80, 0.05)' },
+                  mb: 1
+                }}
+              >
+                Test Move (+10)
+              </Button>
+              
+              <Button 
+                variant="outlined"
+                size="medium"
+                onClick={() => {
+                  console.log('[TEST] Simulating dice roll movement');
+                  if (players.length > 0) {
+                    const testPlayer = players[0];
+                    const roll = [3, 4]; // Simulate rolling 3 and 4
+                    const total = roll[0] + roll[1];
+                    const newPos = (testPlayer.position + total) % 40;
+                    console.log(`[TEST] Dice roll: ${roll[0]} + ${roll[1]} = ${total}`);
+                    console.log(`[TEST] Moving player ${testPlayer.id} from ${testPlayer.position} to ${newPos}`);
+                    
+                    // Show dice animation first
+                    setDiceValues(roll);
+                    setDiceAnimationStage('rolling');
+                    
+                    setTimeout(() => {
+                      setDiceAnimationStage('result');
+                      
+                      setTimeout(() => {
+                        // Then animate movement
+                        if (typeof animatePlayerMovement === 'function') {
+                          animatePlayerMovement(testPlayer.id, testPlayer.position, newPos, total)
+                            .then(() => {
+                              console.log('[TEST] Movement animation complete');
+                              setPlayers(prevPlayers => 
+                                prevPlayers.map(p => p.id === testPlayer.id ? {...p, position: newPos} : p)
+                              );
+                              setDiceAnimationStage('idle');
+                            });
+                        }
+                      }, 1000);
+                    }, 1500);
+                  }
+                }}
+                sx={{ 
+                  fontWeight: 'medium',
+                  borderColor: '#2196F3',
+                  color: '#2196F3',
+                  '&:hover': { borderColor: '#1976D2', bgcolor: 'rgba(33, 150, 243, 0.05)' },
+                  mb: 1
+                }}
+              >
+                Test Dice Roll (3+4)
               </Button>
               
               <Button 

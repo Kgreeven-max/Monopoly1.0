@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Movement Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        
+        .board-container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+            border: 3px solid #333;
+            background-color: #E8F5E9;
+            margin: 20px;
+        }
+        
+        .board-space {
+            position: absolute;
+            border: 1px solid #999;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            text-align: center;
+        }
+        
+        .corner {
+            width: 54.5px;
+            height: 54.5px;
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        
+        .edge {
+            width: 54.5px;
+            height: 54.5px;
+        }
+        
+        .token {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #E53935;
+            border: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        #position-display {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Token Movement Test</h1>
+    <div id="position-display">Position: 0 (GO)</div>
+    <div class="controls">
+        <button onclick="moveToken(1)">Move +1</button>
+        <button onclick="moveToken(2)">Move +2</button>
+        <button onclick="moveToken(3)">Move +3</button>
+        <button onclick="moveToken(6)">Move +6</button>
+        <button onclick="rollDice()">Roll Dice</button>
+        <button onclick="goToPosition(10)">Go to Jail</button>
+        <button onclick="goToPosition(0)">Go to GO</button>
+    </div>
+    
+    <div class="board-container" id="board">
+        <div class="token" id="player-token">1</div>
+    </div>
+    
+    <script>
+        let currentPosition = 0;
+        const BOARD_SPACES = 40;
+        const boardSize = 600;
+        const cornerSize = boardSize / 11;
+        const edgeSize = (boardSize - 2 * cornerSize) / 9;
+        
+        const spaceNames = [
+            'GO', 'Med. Ave', 'Com. Chest', 'Baltic Ave', 'Income Tax', 'Reading RR',
+            'Oriental Ave', 'Chance', 'Vermont Ave', 'Conn. Ave', 'Jail',
+            'St. Charles', 'Electric Co.', 'States Ave', 'Virginia Ave', 'Penn RR',
+            'St. James', 'Com. Chest', 'Tenn. Ave', 'New York Ave', 'Free Parking',
+            'Kentucky Ave', 'Chance', 'Indiana Ave', 'Illinois Ave', 'B&O RR',
+            'Atlantic Ave', 'Ventnor Ave', 'Water Works', 'Marvin Gardens', 'Go To Jail',
+            'Pacific Ave', 'NC Ave', 'Com. Chest', 'Penn Ave', 'Short Line',
+            'Chance', 'Park Place', 'Luxury Tax', 'Boardwalk'
+        ];
+        
+        function calculateBoardPosition(spaceIndex) {
+            const getEdgePosition = (index) => {
+                return cornerSize + (index * edgeSize) + (edgeSize / 2);
+            };
+            
+            if (spaceIndex === 0) {
+                return { x: boardSize - cornerSize / 2, y: boardSize - cornerSize / 2 };
+            } else if (spaceIndex <= 9) {
+                const pos = 9 - spaceIndex;
+                return { x: getEdgePosition(pos), y: boardSize - cornerSize / 2 };
+            } else if (spaceIndex === 10) {
+                return { x: cornerSize / 2, y: boardSize - cornerSize / 2 };
+            } else if (spaceIndex <= 19) {
+                const pos = 19 - spaceIndex;
+                return { x: cornerSize / 2, y: getEdgePosition(pos) };
+            } else if (spaceIndex === 20) {
+                return { x: cornerSize / 2, y: cornerSize / 2 };
+            } else if (spaceIndex <= 29) {
+                const pos = spaceIndex - 21;
+                return { x: getEdgePosition(pos), y: cornerSize / 2 };
+            } else if (spaceIndex === 30) {
+                return { x: boardSize - cornerSize / 2, y: cornerSize / 2 };
+            } else if (spaceIndex <= 39) {
+                const pos = spaceIndex - 31;
+                return { x: boardSize - cornerSize / 2, y: getEdgePosition(pos) };
+            }
+            
+            return { x: boardSize / 2, y: boardSize / 2 };
+        }
+        
+        function createBoard() {
+            const board = document.getElementById('board');
+            
+            // Create board spaces
+            for (let i = 0; i < BOARD_SPACES; i++) {
+                const space = document.createElement('div');
+                const pos = calculateBoardPosition(i);
+                const isCorner = i % 10 === 0;
+                
+                space.className = isCorner ? 'board-space corner' : 'board-space edge';
+                space.style.left = (pos.x - (isCorner ? cornerSize : edgeSize) / 2) + 'px';
+                space.style.top = (pos.y - (isCorner ? cornerSize : edgeSize) / 2) + 'px';
+                space.textContent = spaceNames[i];
+                space.title = `Space ${i}: ${spaceNames[i]}`;
+                
+                board.appendChild(space);
+            }
+            
+            // Position initial token
+            updateTokenPosition();
+        }
+        
+        function updateTokenPosition() {
+            const token = document.getElementById('player-token');
+            const pos = calculateBoardPosition(currentPosition);
+            token.style.transform = `translate(${pos.x - 15}px, ${pos.y - 15}px)`;
+            
+            document.getElementById('position-display').textContent = 
+                `Position: ${currentPosition} (${spaceNames[currentPosition]})`;
+        }
+        
+        function moveToken(spaces) {
+            const newPosition = (currentPosition + spaces) % BOARD_SPACES;
+            animateMovement(currentPosition, newPosition);
+        }
+        
+        function goToPosition(position) {
+            animateMovement(currentPosition, position);
+        }
+        
+        async function animateMovement(fromPos, toPos) {
+            const path = [];
+            let pos = fromPos;
+            
+            while (pos !== toPos) {
+                pos = (pos + 1) % BOARD_SPACES;
+                path.push(pos);
+            }
+            
+            for (const nextPos of path) {
+                currentPosition = nextPos;
+                updateTokenPosition();
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+        }
+        
+        function rollDice() {
+            const dice1 = Math.floor(Math.random() * 6) + 1;
+            const dice2 = Math.floor(Math.random() * 6) + 1;
+            const total = dice1 + dice2;
+            
+            alert(`Rolled ${dice1} + ${dice2} = ${total}`);
+            moveToken(total);
+        }
+        
+        // Initialize board
+        createBoard();
+    </script>
+</body>
+</html>

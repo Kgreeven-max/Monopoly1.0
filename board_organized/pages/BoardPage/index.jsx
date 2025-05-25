@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Box, Typography, Paper, Avatar, Chip, Tooltip, CircularProgress, Grid } from '@mui/material';
-import { useGame } from '../contexts/GameContext';
-import { useSocket } from '../contexts/SocketContext';
-import PlayerList from '../components/PlayerList';
-import { GameLog, gameLogStyle } from '../components/GameLog';
-import CardDisplay from '../components/CardDisplay';
-import NavBar from '../components/NavBar';
+import { useGame } from '../../game-state/contexts/GameContext';
+import { useSocket } from '../../game-state/contexts/SocketContext';
+import PlayerList from '../../components/ui/PlayerList';
+import { GameLog, gameLogStyle } from '../../components/ui/GameLog';
+import CardDisplay from '../../components/cards/CardDisplay';
+import NavBar from '../../components/ui/NavBar';
+import AnimatedPlayerToken from '../../game-board/components/PlayerToken/AnimatedPlayerToken';
+import DiceAnimation from '../../game-board/components/DiceAnimation/DiceAnimation';
 
 // Define board layout structure (could be moved to a constants file)
 // Simplified: assumes 40 spaces, 11 per side (corners shared)
@@ -224,6 +226,14 @@ function BoardPage() {
   // Check for fullscreen state changes
   const [isFullScreenActive, setIsFullScreenActive] = useState(false);
   
+  // Add board reference and size tracking
+  const boardRef = useRef(null);
+  const [boardSize, setBoardSize] = useState(900);
+  
+  // Dice animation state
+  const [showDiceAnimation, setShowDiceAnimation] = useState(false);
+  const [animatedDiceRoll, setAnimatedDiceRoll] = useState(null);
+  
   // Connect socket and request game state updates
   useEffect(() => {
     if (!isConnected) {
@@ -261,7 +271,49 @@ function BoardPage() {
         }));
       };
 
+      // Listen for player movement events
+      const handlePlayerMoved = (data) => {
+        console.log("[BoardPage] Player moved:", data);
+        setBoardState(prev => {
+          if (!prev.gameData) return prev;
+          
+          const updatedPlayers = prev.gameData.players?.map(player => 
+            player.id === data.playerId 
+              ? { ...player, position: data.newPosition }
+              : player
+          ) || [];
+          
+          return {
+            ...prev,
+            gameData: {
+              ...prev.gameData,
+              players: updatedPlayers
+            }
+          };
+        });
+      };
+
+      // Listen for dice roll events
+      const handleDiceRolled = (data) => {
+        console.log("[BoardPage] Dice rolled:", data);
+        setBoardState(prev => ({
+          ...prev,
+          gameData: {
+            ...prev.gameData,
+            lastDiceRoll: data.roll
+          }
+        }));
+        
+        // Show dice animation
+        if (data.roll && Array.isArray(data.roll)) {
+          setAnimatedDiceRoll(data.roll);
+          setShowDiceAnimation(true);
+        }
+      };
+
       socket.on('game_state_update', handleGameStateUpdate);
+      socket.on('player_moved', handlePlayerMoved);
+      socket.on('dice_rolled', handleDiceRolled);
       
       // Periodically refresh game state every 3 seconds
       const refreshInterval = setInterval(() => {
@@ -272,6 +324,8 @@ function BoardPage() {
       return () => {
         clearInterval(refreshInterval);
         socket.off('game_state_update', handleGameStateUpdate);
+        socket.off('player_moved', handlePlayerMoved);
+        socket.off('dice_rolled', handleDiceRolled);
       };
     }
   }, [isConnected, connectSocket, emit, socket]);
@@ -333,6 +387,33 @@ function BoardPage() {
       document.removeEventListener('webkitfullscreenchange', handleFullScreenChange);
       document.removeEventListener('mozfullscreenchange', handleFullScreenChange);
       document.removeEventListener('MSFullscreenChange', handleFullScreenChange);
+    };
+  }, []);
+
+  // Track board size for responsive token positioning
+  useEffect(() => {
+    const updateBoardSize = () => {
+      if (boardRef.current) {
+        const width = boardRef.current.offsetWidth;
+        setBoardSize(width);
+      }
+    };
+
+    // Initial size
+    updateBoardSize();
+
+    // Update on resize
+    window.addEventListener('resize', updateBoardSize);
+    
+    // Use ResizeObserver for more accurate tracking
+    const resizeObserver = new ResizeObserver(updateBoardSize);
+    if (boardRef.current) {
+      resizeObserver.observe(boardRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateBoardSize);
+      resizeObserver.disconnect();
     };
   }, []);
 
@@ -441,6 +522,46 @@ function BoardPage() {
               Pi-nopoly Game Board
             </Typography>
             
+            {/* Debug button for testing movement */}
+            <Box sx={{ mb: 2, display: 'flex', gap: 2, justifyContent: 'center' }}>
+              <button 
+                onClick={() => {
+                  console.log("[DEBUG] Simulating dice roll movement");
+                  emit('dice_rolled', { roll: [5, 5], playerId: 1 });
+                }}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#4CAF50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer'
+                }}
+              >
+                Test Roll Dice (5,5)
+              </button>
+              <button 
+                onClick={() => {
+                  console.log("[DEBUG] Simulating player move");
+                  const currentPlayer = gameData?.players?.find(p => p.id === 1);
+                  if (currentPlayer) {
+                    const newPos = (currentPlayer.position + 10) % 40;
+                    emit('player_moved', { playerId: 1, newPosition: newPos });
+                  }
+                }}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#2196F3',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer'
+                }}
+              >
+                Move Player 1 (+10)
+              </button>
+            </Box>
+            
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -481,7 +602,7 @@ function BoardPage() {
               </Box>
             )}
 
-            <Box sx={boardStyle}>
+            <Box sx={boardStyle} ref={boardRef}>
               {/* Center area */}
               <Paper elevation={3} sx={{ 
                 gridColumn: '2 / 11', 
@@ -523,43 +644,25 @@ function BoardPage() {
                       }} />
                     </Tooltip>
                   }
-                  
-                  {/* Render Player Tokens within this space */}
-                  {gameData?.players
-                    ?.filter(p => p.position === space.id)
-                    .map((player, index) => (
-                      <Tooltip 
-                        key={`player-token-${player.id}-${player.position}-${lastUpdate}`} 
-                        title={`${player.username || `Player ${player.id}`} ${player.is_bot ? '(Bot)' : ''} - $${player.money || 0}`}
-                      >
-                        <Box 
-                          sx={{
-                            ...playerTokenStyle(
-                              player.id - 1, // Use player ID directly for consistent colors
-                              player.id === gameData.current_player_id
-                            ),
-                            transition: 'all 1.5s cubic-bezier(0.22, 1, 0.36, 1)', // Ensure smooth transitions
-                            animation: player.id === gameData.current_player_id ? 'pulse 1.5s infinite' : 'none',
-                          }}
-                          data-player-id={player.id}
-                          data-position={player.position}
-                          data-timestamp={lastUpdate}
-                        >
-                          <Typography sx={{ 
-                            fontSize: '16px', // Bigger text for better visibility
-                            fontWeight: 'bold', 
-                            color: 'white', 
-                            textAlign: 'center',
-                            lineHeight: '35px', // Match the new height
-                            textShadow: '1px 1px 3px black'
-                          }}>
-                            {player.id}
-                          </Typography>
-                        </Box>
-                      </Tooltip>
-                    ))}
                 </Box>
               ))}
+              
+              {/* Render Player Tokens as absolute positioned elements */}
+              {gameData?.players?.map((player, index) => {
+                // Find other players on the same space for stacking
+                const playersOnSameSpace = gameData.players.filter(p => p.position === player.position);
+                
+                return (
+                  <AnimatedPlayerToken
+                    key={`player-${player.id}`}
+                    player={player}
+                    boardSize={boardSize}
+                    isCurrentPlayer={player.id === gameData.current_player_id}
+                    playerIndex={player.id - 1}
+                    otherPlayersOnSpace={playersOnSameSpace.map(p => p.id)}
+                  />
+                );
+              })}
             </Box>
           </Box>
         </Grid>
@@ -576,6 +679,17 @@ function BoardPage() {
           <CardDisplay />
         </Grid>
       </Box>
+      
+      {/* Dice Animation Overlay */}
+      {showDiceAnimation && animatedDiceRoll && (
+        <DiceAnimation
+          diceRoll={animatedDiceRoll}
+          onComplete={() => {
+            setShowDiceAnimation(false);
+            setAnimatedDiceRoll(null);
+          }}
+        />
+      )}
     </Box>
   );
 }

@@ -806,12 +806,13 @@ class GameController:
                  landing_action = result.get('landing_action', {})
                  next_action = result.get('next_action', 'end_turn') 
 
-                 # Emit general events
-                 self.socketio.emit('dice_rolled', { 'playerId': player_id, 'roll': result.get('dice_roll'), 'doubles': result.get('doubles'), 'inJailAttempt': player.in_jail }, room=game_id)
-                 if result.get('passed_go'): self.socketio.emit('go_salary_collected', { 'playerId': player_id, 'amount': self.game_logic.GO_SALARY }, room=game_id)
-                 self.socketio.emit('player_moved', { 'playerId': player_id, 'newPosition': result.get('new_position'), 'diceTotal': sum(result.get('dice_roll', [0,0])) }, room=game_id)
-                 if result.get('sent_to_jail'): self.socketio.emit('player_jailed', { 'playerId': player_id, 'reason': result.get('message', 'Sent to jail') }, room=game_id)
-                 if landing_action.get('action') == 'paid_rent': self.socketio.emit('rent_paid', { 'payerId': player_id, 'ownerId': landing_action.get('owner_id'), 'amount': landing_action.get('rent_amount'), 'propertyId': landing_action.get('property_id') }, room=game_id)
+                 # Emit general events - use the game_state.game_id (UUID) for the room
+                 room_id = game_state.game_id if game_state else str(game_id)
+                 self.socketio.emit('dice_rolled', { 'playerId': player_id, 'roll': result.get('dice_roll'), 'doubles': result.get('doubles'), 'inJailAttempt': player.in_jail }, room=room_id)
+                 if result.get('passed_go'): self.socketio.emit('go_salary_collected', { 'playerId': player_id, 'amount': self.game_logic.GO_SALARY }, room=room_id)
+                 self.socketio.emit('player_moved', { 'playerId': player_id, 'newPosition': result.get('new_position'), 'diceTotal': sum(result.get('dice_roll', [0,0])) }, room=room_id)
+                 if result.get('sent_to_jail'): self.socketio.emit('player_jailed', { 'playerId': player_id, 'reason': result.get('message', 'Sent to jail') }, room=room_id)
+                 if landing_action.get('action') == 'paid_rent': self.socketio.emit('rent_paid', { 'payerId': player_id, 'ownerId': landing_action.get('owner_id'), 'amount': landing_action.get('rent_amount'), 'propertyId': landing_action.get('property_id') }, room=room_id)
                  
                  # Emit targeted prompts/errors
                  action_type = landing_action.get('action')
@@ -829,13 +830,13 @@ class GameController:
 
                  # Broadcast the overall game state update
                  if game_state_data: # GameLogic now returns state in result
-                     self.socketio.emit('game_state_update', game_state_data, room=game_id)
+                     self.socketio.emit('game_state_update', game_state_data, room=room_id)
                  else:
                       self.logger.error(f"Game state missing from roll_dice_and_move result for game {game_id}")
                       # Fetch manually as fallback?
                       fallback_state = self.get_game_state(game_id)
                       if fallback_state.get('success'):
-                           self.socketio.emit('game_state_update', fallback_state, room=game_id)
+                           self.socketio.emit('game_state_update', fallback_state, room=room_id)
 
                  # Determine next step (end turn, roll again, wait for action)
                  if next_action == 'end_turn':
@@ -849,7 +850,7 @@ class GameController:
                       self.logger.info(f"Player {player_id} rolled doubles, gets another turn.")
                       self.socketio.emit('action_required', {'action': 'roll_again'}, room=player_sid)
                       # Broadcast updated state with the new expected action
-                      self.socketio.emit('game_state_update', game_state.to_dict(), room=game_id)
+                      self.socketio.emit('game_state_update', game_state.to_dict(), room=room_id)
                  else:
                       # Waiting for player action specified by expected_action_type set by GameLogic
                       self.logger.info(f"Waiting for player {player_id} action: {game_state.expected_action_type}")
