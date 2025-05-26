@@ -24,8 +24,6 @@ const usePlayerAnimation = (onCompleteLanding) => {
   };
   
   const animatePlayerMovement = (playerId, fromPosition, toPosition, steps) => {
-    console.log(`[animatePlayerMovement] Starting animation for player ${playerId} from ${fromPosition} to ${toPosition} (${steps} steps)`);
-    
     if (!playerTokenRefs.current[playerId]) {
       console.error(`No ref found for player ${playerId}`);
       return Promise.reject('No player ref found');
@@ -45,8 +43,6 @@ const usePlayerAnimation = (onCompleteLanding) => {
       currentPosition = (currentPosition + 1) % 40; // Wrap around the board
       path.push(currentPosition);
     }
-    
-    console.log(`[animatePlayerMovement] Path: ${path.join(' -> ')}`)
     
     setPlayerMoving(playerId);
     setIsAnimatingMovement(true);
@@ -78,11 +74,6 @@ const usePlayerAnimation = (onCompleteLanding) => {
       spaceMap[id] = el;
     });
     
-    // Define starting position - player is already here in the DOM
-    // We need to get its current computed transform to use as a starting point
-    // This avoids jumps at the beginning of the animation
-    const startStyle = window.getComputedStyle(playerTokenRefs.current[playerId]);
-    const startTransform = startStyle.transform;
     
     // Get the token element and find the board container
     const tokenElement = playerTokenRefs.current[playerId];
@@ -2245,17 +2236,14 @@ function BoardPage() {
                 variant="outlined"
                 size="medium"
                 onClick={() => {
-                  console.log('[TEST] Simulating player movement');
                   if (players.length > 0) {
                     const testPlayer = players[0];
                     const newPos = (testPlayer.position + 10) % 40;
-                    console.log(`[TEST] Moving player ${testPlayer.id} from ${testPlayer.position} to ${newPos}`);
                     
                     // Simulate the player_moved event
                     if (typeof animatePlayerMovement === 'function') {
                       animatePlayerMovement(testPlayer.id, testPlayer.position, newPos, 10)
                         .then(() => {
-                          console.log('[TEST] Animation complete');
                           setPlayers(prevPlayers => 
                             prevPlayers.map(p => p.id === testPlayer.id ? {...p, position: newPos} : p)
                           );
@@ -2278,14 +2266,11 @@ function BoardPage() {
                 variant="outlined"
                 size="medium"
                 onClick={() => {
-                  console.log('[TEST] Simulating dice roll movement');
                   if (players.length > 0) {
                     const testPlayer = players[0];
                     const roll = [3, 4]; // Simulate rolling 3 and 4
                     const total = roll[0] + roll[1];
                     const newPos = (testPlayer.position + total) % 40;
-                    console.log(`[TEST] Dice roll: ${roll[0]} + ${roll[1]} = ${total}`);
-                    console.log(`[TEST] Moving player ${testPlayer.id} from ${testPlayer.position} to ${newPos}`);
                     
                     // Show dice animation first
                     setDiceValues(roll);
@@ -2299,7 +2284,6 @@ function BoardPage() {
                         if (typeof animatePlayerMovement === 'function') {
                           animatePlayerMovement(testPlayer.id, testPlayer.position, newPos, total)
                             .then(() => {
-                              console.log('[TEST] Movement animation complete');
                               setPlayers(prevPlayers => 
                                 prevPlayers.map(p => p.id === testPlayer.id ? {...p, position: newPos} : p)
                               );
