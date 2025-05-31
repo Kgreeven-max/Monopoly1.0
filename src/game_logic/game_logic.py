@@ -154,7 +154,21 @@ class GameLogic:
                  logger.error("Missing Banker or SpecialSpaceController dependency in GameLogic")
                  return {"success": False, "error": "Server configuration error"}
                 
-            game_state = GameState.query.get(game_id)
+            # Get game state by primary key first, if that fails, try by game_id column
+            game_state = None
+            
+            # Try numeric ID first (used for integers)
+            try:
+                if isinstance(game_id, int) or (isinstance(game_id, str) and game_id.isdigit()):
+                    game_state = GameState.query.get(int(game_id))
+            except (ValueError, TypeError):
+                pass
+                
+            # If not found and it's a string (potentially UUID), try by game_id column
+            if not game_state and isinstance(game_id, str):
+                logger.info(f"Looking up GameState by UUID in game_id column: {game_id}")
+                game_state = GameState.query.filter_by(game_id=game_id).first()
+                
             player = Player.query.get(player_id)
 
             if not game_state or not player:

@@ -743,39 +743,59 @@ class GameController:
         """Handles the 'roll_dice' socket event from a client."""
         player_id = data.get('playerId') 
         game_id = data.get('gameId', 1) 
-        player_sid = request.sid # Get SID for targeted responses
+        is_bot = data.get('is_bot', False)
+        player_sid = request.sid if not is_bot else None # Get SID for targeted responses
 
         if not player_id:
              self.logger.warning(f"Received roll_dice event without playerId (SID: {player_sid})")
-             self.socketio.emit('game_error', {'error': 'Player ID missing'}, room=player_sid)
-             return 
+             if player_sid:
+                 self.socketio.emit('game_error', {'error': 'Player ID missing'}, room=player_sid)
+             return {'success': False, 'error': 'Player ID missing'} if is_bot else None 
 
         self.logger.info(f"Received roll_dice request from Player {player_id} (SID: {player_sid}) for Game {game_id}")
 
         if not self.game_logic:
              self.logger.error("GameLogic not initialized in GameController.")
-             self.socketio.emit('game_error', {'error': 'Server configuration error'}, room=player_sid)
-             return
+             if player_sid:
+                 self.socketio.emit('game_error', {'error': 'Server configuration error'}, room=player_sid)
+             return {'success': False, 'error': 'Server configuration error'} if is_bot else None
 
         with current_app.app_context():
             try:
-                 game_state = GameState.query.get(game_id)
+                 # Get game state by primary key first, if that fails, try by game_id column
+                 game_state = None
+                 
+                 # Try numeric ID first (used for integers)
+                 try:
+                     if isinstance(game_id, int) or (isinstance(game_id, str) and game_id.isdigit()):
+                         game_state = GameState.query.get(int(game_id))
+                 except (ValueError, TypeError):
+                     pass
+                     
+                 # If not found and it's a string (potentially UUID), try by game_id column
+                 if not game_state and isinstance(game_id, str):
+                     self.logger.info(f"Looking up GameState by UUID in game_id column: {game_id}")
+                     game_state = GameState.query.filter_by(game_id=game_id).first()
+                     
                  if not game_state:
                      self.logger.error(f"Game state {game_id} not found for roll_dice.")
-                     self.socketio.emit('game_error', {'error': 'Game not found'}, room=player_sid)
-                     return
+                     if player_sid:
+                         self.socketio.emit('game_error', {'error': 'Game not found'}, room=player_sid)
+                     return {'success': False, 'error': 'Game not found'} if is_bot else None
 
                  # --- Action Validation --- 
                  # Can only roll if it's your turn AND no other action is pending 
                  # (unless the pending action is specifically 'roll_again' or 'jail_action_prompt')
                  if game_state.current_player_id != player_id:
-                     self.socketio.emit('game_error', {'error': 'Not your turn'}, room=player_sid)
-                     return
+                     if player_sid:
+                         self.socketio.emit('game_error', {'error': 'Not your turn'}, room=player_sid)
+                     return {'success': False, 'error': 'Not your turn'} if is_bot else None
                  
                  player = Player.query.get(player_id) # Fetch player for jail check
                  if not player:
-                      self.socketio.emit('game_error', {'error': 'Player not found'}, room=player_sid)
-                      return
+                      if player_sid:
+                          self.socketio.emit('game_error', {'error': 'Player not found'}, room=player_sid)
+                      return {'success': False, 'error': 'Player not found'} if is_bot else None
                  
                  # Allow roll only if no action pending OR if the action is to roll (jail or doubles)
                  is_jail_roll_prompt = game_state.expected_action_type == 'jail_action_prompt'
@@ -783,13 +803,15 @@ class GameController:
                  
                  if game_state.expected_action_type and not (is_jail_roll_prompt or is_doubles_roll_prompt):
                      self.logger.warning(f"Player {player_id} tried to roll dice, but expected action is '{game_state.expected_action_type}'")
-                     self.socketio.emit('game_error', {'error': f'Cannot roll now, must first {game_state.expected_action_type}'}, room=player_sid)
-                     return
+                     if player_sid:
+                         self.socketio.emit('game_error', {'error': f'Cannot roll now, must first {game_state.expected_action_type}'}, room=player_sid)
+                     return {'success': False, 'error': f'Cannot roll now, must first {game_state.expected_action_type}'} if is_bot else None
                  # Allow rolling if in jail, GameLogic handles the specific jail roll logic
                  if not player.in_jail and game_state.expected_action_type == 'jail_action_prompt':
                       self.logger.warning(f"Player {player_id} tried to roll for jail action but is not in jail.")
-                      self.socketio.emit('game_error', {'error': 'Cannot perform jail roll, not in jail.'}, room=player_sid)
-                      return
+                      if player_sid:
+                          self.socketio.emit('game_error', {'error': 'Cannot perform jail roll, not in jail.'}, room=player_sid)
+                      return {'success': False, 'error': 'Cannot perform jail roll, not in jail.'} if is_bot else None
                  # --- End Action Validation --- 
 
                  # Call the core game logic function
@@ -797,8 +819,9 @@ class GameController:
 
                  if not result.get('success'):
                      self.logger.warning(f"roll_dice_and_move failed for Player {player_id}: {result.get('error')}")
-                     self.socketio.emit('game_error', {'error': result.get('error', 'Roll failed')}, room=player_sid) 
-                     return
+                     if player_sid:
+                         self.socketio.emit('game_error', {'error': result.get('error', 'Roll failed')}, room=player_sid) 
+                     return result if is_bot else None
 
                  # --- Process successful roll result --- 
                  # ... (Emit events: dice_rolled, go_salary_collected, player_moved, player_jailed, rent_paid) ...
@@ -806,27 +829,62 @@ class GameController:
                  landing_action = result.get('landing_action', {})
                  next_action = result.get('next_action', 'end_turn') 
 
-                 # Emit general events - use the game_state.game_id (UUID) for the room
-                 room_id = game_state.game_id if game_state else str(game_id)
-                 self.socketio.emit('dice_rolled', { 'playerId': player_id, 'roll': result.get('dice_roll'), 'doubles': result.get('doubles'), 'inJailAttempt': player.in_jail }, room=room_id)
-                 if result.get('passed_go'): self.socketio.emit('go_salary_collected', { 'playerId': player_id, 'amount': self.game_logic.GO_SALARY }, room=room_id)
-                 self.socketio.emit('player_moved', { 'playerId': player_id, 'newPosition': result.get('new_position'), 'diceTotal': sum(result.get('dice_roll', [0,0])) }, room=room_id)
+                 # Emit general events - ALWAYS use the game_state.game_id (UUID) for the room
+                 # Ensure we're using the UUID game_id, not the numeric ID
+                 if game_state and hasattr(game_state, 'game_id') and game_state.game_id:
+                     room_id = game_state.game_id  # This should be the UUID
+                 else:
+                     # Fallback - try to get the game state by ID to get its UUID
+                     self.logger.warning(f"[ROOM DEBUG] game_state missing or has no game_id, attempting to fetch...")
+                     temp_game_state = GameState.query.get(game_id) if isinstance(game_id, int) else GameState.query.filter_by(game_id=game_id).first()
+                     room_id = temp_game_state.game_id if temp_game_state and temp_game_state.game_id else str(game_id)
+                     
+                 self.logger.info(f"[SOCKET EMIT DEBUG] Preparing to emit events to room: {room_id}")
+                 self.logger.info(f"[SOCKET EMIT DEBUG] game_state exists: {game_state is not None}, game_state.game_id: {game_state.game_id if game_state else 'N/A'}")
+                 self.logger.info(f"[ROOM DEBUG] Emitting to room: '{room_id}' (type: {type(room_id)}, is UUID: {'-' in str(room_id)})")
+                 
+                 # Emit dice_rolled event
+                 dice_rolled_data = { 'playerId': player_id, 'roll': result.get('dice_roll'), 'doubles': result.get('doubles'), 'inJailAttempt': player.in_jail }
+                 self.logger.info(f"[SOCKET EMIT DEBUG] Emitting 'dice_rolled' to room {room_id} with data: {dice_rolled_data}")
+                 
+                 # Debug: Check who's in the room
+                 try:
+                     from flask_socketio import rooms as get_rooms
+                     # Get all clients in the room
+                     clients_in_room = []
+                     for sid, _ in self.socketio.server.manager.get_participants('/', room_id):
+                         clients_in_room.append(sid)
+                     self.logger.info(f"[ROOM DEBUG] Clients in room '{room_id}': {clients_in_room}")
+                 except Exception as e:
+                     self.logger.warning(f"[ROOM DEBUG] Could not get room participants: {e}")
+                 
+                 self.socketio.emit('dice_rolled', dice_rolled_data, room=room_id)
+                 if result.get('passed_go'): 
+                     go_data = { 'playerId': player_id, 'amount': self.game_logic.GO_SALARY }
+                     self.logger.info(f"[SOCKET EMIT DEBUG] Emitting 'go_salary_collected' to room {room_id} with data: {go_data}")
+                     self.socketio.emit('go_salary_collected', go_data, room=room_id)
+                 
+                 # Emit player_moved event
+                 player_moved_data = { 'playerId': player_id, 'newPosition': result.get('new_position'), 'diceTotal': sum(result.get('dice_roll', [0,0])) }
+                 self.logger.info(f"[SOCKET EMIT DEBUG] Emitting 'player_moved' to room {room_id} with data: {player_moved_data}")
+                 self.socketio.emit('player_moved', player_moved_data, room=room_id)
                  if result.get('sent_to_jail'): self.socketio.emit('player_jailed', { 'playerId': player_id, 'reason': result.get('message', 'Sent to jail') }, room=room_id)
                  if landing_action.get('action') == 'paid_rent': self.socketio.emit('rent_paid', { 'payerId': player_id, 'ownerId': landing_action.get('owner_id'), 'amount': landing_action.get('rent_amount'), 'propertyId': landing_action.get('property_id') }, room=room_id)
                  
                  # Emit targeted prompts/errors
                  action_type = landing_action.get('action')
-                 if action_type == 'insufficient_funds_for_rent':
-                      self.socketio.emit('prompt_manage_assets', {'reason': 'rent', 'required': landing_action.get('required'), 'details': landing_action }, room=player_sid)
-                 elif action_type == 'buy_or_auction_prompt':
-                      self.socketio.emit('prompt_buy_property', landing_action, room=player_sid)
-                 elif action_type == 'draw_chance_card' or action_type == 'draw_community_chest_card':
-                      self.socketio.emit('action_required', {'action': action_type}, room=player_sid)
-                 elif action_type == 'pay_tax':
-                       self.socketio.emit('action_required', {'action': 'pay_tax', 'details': landing_action.get('tax_details') }, room=player_sid)
-                 # Add prompt for manage_assets_for_jail_fine if needed (though GameLogic returns error currently)
-                 elif action_type == 'manage_assets_or_bankrupt': # Generic prompt
-                     self.socketio.emit('prompt_manage_assets', {'reason': landing_action.get('reason', 'unknown'), 'required': landing_action.get('required'), 'details': landing_action }, room=player_sid)
+                 if player_sid:  # Only emit to player socket if available
+                     if action_type == 'insufficient_funds_for_rent':
+                          self.socketio.emit('prompt_manage_assets', {'reason': 'rent', 'required': landing_action.get('required'), 'details': landing_action }, room=player_sid)
+                     elif action_type == 'buy_or_auction_prompt':
+                          self.socketio.emit('prompt_buy_property', landing_action, room=player_sid)
+                     elif action_type == 'draw_chance_card' or action_type == 'draw_community_chest_card':
+                          self.socketio.emit('action_required', {'action': action_type}, room=player_sid)
+                     elif action_type == 'pay_tax':
+                           self.socketio.emit('action_required', {'action': 'pay_tax', 'details': landing_action.get('tax_details') }, room=player_sid)
+                     # Add prompt for manage_assets_for_jail_fine if needed (though GameLogic returns error currently)
+                     elif action_type == 'manage_assets_or_bankrupt': # Generic prompt
+                         self.socketio.emit('prompt_manage_assets', {'reason': landing_action.get('reason', 'unknown'), 'required': landing_action.get('required'), 'details': landing_action }, room=player_sid)
 
                  # Broadcast the overall game state update
                  if game_state_data: # GameLogic now returns state in result
@@ -848,17 +906,25 @@ class GameController:
                       db.session.add(game_state)
                       db.session.commit() # Commit the expected state change
                       self.logger.info(f"Player {player_id} rolled doubles, gets another turn.")
-                      self.socketio.emit('action_required', {'action': 'roll_again'}, room=player_sid)
+                      if player_sid:
+                          self.socketio.emit('action_required', {'action': 'roll_again'}, room=player_sid)
                       # Broadcast updated state with the new expected action
                       self.socketio.emit('game_state_update', game_state.to_dict(), room=room_id)
                  else:
                       # Waiting for player action specified by expected_action_type set by GameLogic
                       self.logger.info(f"Waiting for player {player_id} action: {game_state.expected_action_type}")
+                 
+                 # Return result for bot calls
+                 if is_bot:
+                     return result
 
             except Exception as e:
                  db.session.rollback() 
                  self.logger.error(f"Error during handle_roll_dice for Player {player_id}: {e}", exc_info=True)
-                 self.socketio.emit('game_error', {'error': 'An internal server error occurred.'}, room=player_sid)
+                 if player_sid:
+                     self.socketio.emit('game_error', {'error': 'An internal server error occurred.'}, room=player_sid)
+                 if is_bot:
+                     return {'success': False, 'error': str(e)}
 
 
     def _internal_end_turn(self, player_id, game_id):

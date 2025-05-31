@@ -200,6 +200,16 @@ class SocketController:
         }
 
     # --- Core Event Handlers --- 
+    
+    def handle_echo_test(self, data):
+        """Simple echo test for debugging socket communication."""
+        logger.info(f"Echo test received from {request.sid}: {data}")
+        emit('echo_response', {
+            'original': data,
+            'timestamp': datetime.now().isoformat(),
+            'sid': request.sid
+        })
+        return {'success': True, 'echo': data}
 
     def handle_authenticate_socket(self, data):
         """Associates an authenticated player ID with the current socket connection."""
@@ -210,11 +220,77 @@ class SocketController:
         # Handle display mode authentication
         if mode == 'display':
             logger.info(f"[AuthSocket] Display mode authentication from SID: {sid}")
-            game_state = GameState.get_instance()
-            if game_state:
-                join_room(game_state.game_id)  # Join game room for broadcasts
-                logger.info(f"[AuthSocket] Display SID {sid} joined game room {game_state.game_id}")
-            emit('auth_socket_response', {'success': True, 'mode': 'display'}, room=sid)
+            game_id = data.get('gameId')
+            
+            # Always try to find the active game
+            active_game = None
+            if game_id:
+                # Try to find game by UUID
+                active_game = GameState.query.filter_by(game_id=game_id).first()
+                logger.info(f"[AuthSocket] Looking for game with ID {game_id}, found: {active_game is not None}")
+            
+            if not active_game:
+                # Log all game states for debugging
+                all_games = GameState.query.all()
+                logger.info(f"[AuthSocket] All games in database: {[(g.id, g.game_id, g.status) for g in all_games]}")
+                
+                # Find the most recent active game - include all non-ended states
+                active_game = GameState.query.filter(
+                    GameState.status.in_(['In Progress', 'Setup', 'Waiting', 'active'])
+                ).order_by(GameState.id.desc()).first()
+                
+                # If still no game, try without status filter
+                if not active_game:
+                    active_game = GameState.query.order_by(GameState.id.desc()).first()
+                    logger.info(f"[AuthSocket] Using most recent game regardless of status: {active_game.game_id if active_game else 'None'} (status: {active_game.status if active_game else 'N/A'})")
+                else:
+                    logger.info(f"[AuthSocket] Found active game: {active_game.game_id if active_game else 'None'} (status: {active_game.status if active_game else 'N/A'})")
+            
+            if active_game:
+                # Join the active game room
+                join_room(active_game.game_id)
+                logger.info(f"[AuthSocket] Display SID {sid} joined game room {active_game.game_id} (status: {active_game.status})")
+                logger.info(f"[ROOM DEBUG] Board joining room: '{active_game.game_id}' (type: {type(active_game.game_id)})")
+                
+                # Get current room members for debugging
+                from flask_socketio import rooms
+                room_members = rooms(sid)
+                logger.info(f"[AuthSocket] SID {sid} is now in rooms: {room_members}")
+                
+                emit('auth_socket_response', {
+                    'success': True, 
+                    'mode': 'display', 
+                    'gameId': active_game.game_id,
+                    'gameStatus': active_game.status
+                }, room=sid)
+                
+                # Test emit to the game room
+                logger.info(f"[ROOM DEBUG] Testing emit to game room {active_game.game_id}")
+                self.socketio.emit('test_room_event', {
+                    'message': 'Board joined the game room',
+                    'gameId': active_game.game_id,
+                    'timestamp': datetime.now().isoformat()
+                }, room=active_game.game_id)
+                
+                # Send current player positions to the board
+                players = Player.query.filter_by(in_game=True).all()
+                player_positions = []
+                for player in players:
+                    player_positions.append({
+                        'playerId': player.id,
+                        'position': player.position,
+                        'name': player.username or player.name,
+                        'money': player.money
+                    })
+                
+                logger.info(f"[AuthSocket] Sending initial player positions to board: {player_positions}")
+                emit('initial_player_positions', {
+                    'players': player_positions,
+                    'gameId': active_game.game_id
+                }, room=sid)
+            else:
+                logger.warning(f"[AuthSocket] No active game found for display mode")
+                emit('auth_socket_response', {'success': False, 'error': 'No active game found'}, room=sid)
             return
         
         if not player_id:
@@ -273,6 +349,9 @@ class SocketController:
         
         # Register the new authentication handler
         self.socketio.on('authenticate_socket')(self.handle_authenticate_socket)
+        
+        # Register echo test handler for debugging
+        self.socketio.on('echo_test')(self.handle_echo_test)
 
         @self.socketio.on('register_device')
         def handle_register_device(data):

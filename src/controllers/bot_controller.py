@@ -142,7 +142,7 @@ class BotController:
     def take_turn(self, player_id, game_id=1):
         """Determine and execute the bot's actions for its turn."""
         self.logger.info(f"--- Bot Player {player_id} starting turn in Game {game_id} ---")
-        time.sleep(random.uniform(0.5, 1.5)) # Simulate thinking time
+        time.sleep(random.uniform(1.5, 2.5)) # Increased thinking time to allow board to join
 
         try:
             # Get game state - handle both numeric and string UUIDs
@@ -225,12 +225,17 @@ class BotController:
                           turn_active = False; break
                            
                 # Roll the dice
-                if not self.game_logic:
-                     self.logger.error(f"GameLogic not found for bot {player_id}. Cannot roll dice.")
+                if not self.game_controller:
+                     self.logger.error(f"GameController not found for bot {player_id}. Cannot roll dice.")
                      turn_active = False; break
                       
-                # Roll dice and move the player
-                roll_result = self.game_logic.roll_dice_and_move(player_id)
+                # Roll dice through game controller to emit socket events
+                self.logger.info(f"[BOT DEBUG] Bot {player_id} calling handle_roll_dice with game_id: {game_id} (type: {type(game_id)})")
+                roll_result = self.game_controller.handle_roll_dice({
+                    'playerId': player_id,
+                    'gameId': game_id,
+                    'is_bot': True
+                })
                 
                 if not roll_result or not roll_result.get("success"):
                      self.logger.warning(f"Bot {player_id} roll failed: {roll_result.get('error') if roll_result else 'Unknown error'}")
@@ -329,9 +334,13 @@ class BotController:
                  game_state.expected_action_details = None
                  db.session.commit()
                  
-                 # Let the game_logic handle the dice roll
-                 if self.game_logic:
-                     roll_result = self.game_logic.roll_dice_and_move(player_id)
+                 # Roll dice through game controller to emit socket events
+                 if self.game_controller:
+                     roll_result = self.game_controller.handle_roll_dice({
+                         'playerId': player_id,
+                         'gameId': game_id,
+                         'is_bot': True
+                     })
                      if roll_result and roll_result.get('success'):
                          return True
                  return False

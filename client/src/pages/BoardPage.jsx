@@ -24,6 +24,14 @@ const usePlayerAnimation = (onCompleteLanding) => {
   };
   
   const animatePlayerMovement = (playerId, fromPosition, toPosition, steps) => {
+    console.log(`=== ANIMATION START: Player ${playerId} from ${fromPosition} to ${toPosition} (${steps} steps) ===`);
+    
+    // Guard against concurrent animations
+    if (isAnimatingMovement) {
+      console.warn('Animation already in progress, skipping new animation');
+      return Promise.reject('Animation in progress');
+    }
+    
     if (!playerTokenRefs.current[playerId]) {
       console.error(`No ref found for player ${playerId}`);
       return Promise.reject('No player ref found');
@@ -31,6 +39,7 @@ const usePlayerAnimation = (onCompleteLanding) => {
     
     // Clear any existing timeline
     if (animationTimelineRef.current) {
+      console.log('Killing existing timeline before starting new animation');
       animationTimelineRef.current.kill();
     }
     
@@ -53,6 +62,7 @@ const usePlayerAnimation = (onCompleteLanding) => {
     // Create animation timeline
     const timeline = gsap.timeline({
       onComplete: () => {
+        console.log('Timeline completed successfully');
         setIsAnimatingMovement(false);
         setPlayerMoving(null);
         setRemainingSteps(0);
@@ -74,14 +84,35 @@ const usePlayerAnimation = (onCompleteLanding) => {
       spaceMap[id] = el;
     });
     
-    
     // Get the token element and find the board container
-    const tokenElement = playerTokenRefs.current[playerId];
+    let tokenElement = playerTokenRefs.current[playerId];
+    
+    // If token not found, try to find it by data attribute
+    if (!tokenElement) {
+      console.warn(`No token ref for player ${playerId}, trying to find by data attribute`);
+      tokenElement = document.querySelector(`[data-player-id="${playerId}"]`);
+      
+      if (tokenElement) {
+        // Store it in the ref for next time
+        playerTokenRefs.current[playerId] = tokenElement;
+      }
+    }
+    
+    if (!tokenElement) {
+      console.error(`No token element found for player ${playerId}`);
+      console.error('Available player refs:', Object.keys(playerTokenRefs.current));
+      setIsAnimatingMovement(false);
+      setRemainingSteps(0);
+      return Promise.reject('No token element found');
+    }
+    
     // The board is the grid container that contains all spaces
     const boardElement = document.querySelector('[data-space-id="0"]')?.parentElement;
     
     if (!boardElement) {
       console.error('Could not find board element');
+      setIsAnimatingMovement(false);
+      setRemainingSteps(0);
       return Promise.reject('No board found');
     }
     
@@ -113,6 +144,8 @@ const usePlayerAnimation = (onCompleteLanding) => {
       
       if (!spaceElement) {
         console.error(`Could not find element for space ${pos}`);
+        console.error('Available spaces:', Object.keys(spaceMap));
+        // Skip this position and continue
         return;
       }
       
@@ -124,54 +157,12 @@ const usePlayerAnimation = (onCompleteLanding) => {
       const y = spaceRect.top - boardRect.top + (spaceRect.height * 0.7) - (startRect.height / 2);
       
       timeline.to(animatedToken, {
-        duration: 0.6, // Duration for each step (increased for visibility)
+        duration: 0.25, // Fast movement
         left: x,
         top: y,
-        ease: "power2.inOut",
+        ease: "power1.inOut",
         onStart: () => {
           setRemainingSteps(steps - index - 1);
-          
-          // Add hopping effect for each move
-          gsap.to(animatedToken, {
-            duration: 0.3,
-            top: y - 40, // Hop up 40px
-            scale: 1.2,
-            ease: "power2.out",
-            yoyo: true,
-            repeat: 1,
-            onRepeat: () => {
-              // Add shadow effect during hop
-              gsap.to(animatedToken, {
-                duration: 0.15,
-                boxShadow: '0 20px 30px rgba(0,0,0,0.3)',
-                yoyo: true,
-                repeat: 1
-              });
-            }
-          });
-          
-          // If passing Go (position 0), add visual effect
-          if (pos === 0 && fromPosition !== 0) {
-            gsap.to(animatedToken, {
-              duration: 0.2,
-              backgroundColor: 'gold',
-              boxShadow: '0 0 15px gold',
-              yoyo: true,
-              repeat: 1
-            });
-          }
-        },
-        onComplete: () => {
-          // Bounce effect when landing on final space
-          if (index === path.length - 1) {
-            gsap.to(animatedToken, {
-              duration: 0.3,
-              top: y - 10,
-              yoyo: true,
-              repeat: 1,
-              ease: "power2.inOut"
-            });
-          }
         }
       });
     });
@@ -180,8 +171,30 @@ const usePlayerAnimation = (onCompleteLanding) => {
     animationTimelineRef.current = timeline;
     
     // Return a promise that resolves when animation completes
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      // Set a timeout to prevent infinite animation
+      const timeoutId = setTimeout(() => {
+        console.error('Animation timeout - forcing completion');
+        timeline.kill(); // Kill the timeline
+        
+        // Cleanup
+        if (animatedToken && animatedToken.parentNode) {
+          animatedToken.parentNode.removeChild(animatedToken);
+        }
+        if (tokenElement) {
+          tokenElement.style.opacity = '1';
+        }
+        
+        setIsAnimatingMovement(false);
+        setPlayerMoving(null);
+        setRemainingSteps(0);
+        
+        reject(new Error('Animation timeout'));
+      }, steps * 500 + 2000); // Allow 0.5 seconds per step plus 2 seconds buffer
+      
       timeline.eventCallback('onComplete', () => {
+        clearTimeout(timeoutId); // Clear the timeout
+        
         // Remove the animated clone
         if (animatedToken && animatedToken.parentNode) {
           animatedToken.parentNode.removeChild(animatedToken);
@@ -850,6 +863,16 @@ function BoardPage() {
   const [inflation, setInflation] = useState(1.0);
   const [economicState, setEconomicState] = useState('stable');
   
+  // Use ref to always have latest players for event handlers
+  const playersRef = useRef([]);
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
+  
+  // Use ref for animation function to ensure it's always available
+  const animatePlayerMovementRef = useRef(null);
+  
+  
   // Dice roll state
   const [isRolling, setIsRolling] = useState(false);
   const [diceValues, setDiceValues] = useState([1, 1]);
@@ -912,12 +935,26 @@ function BoardPage() {
     console.log(`Requesting dice roll for player ${currentPlayerId} in game ${gameId}`);
   };
   
-  // Listen for dice roll events
-  useEffect(() => {
-    if (!socket) return;
-    
-    const handleDiceRolled = (data) => {
-      console.log('Dice rolled:', data);
+  // Use our custom animation hook BEFORE defining handlers that need it
+  const {
+    isAnimatingMovement,
+    playerMoving,
+    remainingSteps,
+    getPlayerTokenRef,
+    animatePlayerMovement
+  } = usePlayerAnimation((spaceId) => {
+    // Handle landing on special spaces
+    handleLanding(spaceId);
+  });
+  
+  // Store animation function in ref immediately - no useEffect needed
+  animatePlayerMovementRef.current = animatePlayerMovement;
+  
+
+  // Dice and movement handlers defined outside useEffect so they can be used immediately
+  const handleDiceRolled = (data) => {
+    console.log('=== BOARD RECEIVED dice_rolled EVENT ===');
+    console.log('Dice rolled:', data);
       
       // Extract roll data
       const roll = data.roll || [1, 1];
@@ -925,132 +962,16 @@ function BoardPage() {
       const die2 = roll[1];
       const total = die1 + die2;
       
-      // Update dice state
+      // Update dice state - matching the test button approach
       setDiceValues([die1, die2]);
       setRollTotal(total);
+      setDiceAnimationStage('rolling');
       
-      // Animation sequence
+      // Animation sequence - simplified to match test button
       setTimeout(() => {
         setDiceAnimationStage('result');
-        
-        // After showing result briefly, initiate throwing animation
-        setTimeout(() => {
-          setDiceAnimationStage('throwing');
-          
-          // After dice throw completes, show final result
-          setTimeout(() => {
-            setShowRollResult(true);
-            
-            // At this point, the dice roll is complete
-            // The player_moved event will be handled separately with animation
-            
-            // After showing the result for a moment, end dice animation
-            // But keep isRolling true until movement animation completes
-            setTimeout(() => {
-              setDiceAnimationStage('idle');
-              setShowRollResult(false);
-              
-              // Note: isRolling will be set to false after movement animation completes
-            }, 2000); // Display the result for 2 seconds
-          }, 1500); // Time for dice to finish throwing
-        }, 1000); // Time to show the initial result
-      }, 1500); // Time for dice to roll
-    };
-    
-    // Handle player movement event
-    const handlePlayerMoved = (data) => {
-      console.log('Player moved:', data);
-      
-      if (!data || !data.playerId) {
-        console.error('Invalid player movement data received');
-        setIsRolling(false);
-        return;
-      }
-      
-      // Extract movement data
-      const playerId = data.playerId;
-      const newPosition = data.newPosition || 0;
-      const diceTotal = data.diceTotal || 1;
-      
-      // Find the player - with safeguards
-      const playersList = players || [];
-      
-      // Fallback case if players state isn't set yet
-      if (playersList.length === 0) {
-        console.warn('No players loaded yet, creating temporary player');
-        const tempPlayer = {
-          id: playerId,
-          position: 0,
-          name: `Player ${playerId}`,
-          color: getDefaultPlayerColor(playerId),
-          token: getDefaultPlayerToken(playerId)
-        };
-        
-        // Update with new position immediately
-        const updatedPlayer = { ...tempPlayer, position: newPosition };
-        setPlayers([updatedPlayer]);
-        setIsRolling(false);
-        return;
-      }
-      
-      const player = playersList.find(p => p.id === playerId);
-      if (!player) {
-        console.error(`Player ${playerId} not found.`);
-        setIsRolling(false);
-        return;
-      }
-      
-      const oldPosition = player.position || 0;
-      
-      // Create a local copy of player data to be updated after animation
-      const updatedPlayer = { ...player, position: newPosition };
-      
-      // Update local player state immediately for other players
-      // but animate for the current player or if we're in observer mode
-      try {
-        if (playerId === currentPlayerId || !currentPlayerId) {
-          // Start the animation sequence
-          console.log(`Animating player ${playerId} movement from ${oldPosition} to ${newPosition}`);
-          
-          if (typeof animatePlayerMovement === 'function') {
-            // Delay the state update until animation completes
-            animatePlayerMovement(playerId, oldPosition, newPosition, diceTotal)
-              .then(() => {
-                console.log(`Animation complete for player ${playerId}`);
-                setPlayers(prevPlayers => 
-                  prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
-                );
-                setIsRolling(false);
-              })
-              .catch(error => {
-                console.error(`Animation failed: ${error}`);
-                setPlayers(prevPlayers => 
-                  prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
-                );
-                setIsRolling(false);
-              });
-          } else {
-            console.warn('animatePlayerMovement function not available');
-            setPlayers(prevPlayers => 
-              prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
-            );
-            setIsRolling(false);
-          }
-        } else {
-          // For other players, just update position without special animation
-          console.log(`Updating position for player ${playerId} without animation`);
-          setPlayers(prevPlayers => 
-            prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
-          );
-          setIsRolling(false);
-        }
-      } catch (error) {
-        console.error('Error in player movement handler:', error);
-        setPlayers(prevPlayers => 
-          prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
-        );
-        setIsRolling(false);
-      }
+        // The player_moved event will handle the actual movement
+      }, 1500);
     };
     
     // Handle errors with dice roll
@@ -1066,16 +987,10 @@ function BoardPage() {
       setTimeout(() => setErrorMessage(null), 3000);
     };
     
-    socket.on('dice_rolled', handleDiceRolled);
-    socket.on('roll_error', handleDiceError);
-    socket.on('player_moved', handlePlayerMoved);
-    
-    return () => {
-      socket.off('dice_rolled', handleDiceRolled);
-      socket.off('roll_error', handleDiceError);
-      socket.off('player_moved', handlePlayerMoved);
-    };
-  }, [socket]); // Remove dependencies that can cause circular references or uninitialized variables
+  // Empty useEffect - handlers are now registered in main socket useEffect
+  useEffect(() => {
+    // Handlers moved to main socket useEffect for proper timing
+  }, [socket]);
   
   // Function for 3D dice face
   const getDiceFace = (value) => {
@@ -1251,9 +1166,127 @@ function BoardPage() {
 
   // Initialize game data from server
   useEffect(() => {
-    if (!socket || !isConnected) return;
+    if (!socket) return; // Only check if socket exists, not if connected
     
-    console.log('Socket connected, initializing game data...');
+    console.log('Socket available, setting up handlers...');
+    
+    // Debug all incoming events
+    const anyHandler = (eventName, ...args) => {
+      // Only log important events to reduce noise
+      if (eventName === 'dice_rolled' || eventName === 'player_moved' || eventName.includes('error')) {
+        console.log(`[SOCKET EVENT] ${eventName}:`, args);
+      }
+      
+      // Special handling for dice and movement events
+      if (eventName === 'dice_rolled' || eventName === 'player_moved') {
+        console.warn(`[IMPORTANT] Bot movement event received: ${eventName}`, args[0]);
+        
+        // Try to call the handler directly when we receive the event
+        if (eventName === 'dice_rolled' && args[0]) {
+          console.log('>>> Triggering dice animation from bot event');
+          handleDiceRolledInner(args[0]);
+        } else if (eventName === 'player_moved' && args[0]) {
+          console.log('>>> Triggering movement animation from bot event');
+          handlePlayerMovedInner(args[0]);
+        }
+      }
+    };
+    socket.onAny(anyHandler);
+    
+    // Define handlers inside useEffect to ensure they have access to current state
+    const handleDiceRolledInner = (data) => {
+      handleDiceRolled(data);
+    };
+    
+    // Move handlePlayerMoved inside useEffect to access current animatePlayerMovement
+    const handlePlayerMovedInner = (data) => {
+      console.log(`[handlePlayerMovedInner] Player ${data?.playerId} moving from position to ${data?.newPosition}`);
+      
+      if (!data || !data.playerId) {
+        console.error('Invalid player movement data received');
+        setIsRolling(false);
+        return;
+      }
+      
+      // Extract movement data
+      const playerId = data.playerId;
+      const newPosition = data.newPosition || 0;
+      const diceTotal = data.diceTotal || 1;
+      
+      // Find the player - use ref to get latest state
+      const playersList = playersRef.current || [];
+      
+      // Fallback case if players state isn't set yet
+      if (playersList.length === 0) {
+        console.warn('No players loaded yet, creating temporary player');
+        const tempPlayer = {
+          id: playerId,
+          position: 0,
+          name: `Player ${playerId}`,
+          color: getDefaultPlayerColor(playerId),
+          token: getDefaultPlayerToken(playerId)
+        };
+        
+        // Update with new position immediately
+        const updatedPlayer = { ...tempPlayer, position: newPosition };
+        setPlayers([updatedPlayer]);
+        setIsRolling(false);
+        return;
+      }
+      
+      const player = playersList.find(p => p.id === playerId);
+      if (!player) {
+        console.error(`Player ${playerId} not found in`, playersList);
+        setIsRolling(false);
+        return;
+      }
+      
+      const oldPosition = player.position || 0;
+      
+      // Create a local copy of player data to be updated after animation
+      const updatedPlayer = { ...player, position: newPosition };
+      
+      // Always animate player movements on the board view
+      try {
+        // Start the animation sequence
+        console.log(`Animating player ${playerId} movement from ${oldPosition} to ${newPosition}`);
+        
+        // Use animatePlayerMovementRef to access the current animation function
+        if (animatePlayerMovementRef.current && typeof animatePlayerMovementRef.current === 'function') {
+          console.log(`Starting animation for player ${playerId} from ${oldPosition} to ${newPosition}`);
+          // Call the animation function from the ref
+          animatePlayerMovementRef.current(playerId, oldPosition, newPosition, diceTotal)
+            .then(() => {
+              console.log(`Animation complete for player ${playerId}`);
+              setPlayers(prevPlayers => 
+                prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
+              );
+              setIsRolling(false);
+            })
+            .catch(error => {
+              console.error(`Animation failed: ${error}`);
+              setPlayers(prevPlayers => 
+                prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
+              );
+              setIsRolling(false);
+            });
+        } else {
+          console.warn('animatePlayerMovement function not available in ref');
+          setPlayers(prevPlayers => 
+            prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
+          );
+          setIsRolling(false);
+        }
+      } catch (error) {
+        console.error('Error in player movement handler:', error);
+        setPlayers(prevPlayers => 
+          prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
+        );
+        setIsRolling(false);
+      }
+    };
+    
+    // We'll authenticate after we get the game state with the gameId
     
     // Socket event handler for player list
     const handlePlayerList = (data) => {
@@ -1277,40 +1310,7 @@ function BoardPage() {
       }
     };
     
-    // Fetch game state
-    socket.emit('get_game_state', {}, (response) => {
-      if (response && response.success) {
-        console.log('Game state received:', response.data);
-        
-        // Set game ID
-        if (response.data.gameId) {
-          setGameId(response.data.gameId);
-        }
-        
-        // Set game started status
-        setGameStarted(response.data.started || false);
-        
-        // Set economic data if available
-        if (response.data.economicState) {
-          setEconomicState(response.data.economicState);
-        }
-        
-        if (response.data.inflation !== undefined) {
-          setInflation(response.data.inflation);
-        }
-      }
-    });
-    
-    // Get player ID from authentication
-    socket.emit('get_current_player', {}, (response) => {
-      if (response && response.success && response.player) {
-        console.log('Current player received:', response.player);
-        setCurrentPlayerId(response.player.id);
-      }
-    });
-    
-    // Fetch all players
-    socket.emit('get_all_players', { request_type: 'board_view' });
+    // Handler definitions stay here but socket.emit calls will be moved after handlers are registered
     
     // Listen for player updates
     const handlePlayersUpdate = (data) => {
@@ -1346,19 +1346,127 @@ function BoardPage() {
       }
     };
     
+    // Handle authentication response
+    const handleAuthResponse = (data) => {
+      if (data.success && data.mode === 'display') {
+        console.log('Board authenticated as display mode successfully');
+        console.log('Board joined room:', data.room);
+        if (data.gameId) {
+          console.log('Setting game ID from auth response:', data.gameId);
+          setGameId(data.gameId);
+          
+        }
+      } else if (!data.success) {
+        console.error('Board authentication failed:', data.error);
+      }
+    };
+    
+    // Handle initial player positions when board joins late
+    const handleInitialPositions = (data) => {
+      console.log('Received initial player positions:', data);
+      if (data && data.players) {
+        const formattedPlayers = data.players.map(player => ({
+          id: player.playerId,
+          name: player.name,
+          cash: player.money,
+          position: player.position || 0,
+          color: getDefaultPlayerColor(player.playerId),
+          token: getDefaultPlayerToken(player.playerId),
+          inJail: false,
+          getOutOfJailCards: 0,
+          isBot: true
+        }));
+        
+        setPlayers(formattedPlayers);
+        console.log('Updated player positions from initial sync');
+      }
+    };
+    
+    // CRITICAL: Register all socket event handlers BEFORE authentication
+    socket.on('auth_socket_response', handleAuthResponse);
     socket.on('players_updated', handlePlayersUpdate);
     socket.on('game_state_updated', handleGameStateUpdate);
     socket.on('all_players_list', handlePlayerList);
+    socket.on('initial_player_positions', handleInitialPositions);
     
-    // Auto-refresh players every 5 seconds
-    const playerRefreshInterval = setInterval(refreshPlayers, 5000);
+    // COMMENTED OUT: We're handling these in onAny instead to avoid double processing
+    // socket.on('dice_rolled', handleDiceRolledInner);
+    // socket.on('roll_error', handleDiceError);
+    // socket.on('player_moved', handlePlayerMovedInner);
+    
+    // Test event handlers
+    socket.on('test_room_event', (data) => {
+      console.log('=== BOARD RECEIVED test_room_event ===', data);
+    });
+    
+    socket.on('bot_dice_test', (data) => {
+      console.log('=== BOARD RECEIVED bot_dice_test (broadcast) ===', data);
+    });
+    
+    console.log('All socket event handlers registered, including dice_rolled and player_moved');
+    
+    // Disabled auto-refresh to prevent interference with animations
+    // const playerRefreshInterval = setInterval(refreshPlayers, 5000);
     
     return () => {
+      socket.off('auth_socket_response', handleAuthResponse);
       socket.off('players_updated', handlePlayersUpdate);
       socket.off('game_state_updated', handleGameStateUpdate);
       socket.off('all_players_list', handlePlayerList);
-      clearInterval(playerRefreshInterval);
+      socket.off('initial_player_positions', handleInitialPositions);
+      // socket.off('dice_rolled', handleDiceRolledInner);
+      // socket.off('roll_error', handleDiceError);
+      // socket.off('player_moved', handlePlayerMovedInner);
+      socket.off('test_room_event');
+      socket.off('bot_dice_test');
+      socket.offAny(anyHandler); // Remove the onAny handler
+      // clearInterval(playerRefreshInterval);
     };
+  }, [socket]); // Only depend on socket existence, not connection state
+  
+  // Separate effect for connection state changes
+  useEffect(() => {
+    if (socket && isConnected) {
+      console.log('Socket connected, authenticating and fetching data...');
+      
+      // Authenticate when connection is established
+      socket.emit('authenticate_socket', { mode: 'display' });
+      
+      // Fetch game state
+      socket.emit('get_game_state', {}, (response) => {
+        if (response && response.success) {
+          console.log('Game state received:', response.data);
+          
+          // Set game ID
+          if (response.data.gameId) {
+            setGameId(response.data.gameId);
+          }
+          
+          // Set game started status
+          setGameStarted(response.data.started || false);
+          
+          // Set economic data if available
+          if (response.data.economicState) {
+            setEconomicState(response.data.economicState);
+          }
+          
+          if (response.data.inflation !== undefined) {
+            setInflation(response.data.inflation);
+          }
+        }
+      });
+      
+      // Get player ID from authentication
+      socket.emit('get_current_player', {}, (response) => {
+        if (response && response.success && response.player) {
+          console.log('Current player received:', response.player);
+          setCurrentPlayerId(response.player.id);
+        }
+      });
+      
+      // Fetch all players
+      socket.emit('get_all_players', { request_type: 'board_view' });
+    }
   }, [socket, isConnected]);
   
   // Update current player whenever players or currentPlayerId changes
@@ -1370,85 +1478,6 @@ function BoardPage() {
       }
     }
   }, [players, currentPlayerId]);
-
-  // Use our custom animation hook
-  const {
-    isAnimatingMovement,
-    playerMoving,
-    remainingSteps,
-    getPlayerTokenRef,
-    animatePlayerMovement
-  } = usePlayerAnimation((spaceId) => {
-    // Handle landing on special spaces
-    console.log(`Player landed on space ${spaceId}`);
-    const space = boardSpaces.find(s => s.id === spaceId);
-    
-    if (!space) {
-      console.error(`Could not find space with ID ${spaceId}`);
-      return;
-    }
-    
-    // In real implementation, the backend will trigger these events
-    // This is just to provide immediate feedback for landing actions
-    if (space.type === 'chance') {
-      console.log('Landed on Chance space');
-      // After animation completes, draw a Chance card
-      if (socket) {
-        setTimeout(() => drawCard('chance'), 300);
-      } else {
-        // Local fallback
-        const randomCard = CHANCE_CARDS[Math.floor(Math.random() * CHANCE_CARDS.length)];
-        setCardType('chance');
-        setCardContent(randomCard);
-        setShowCard(true);
-        
-        // Animation sequence for the card
-        setCardAnimation('initial');
-        setTimeout(() => setCardAnimation('flipping'), 800);
-        setTimeout(() => setCardAnimation('showing'), 2000);
-        setTimeout(() => setCardAnimation('flying'), 8000);
-        setTimeout(() => setShowCard(false), 9500);
-      }
-    } 
-    else if (space.type === 'chest') {
-      console.log('Landed on Community Chest space');
-      // After animation completes, draw a Community Chest card
-      if (socket) {
-        setTimeout(() => drawCard('chest'), 300);
-      } else {
-        // Local fallback
-        const randomCard = COMMUNITY_CHEST_CARDS[Math.floor(Math.random() * COMMUNITY_CHEST_CARDS.length)];
-        setCardType('chest');
-        setCardContent(randomCard);
-        setShowCard(true);
-        
-        // Animation sequence for the card
-        setCardAnimation('initial');
-        setTimeout(() => setCardAnimation('flipping'), 800);
-        setTimeout(() => setCardAnimation('showing'), 2000);
-        setTimeout(() => setCardAnimation('flying'), 8000);
-        setTimeout(() => setShowCard(false), 9500);
-      }
-    }
-    else if (space.type === 'corner' && space.id === 30) {
-      console.log('Landed on Go To Jail space');
-      // Visual feedback for going to jail
-      // In real implementation, backend would handle this
-      if (socket) {
-        // Backend handles movement to jail
-        console.log('Backend will handle movement to jail');
-      } else {
-        // Local fallback animation
-        alert('Go to jail! Moving to jail space...');
-        // In a real implementation, we would animate the move to jail here
-      }
-    }
-    else if (space.type === 'tax') {
-      console.log(`Landed on Tax space: ${space.name}`);
-      // Visual feedback for paying tax
-      // In real implementation, backend would handle this
-    }
-  });
 
   return (
     <Box 
