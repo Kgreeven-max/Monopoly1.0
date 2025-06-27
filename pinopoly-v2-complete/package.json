@@ -1,0 +1,168 @@
+{
+  "name": "pinopoly-v2",
+  "version": "2.0.0",
+  "description": "Modern Monopoly game built with Clean Architecture and DDD",
+  "keywords": [
+    "monopoly",
+    "board-game",
+    "multiplayer",
+    "realtime",
+    "websockets",
+    "react",
+    "typescript",
+    "flask",
+    "clean-architecture"
+  ],
+  "author": "Pinopoly Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/pinopoly-v2.git"
+  },
+  "bugs": {
+    "url": "https://github.com/username/pinopoly-v2/issues"
+  },
+  "homepage": "https://github.com/username/pinopoly-v2#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0",
+    "python": ">=3.11.0"
+  },
+  "scripts": {
+    "setup": "./scripts/setup.sh",
+    "dev": "docker-compose up -d",
+    "dev:backend": "cd backend && python src/main.py",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "./scripts/build.sh",
+    "build:backend": "cd backend && python -m build",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "./scripts/test.sh",
+    "test:backend": "cd backend && pytest",
+    "test:frontend": "cd frontend && npm test",
+    "test:e2e": "cd frontend && npm run test:e2e",
+    "test:coverage": "./scripts/test-coverage.sh",
+    "lint": "./scripts/lint.sh",
+    "lint:backend": "cd backend && black --check src tests && isort --check-only src tests && mypy src && flake8 src tests",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:fix": "./scripts/lint-fix.sh",
+    "format": "./scripts/format.sh",
+    "format:backend": "cd backend && black src tests && isort src tests",
+    "format:frontend": "cd frontend && npm run format",
+    "type-check": "./scripts/type-check.sh",
+    "type-check:backend": "cd backend && mypy src",
+    "type-check:frontend": "cd frontend && npm run type-check",
+    "db:migrate": "cd backend && alembic upgrade head",
+    "db:migration": "cd backend && alembic revision --autogenerate",
+    "db:seed": "cd backend && python scripts/seed_database.py",
+    "db:reset": "cd backend && python scripts/reset_database.py",
+    "db:backup": "cd backend && python scripts/backup_database.py",
+    "logs": "docker-compose logs -f",
+    "logs:backend": "docker-compose logs -f backend",
+    "logs:frontend": "docker-compose logs -f frontend",
+    "logs:db": "docker-compose logs -f database",
+    "clean": "./scripts/clean.sh",
+    "clean:backend": "cd backend && find . -type d -name __pycache__ -delete && find . -name '*.pyc' -delete",
+    "clean:frontend": "cd frontend && rm -rf node_modules dist .vite",
+    "clean:docker": "docker-compose down -v && docker system prune -f",
+    "security:check": "./scripts/security-check.sh",
+    "security:backend": "cd backend && bandit -r src/",
+    "security:frontend": "cd frontend && npm audit",
+    "docs:serve": "cd docs && python -m http.server 8080",
+    "docs:build": "./scripts/build-docs.sh",
+    "deploy:staging": "./scripts/deploy.sh staging",
+    "deploy:production": "./scripts/deploy.sh production",
+    "monitor": "docker-compose --profile monitoring up -d",
+    "admin-tools": "docker-compose --profile admin up -d",
+    "backup": "./scripts/backup.sh",
+    "restore": "./scripts/restore.sh",
+    "health-check": "./scripts/health-check.sh",
+    "performance:test": "./scripts/performance-test.sh",
+    "load:test": "./scripts/load-test.sh",
+    "stress:test": "./scripts/stress-test.sh"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^14.0.1",
+    "prettier": "^3.0.0",
+    "commitizen": "^4.3.0",
+    "cz-conventional-changelog": "^3.3.0",
+    "@commitlint/cli": "^17.7.1",
+    "@commitlint/config-conventional": "^17.7.0"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS",
+      "pre-push": "npm run test && npm run type-check"
+    }
+  },
+  "lint-staged": {
+    "backend/**/*.py": [
+      "black",
+      "isort",
+      "flake8"
+    ],
+    "frontend/**/*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "**/*.{md,yaml,yml,json}": [
+      "prettier --write"
+    ]
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ],
+    "rules": {
+      "type-enum": [
+        2,
+        "always",
+        [
+          "feat",
+          "fix",
+          "docs",
+          "style",
+          "refactor",
+          "perf",
+          "test",
+          "chore",
+          "ci",
+          "build",
+          "revert"
+        ]
+      ],
+      "scope-enum": [
+        2,
+        "always",
+        [
+          "backend",
+          "frontend",
+          "api",
+          "ui",
+          "db",
+          "auth",
+          "game",
+          "player",
+          "property",
+          "websocket",
+          "docs",
+          "ci",
+          "docker",
+          "deps"
+        ]
+      ]
+    }
+  },
+  "private": true
+}

@@ -13,6 +13,7 @@ const usePlayerAnimation = (onCompleteLanding) => {
   const [remainingSteps, setRemainingSteps] = useState(0);
   const playerTokenRefs = useRef({});
   const animationTimelineRef = useRef(null);
+  const animationQueue = useRef([]);
   
   const getPlayerTokenRef = (playerId) => (element) => {
     if (element) {
@@ -23,13 +24,53 @@ const usePlayerAnimation = (onCompleteLanding) => {
     }
   };
   
-  const animatePlayerMovement = (playerId, fromPosition, toPosition, steps) => {
-    console.log(`=== ANIMATION START: Player ${playerId} from ${fromPosition} to ${toPosition} (${steps} steps) ===`);
+  const processAnimationQueue = () => {
+    if (animationQueue.current.length === 0 || isAnimatingMovement) {
+      return;
+    }
     
-    // Guard against concurrent animations
+    const nextAnimation = animationQueue.current.shift();
+    executeAnimation(nextAnimation.playerId, nextAnimation.fromPosition, nextAnimation.toPosition, nextAnimation.steps)
+      .then(nextAnimation.resolve)
+      .catch(nextAnimation.reject)
+      .finally(() => {
+        // Process next animation in queue
+        setTimeout(processAnimationQueue, 50);
+      });
+  };
+
+  const animatePlayerMovement = (playerId, fromPosition, toPosition, steps) => {
+    console.log(`=== ANIMATION REQUEST: Player ${playerId} from ${fromPosition} to ${toPosition} (${steps} steps) ===`);
+    
+    // Add to queue instead of immediate execution
+    return new Promise((resolve, reject) => {
+      animationQueue.current.push({
+        playerId,
+        fromPosition,
+        toPosition,
+        steps,
+        resolve,
+        reject
+      });
+      
+      if (animationQueue.current.length === 1) {
+        console.log(`🎬 Starting animation queue for Player ${playerId}`);
+      } else {
+        console.log(`📋 Queued animation for Player ${playerId} (queue length: ${animationQueue.current.length})`);
+      }
+      
+      // Process queue if not currently animating
+      processAnimationQueue();
+    });
+  };
+
+  const executeAnimation = (playerId, fromPosition, toPosition, steps) => {
+    console.log(`=== ANIMATION EXECUTING: Player ${playerId} from ${fromPosition} to ${toPosition} (${steps} steps) ===`);
+    
+    // Guard against concurrent animations (should not happen with queue)
     if (isAnimatingMovement) {
-      console.warn('Animation already in progress, skipping new animation');
-      return Promise.reject('Animation in progress');
+      console.error('Animation system error: executeAnimation called while animating');
+      return Promise.reject('Animation system error');
     }
     
     if (!playerTokenRefs.current[playerId]) {
@@ -863,11 +904,41 @@ function BoardPage() {
   const [inflation, setInflation] = useState(1.0);
   const [economicState, setEconomicState] = useState('stable');
   
+  // Debug state
+  const [debugMode, setDebugMode] = useState(false);
+  const [animationEnabled, setAnimationEnabled] = useState(true);
+  const [lastPlayerMovement, setLastPlayerMovement] = useState(null);
+  const [movementLog, setMovementLog] = useState([]);
+  
+  // Startup logging
+  useEffect(() => {
+    console.log('🎮 ENHANCED BOARD PAGE LOADED - Animation Debug System Active');
+    console.log('🔍 WHAT TO LOOK FOR:');
+    console.log('   - Turn on Debug Mode checkbox to see movement tracking');
+    console.log('   - Test Move button should work (smooth animation)');
+    console.log('   - When bots move, watch for [🎬 PLAYER MOVEMENT DETECTED] logs');
+    console.log('   - When bots move, watch Movement Log in debug panel');
+    console.log('🎯 IF BOTS TELEPORT: Check if Movement Log shows bot moves but no animation');
+  }, []);
+  
   // Use ref to always have latest players for event handlers
   const playersRef = useRef([]);
+  const preventPositionUpdates = useRef(new Set());
+  
+  const previousPlayersRef = useRef([]);
+  
   useEffect(() => {
+    const oldPlayers = previousPlayersRef.current;
     playersRef.current = players;
-  }, [players]);
+    
+    // Log player position changes for debugging
+    if (debugMode && players.length > 0) {
+      console.log('🔄 Player positions updated:', players.map(p => `${p.name}: ${p.position}`));
+    }
+    
+    // Store current players for next comparison
+    previousPlayersRef.current = [...players];
+  }, [players, debugMode]);
   
   // Use ref for animation function to ensure it's always available
   const animatePlayerMovementRef = useRef(null);
@@ -1187,6 +1258,8 @@ function BoardPage() {
           handleDiceRolledInner(args[0]);
         } else if (eventName === 'player_moved' && args[0]) {
           console.log('>>> Triggering movement animation from bot event');
+          console.log('>>> Movement data:', args[0]);
+          console.log('>>> Animation function available:', !!animatePlayerMovementRef.current);
           handlePlayerMovedInner(args[0]);
         }
       }
@@ -1200,7 +1273,17 @@ function BoardPage() {
     
     // Move handlePlayerMoved inside useEffect to access current animatePlayerMovement
     const handlePlayerMovedInner = (data) => {
-      console.log(`[handlePlayerMovedInner] Player ${data?.playerId} moving from position to ${data?.newPosition}`);
+      console.log(`[🎬 PLAYER MOVEMENT DETECTED] Player ${data?.playerId} moving to ${data?.newPosition}`);
+      
+      // Add to movement log for debugging
+      const movementEntry = {
+        timestamp: new Date().toLocaleTimeString(),
+        playerId: data?.playerId,
+        newPosition: data?.newPosition,
+        diceTotal: data?.diceTotal
+      };
+      setMovementLog(prev => [movementEntry, ...prev.slice(0, 9)]);
+      setLastPlayerMovement(movementEntry);
       
       if (!data || !data.playerId) {
         console.error('Invalid player movement data received');
@@ -1246,39 +1329,49 @@ function BoardPage() {
       // Create a local copy of player data to be updated after animation
       const updatedPlayer = { ...player, position: newPosition };
       
-      // Always animate player movements on the board view
+      // Check if animations are enabled, if not just update position immediately
+      if (!animationEnabled) {
+        console.log(`[🚫 ANIMATION DISABLED] Updating player ${playerId} position immediately: ${oldPosition} → ${newPosition}`);
+        setPlayers(prevPlayers => 
+          prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
+        );
+        setIsRolling(false);
+        return;
+      }
+
+      // Animate player movements on the board view
       try {
         // Start the animation sequence
-        console.log(`Animating player ${playerId} movement from ${oldPosition} to ${newPosition}`);
+        console.log(`[🎬 ANIMATION ENABLED] Animating player ${playerId} movement from ${oldPosition} to ${newPosition}`);
         
         // Use animatePlayerMovementRef to access the current animation function
         if (animatePlayerMovementRef.current && typeof animatePlayerMovementRef.current === 'function') {
-          console.log(`Starting animation for player ${playerId} from ${oldPosition} to ${newPosition}`);
+          console.log(`[🎯 STARTING ANIMATION] Player ${playerId} from ${oldPosition} to ${newPosition} (${diceTotal} steps)`);
           // Call the animation function from the ref
           animatePlayerMovementRef.current(playerId, oldPosition, newPosition, diceTotal)
             .then(() => {
-              console.log(`Animation complete for player ${playerId}`);
+              console.log(`[✅ ANIMATION COMPLETE] Player ${playerId} reached position ${newPosition}`);
               setPlayers(prevPlayers => 
                 prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
               );
               setIsRolling(false);
             })
             .catch(error => {
-              console.error(`Animation failed: ${error}`);
+              console.error(`[❌ ANIMATION FAILED] ${error}`);
               setPlayers(prevPlayers => 
                 prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
               );
               setIsRolling(false);
             });
         } else {
-          console.warn('animatePlayerMovement function not available in ref');
+          console.warn('[⚠️ NO ANIMATION FUNCTION] Using immediate position update');
           setPlayers(prevPlayers => 
             prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
           );
           setIsRolling(false);
         }
       } catch (error) {
-        console.error('Error in player movement handler:', error);
+        console.error('[💥 ANIMATION ERROR] Error in player movement handler:', error);
         setPlayers(prevPlayers => 
           prevPlayers.map(p => p.id === playerId ? updatedPlayer : p)
         );
@@ -1293,6 +1386,9 @@ function BoardPage() {
       if (data && data.success && Array.isArray(data.players)) {
         console.log('Received player list via socket:', data.players);
         
+        // Get previous players to detect changes
+        const oldPlayers = playersRef.current || [];
+        
         // Format players from socket response
         const formattedPlayers = data.players.map(player => ({
           id: player.id,
@@ -1305,6 +1401,29 @@ function BoardPage() {
           getOutOfJailCards: player.get_out_of_jail_cards || 0,
           isBot: player.is_bot || false
         }));
+        
+        // Detect position changes and trigger animations
+        if (oldPlayers.length > 0) {
+          formattedPlayers.forEach(currentPlayer => {
+            const oldPlayer = oldPlayers.find(p => p.id === currentPlayer.id);
+            if (oldPlayer && oldPlayer.position !== currentPlayer.position) {
+              console.log(`🎯 POSITION CHANGE DETECTED: ${currentPlayer.name} moved from ${oldPlayer.position} to ${currentPlayer.position}`);
+              
+              // Calculate steps (simple distance for now)
+              const steps = Math.abs(currentPlayer.position - oldPlayer.position);
+              
+              // Trigger animation using the movement handler
+              const movementData = {
+                playerId: currentPlayer.id,
+                newPosition: currentPlayer.position,
+                diceTotal: steps
+              };
+              
+              console.log(`🎬 SIMULATING player_moved event for bot:`, movementData);
+              handlePlayerMovedInner(movementData);
+            }
+          });
+        }
         
         setPlayers(formattedPlayers);
       }
@@ -1776,7 +1895,7 @@ function BoardPage() {
             const pos = getPosition(space.id);
             const isCorner = space.id % 10 === 0;
             
-            // Players on this space
+            // Players on this space 
             const playersHere = players.filter(p => p.position === space.id);
             
             return (
@@ -1831,6 +1950,7 @@ function BoardPage() {
                         key={player.id}
                         ref={getPlayerTokenRef(player.id)}
                         data-player-id={player.id}
+                        className={isAnimatingMovement && playerMoving === player.id ? 'animating' : ''}
                         sx={{
                           width: isFullScreen ? '3.2vmin' : '2.8vmin',
                           height: isFullScreen ? '3.2vmin' : '2.8vmin',
@@ -2030,7 +2150,7 @@ function BoardPage() {
               borderBottom: '1px solid #eee' 
             }}>
               <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                Players {players.length > 0 ? `(${players.length})` : ''}
+                Players {players.length > 0 ? `(${players.length})` : ''} {debugMode && '🔧'}
               </Typography>
               <Button 
                 size="small" 
@@ -2208,9 +2328,70 @@ function BoardPage() {
           {/* Game controls */}
           <Paper elevation={2} sx={{ borderRadius: '10px', overflow: 'hidden' }}>
             <Typography variant="h6" sx={{ p: 1.5, fontWeight: 'bold', bgcolor: '#f5f5f5', borderBottom: '1px solid #eee' }}>
-              Game Controls
+              🎮 Game Controls & Debug
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, p: 1.5 }}>
+              
+              {/* Debug Toggle */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <input 
+                  type="checkbox" 
+                  checked={debugMode} 
+                  onChange={(e) => setDebugMode(e.target.checked)}
+                  id="debug-toggle"
+                />
+                <label htmlFor="debug-toggle" style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                  🔧 Debug Mode
+                </label>
+              </Box>
+              
+              {/* Animation Toggle */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <input 
+                  type="checkbox" 
+                  checked={animationEnabled} 
+                  onChange={(e) => setAnimationEnabled(e.target.checked)}
+                  id="animation-toggle"
+                />
+                <label htmlFor="animation-toggle" style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                  ✨ Animations Enabled
+                </label>
+              </Box>
+              
+              {/* Simple Debug Text */}
+              <Typography variant="body2" sx={{ 
+                backgroundColor: debugMode ? 'lightgreen' : 'lightgray', 
+                padding: 1, 
+                marginBottom: 1,
+                fontSize: '12px'
+              }}>
+                🔧 DEBUG {debugMode ? 'ON' : 'OFF'} - Players: {players?.length || 0} - Socket: {isConnected ? 'OK' : 'NO'}
+              </Typography>
+              
+              {/* Movement Log - Always Visible When Debug On */}
+              {debugMode && (
+                <Box sx={{ 
+                  backgroundColor: 'rgba(0,0,255,0.1)', 
+                  padding: 1, 
+                  marginBottom: 1,
+                  borderRadius: 1,
+                  maxHeight: 150,
+                  overflow: 'auto'
+                }}>
+                  <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
+                    📋 Animation Status
+                  </Typography>
+                  <Typography variant="caption" display="block">
+                    Last Movement: {lastPlayerMovement ? `Player ${lastPlayerMovement.playerId} to ${lastPlayerMovement.position}` : 'None'}
+                  </Typography>
+                  <Typography variant="caption" display="block">
+                    Currently Animating: {isAnimatingMovement ? '✅ YES' : '❌ NO'}
+                  </Typography>
+                  <Typography variant="caption" display="block">
+                    Movement Log Entries: {movementLog?.length || 0}
+                  </Typography>
+                </Box>
+              )}
               <Button 
                 variant="outlined" 
                 size="medium" 
@@ -2333,6 +2514,7 @@ function BoardPage() {
               >
                 Test Dice Roll (3+4)
               </Button>
+              
               
               <Button 
                 variant="outlined" 

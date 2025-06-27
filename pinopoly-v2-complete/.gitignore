@@ -1,0 +1,555 @@
+# ===================================
+# Pinopoly V2 - Git Ignore Rules
+# ===================================
+
+# ===================================
+# Environment & Configuration
+# ===================================
+.env
+.env.local
+.env.*.local
+*.env
+config.local.json
+secrets.yaml
+
+# ===================================
+# Python Backend
+# ===================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+test-results/
+test-reports/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+Pipfile.lock
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# ===================================
+# Node.js Frontend
+# ===================================
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+out
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+# Comment in the public line in if your project uses Gatsby and not Next.js
+# https://nextjs.org/docs/api-reference/next.config.js/cdn-support-with-asset-prefix
+# public
+
+# Vite build output
+dist-ssr
+*.local
+
+# Rollup build output
+build/
+
+# Storybook build outputs
+.out
+.storybook-out
+storybook-static
+
+# Temporary folders
+tmp/
+temp/
+
+# ===================================
+# IDE & Editor Files
+# ===================================
+
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+
+# Vim
+*~
+*.swp
+*.swo
+.vim/
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ===================================
+# Database Files
+# ===================================
+
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# PostgreSQL
+*.sql.bak
+*.sql.backup
+
+# Database dumps
+*.dump
+*.sql
+
+# ===================================
+# Log Files
+# ===================================
+
+# Application logs
+logs/
+*.log
+*.log.*
+log-*.txt
+
+# System logs
+syslog
+auth.log
+kern.log
+
+# ===================================
+# Docker
+# ===================================
+
+# Docker build context
+Dockerfile.local
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Docker volumes
+docker-volumes/
+
+# ===================================
+# Deployment
+# ===================================
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+*.tfplan
+
+# Kubernetes
+kustomization.yaml
+*.yaml.bak
+
+# Ansible
+*.retry
+vault_password
+
+# ===================================
+# Monitoring & Observability
+# ===================================
+
+# Prometheus data
+prometheus-data/
+
+# Grafana data
+grafana-data/
+
+# Log aggregation
+elk-data/
+logstash-data/
+
+# ===================================
+# Security
+# ===================================
+
+# SSL Certificates
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# SSH Keys
+id_rsa
+id_rsa.pub
+*.pub
+
+# GPG Keys
+*.gpg
+*.asc
+
+# API Keys
+api-keys.json
+credentials.json
+service-account.json
+
+# ===================================
+# Operating System
+# ===================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# macOS Thumbnails
+._*
+
+# macOS Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.tmp
+*.temp
+
+# Windows Folder config file
+[Dd]esktop.ini
+
+# Windows Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+# Linux
+*~
+
+# Linux temporary files
+.fuse_hidden*
+
+# Linux Trash folder which might appear on any partition or disk
+.Trash-*
+
+# Linux .nfs files are created when an open file is removed but is still being accessed
+.nfs*
+
+# ===================================
+# Backup Files
+# ===================================
+
+# Generic backup files
+*.bak
+*.backup
+*.old
+*.orig
+*.save
+
+# Database backups
+backups/
+*.sql.gz
+*.dump.gz
+
+# ===================================
+# Temporary Files
+# ===================================
+
+# Temporary directories
+tmp/
+temp/
+.tmp/
+.temp/
+
+# Lock files
+*.lock
+.lock-*
+
+# PID files
+*.pid
+
+# ===================================
+# Assets & Media
+# ===================================
+
+# Large media files (add specific types as needed)
+# *.mp4
+# *.avi
+# *.mov
+# *.mp3
+# *.wav
+
+# Generated assets
+generated/
+compiled/
+
+# ===================================
+# Documentation
+# ===================================
+
+# Documentation build output
+docs/_build/
+docs/build/
+site/
+
+# ===================================
+# Test Files
+# ===================================
+
+# Test databases
+test.db
+test.sqlite
+test_*.sqlite3
+
+# Test coverage
+.coverage
+coverage/
+htmlcov/
+
+# Test artifacts
+test-results/
+test-reports/
+screenshots/
+videos/
+
+# ===================================
+# Performance & Profiling
+# ===================================
+
+# Profiling output
+*.prof
+*.profile
+profile.out
+
+# Performance test results
+perf-results/
+
+# ===================================
+# Package Managers
+# ===================================
+
+# Yarn
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# PNPM
+.pnpm-debug.log*
+
+# Rush
+common/temp/
+
+# ===================================
+# Custom Application Files
+# ===================================
+
+# Game saves (if implemented)
+saves/
+game-states/
+
+# User uploads
+uploads/
+user-content/
+
+# Generated reports
+reports/
+
+# Cache directories
+.cache/
+cache/
+
+# ===================================
+# End of .gitignore
+# ===================================

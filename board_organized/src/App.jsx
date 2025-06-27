@@ -7,21 +7,21 @@ import {
   useLocation
 } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { SocketProvider } from './contexts/SocketContext';
-import { GameProvider } from './contexts/GameContext';
-import { NotificationProvider } from './contexts/NotificationContext';
+import { AuthProvider, useAuth } from '../game-state/contexts/AuthContext';
+import { SocketProvider } from '../game-state/contexts/SocketContext';
+import { GameProvider } from '../game-state/contexts/GameContext';
+import { NotificationProvider } from '../game-state/contexts/NotificationContext';
 import { Box, CircularProgress } from '@mui/material';
 
 // Import Page Components
-import HomePage from './pages/HomePage';
-import BoardPage from './pages/BoardPage';
-import PlayerPage from './pages/PlayerPage';
-import AdminDashboard from './AdminDashboard';
-import RemotePlayerPage from './pages/RemotePlayerPage';
-import ConnectPage from './pages/ConnectPage';
-import NotFoundPage from './pages/NotFoundPage';
-import DebugPage from './pages/DebugPage';
+import HomePage from '../pages/HomePage';
+import BoardPage from '../pages/BoardPage';
+import PlayerPage from '../pages/PlayerPage';
+import AdminPage from '../pages/AdminPage';
+import RemotePlayerPage from '../pages/RemotePlayerPage';
+import ConnectPage from '../pages/ConnectPage';
+import NotFoundPage from '../pages/NotFoundPage';
+import DebugPage from '../pages/DebugPage';
 
 // Define a basic theme (optional, customize as needed)
 const theme = createTheme({
@@ -99,7 +99,7 @@ function App() {
                     path="/admin"
                     element={
                       <ProtectedRoute roleRequired="admin">
-                        <AdminDashboard />
+                        <AdminPage />
                       </ProtectedRoute>
                     }
                   />

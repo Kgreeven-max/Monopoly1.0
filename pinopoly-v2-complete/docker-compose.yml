@@ -1,0 +1,176 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  database:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: pinopoly_dev
+      POSTGRES_USER: pinopoly_user
+      POSTGRES_PASSWORD: pinopoly_pass
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pinopoly_user -d pinopoly_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://pinopoly_user:pinopoly_pass@database:5432/pinopoly_dev
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - JWT_SECRET=dev-jwt-secret-change-in-production
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - PYTHONPATH=/app/src
+    volumes:
+      - ./backend:/app
+      - /app/venv  # Anonymous volume for virtual environment
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: ["python", "src/main.py"]
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_WS_URL=ws://localhost:8000
+      - VITE_ENV=development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # Anonymous volume for node_modules
+    depends_on:
+      - backend
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+  # Nginx Reverse Proxy (Optional for production-like setup)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./deployment/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./deployment/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+      - frontend
+    profiles:
+      - production
+
+  # Prometheus (Monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    profiles:
+      - monitoring
+
+  # Grafana (Monitoring Dashboard)
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+
+  # Database Administration (pgAdmin)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@pinopoly.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - database
+    profiles:
+      - admin
+
+  # Redis Commander (Redis Administration)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    profiles:
+      - admin
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  default:
+    name: pinopoly-network

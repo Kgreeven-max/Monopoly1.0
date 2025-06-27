@@ -48,6 +48,22 @@ npm run lint
 npm run preview
 ```
 
+### Board Organized Frontend (Enhanced/Experimental)
+```bash
+# Alternative frontend with animations (from board_organized/ directory)
+cd board_organized
+npm install
+
+# Development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Lint code
+npm run lint
+```
+
 ### Database Management
 ```bash
 # Create migration
@@ -77,10 +93,15 @@ python reset_database.py
 - `economic_cycle_controller.py`: Economic simulation
 
 ### Frontend Structure
-- **React Components**: UI components in `client/src/components/`
-- **Game Logic**: Client-side game utilities
-- **Pages**: Route-based page components
-- **Socket Integration**: Real-time communication with backend
+- **Main Frontend** (`client/`): Production-ready React application
+  - Components in `client/src/components/`
+  - Pages in `client/src/pages/`
+  - Socket integration in `client/src/contexts/SocketContext.jsx`
+- **Board Organized Frontend** (`board_organized/`): Enhanced version with animations
+  - Advanced animations using GSAP
+  - Enhanced game board components with animation hooks
+  - Experimental features and improved UX
+  - Contains `AnimationContext.jsx` and `AnimatedGameContext.jsx`
 
 ### Database Models
 - `Player`: Human and bot players with financial data
@@ -149,8 +170,8 @@ Required in `.env` file:
 - Run with `python scripts/run_tests.py`
 
 ### Frontend Tests
-- Linting with ESLint: `npm run lint`
-- Located in `client/` directory
+- Linting with ESLint: `npm run lint` (in both `client/` and `board_organized/`)
+- Both frontend applications use ESLint with React-specific rules
 
 ## Important Notes
 
@@ -179,3 +200,22 @@ Always create migrations for schema changes:
 2. Run `flask db migrate -m "Description"`
 3. Review generated migration
 4. Apply with `flask db upgrade`
+
+### Dual Frontend Architecture
+The project contains two frontend applications:
+- **`client/`**: Stable, production-ready React frontend
+- **`board_organized/`**: Enhanced version with advanced animations and experimental features
+
+When working on frontend features:
+- Use `client/` for stable production code
+- Use `board_organized/` for animation enhancements and experimental UI improvements
+- Both frontends connect to the same Flask backend API
+- Animation-heavy features use GSAP and custom React hooks in `board_organized/`
+
+### Animation System (board_organized)
+The enhanced frontend includes:
+- `AnimationContext.jsx`: Global animation state management
+- `usePlayerAnimation.js` and `useSimplePlayerAnimation.js`: Custom hooks for player movement
+- `AnimatedGameBoard.jsx`, `EnhancedGameBoard.jsx`: Advanced board components
+- GSAP integration for smooth transitions and token movements
+- Debug utilities for testing animations
