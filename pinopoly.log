@@ -19325,3 +19325,11 @@ Traceback (most recent call last):
   File "C:\Monoply\src\controllers\admin_controller.py", line 15, in <module>
     from src.models.finance.transaction import Transaction
 ModuleNotFoundError: No module named 'src.models.finance.transaction'
+2025-07-22 15:43:53,951 - root - INFO - Starting Pi-nopoly server...
+2025-07-22 15:43:54,658 - root - ERROR - Failed to start server: No module named 'src'
+Traceback (most recent call last):
+  File "/Users/kendallgreeven/Monoply mac/deployment/run_pinopoly.py", line 96, in <module>
+    from app import app, socketio, setup_scheduled_tasks
+  File "/Users/kendallgreeven/Monoply mac/deployment/app.py", line 7, in <module>
+    from src.models import init_db
+ModuleNotFoundError: No module named 'src'
