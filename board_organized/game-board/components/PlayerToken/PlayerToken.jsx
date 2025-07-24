@@ -1,5 +1,5 @@
 import React from 'react';
-import { useGame } from '../../contexts/GameContext';
+import { useGame } from '../../../game-state/contexts/GameContext';
 import './PlayerToken.css';
 
 export default function PlayerToken({ player, position }) {

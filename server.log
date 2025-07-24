@@ -1,0 +1,299 @@
+/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:34: NotOpenSSLWarning: urllib3 v2.0 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+2025-07-23 16:32:24,413 - flask_config - INFO - Loaded base configuration from config/base.json
+2025-07-23 16:32:24,413 - flask_config - INFO - Loaded development configuration from config/development.json
+2025-07-23 16:32:24,414 - flask_config - INFO - Configured Flask application for development environment
+2025-07-23 16:32:24,426 - src.models - INFO - Database models initialized
+2025-07-23 16:32:24,430 - root - INFO - Ensured database tables exist.
+2025-07-23 16:32:24,430 - src.migrations.add_free_parking_fund - INFO - Starting migration to add free_parking_fund column to game_state table
+2025-07-23 16:32:24,430 - src.migrations.add_free_parking_fund - INFO - Column free_parking_fund already exists in game_state table; skipping migration
+2025-07-23 16:32:24,430 - root - INFO - Successfully ran free_parking_fund migration.
+2025-07-23 16:32:24,431 - src.migrations.add_credit_score - INFO - Migration 'add_credit_score' already applied.
+2025-07-23 16:32:24,431 - root - INFO - Successfully ran credit_score migration.
+2025-07-23 16:32:24,431 - src.migrations.add_updated_at_column - INFO - Starting migration to add updated_at column to players table
+2025-07-23 16:32:24,431 - src.migrations.add_updated_at_column - INFO - Column updated_at already exists in players table; skipping migration
+2025-07-23 16:32:24,431 - root - INFO - Successfully ran updated_at column migration.
+2025-07-23 16:32:24,431 - src.migrations.add_inflation_rate - INFO - Starting migration to add inflation_rate and base_interest_rate columns to game_state table
+2025-07-23 16:32:24,431 - src.migrations.add_inflation_rate - INFO - Column inflation_rate already exists in game_state table; skipping
+2025-07-23 16:32:24,431 - src.migrations.add_inflation_rate - INFO - Column base_interest_rate already exists in game_state table; skipping
+2025-07-23 16:32:24,432 - src.migrations.add_inflation_rate - INFO - Migration verification successful: columns exist
+2025-07-23 16:32:24,432 - root - INFO - Successfully ran inflation_rate and base_interest_rate migration.
+2025-07-23 16:32:24,432 - src.migrations.add_started_at_column - INFO - Starting migration to add started_at and ended_at columns to game_state table
+2025-07-23 16:32:24,432 - src.migrations.add_started_at_column - INFO - Column started_at already exists in game_state table; skipping
+2025-07-23 16:32:24,432 - src.migrations.add_started_at_column - INFO - Column ended_at already exists in game_state table; skipping
+2025-07-23 16:32:24,432 - src.migrations.add_started_at_column - INFO - Migration verification successful: columns exist
+2025-07-23 16:32:24,432 - root - INFO - Successfully ran started_at and ended_at migration.
+2025-07-23 16:32:24,432 - src.migrations.fix_cash_to_money - INFO - Starting migration to fix cash/money references and add current_price/current_rent columns
+2025-07-23 16:32:24,432 - src.migrations.fix_cash_to_money - INFO - Property table already has current_price and current_rent columns
+2025-07-23 16:32:24,432 - src.migrations.fix_cash_to_money - INFO - Property columns are properly initialized
+2025-07-23 16:32:24,432 - root - INFO - Successfully ran cash to money fix migration.
+2025-07-23 16:32:24,432 - src.migrations.add_community_chest_cards - INFO - Starting migration to add _community_chest_cards_json and game_log columns
+2025-07-23 16:32:24,432 - src.migrations.add_community_chest_cards - INFO - _community_chest_cards_json column already exists
+2025-07-23 16:32:24,432 - src.migrations.add_community_chest_cards - INFO - game_log column already exists
+2025-07-23 16:32:24,432 - src.migrations.add_community_chest_cards - INFO - Migration completed successfully
+2025-07-23 16:32:24,432 - root - INFO - Successfully ran community chest cards migration.
+2025-07-23 16:32:24,432 - src.migrations.add_game_id_to_auction - INFO - Starting migration to add game_id column to auctions table
+2025-07-23 16:32:24,433 - src.migrations.add_game_id_to_auction - INFO - Column game_id already exists in auctions table; skipping migration
+2025-07-23 16:32:24,433 - root - INFO - Successfully ran add_game_id_to_auction migration.
+2025-07-23 16:32:24,433 - src.migrations.add_game_id_to_loan - INFO - Starting migration to add game_id column to loans table
+2025-07-23 16:32:24,433 - src.migrations.add_game_id_to_loan - INFO - Column game_id already exists in loans table; skipping migration
+2025-07-23 16:32:24,433 - root - INFO - Successfully ran add_game_id_to_loan migration.
+2025-07-23 16:32:24,433 - src.migrations.add_fields_to_cd - INFO - Starting migration to add columns to certificates_of_deposit table
+2025-07-23 16:32:24,433 - src.migrations.add_fields_to_cd - INFO - is_variable_rate column already exists
+2025-07-23 16:32:24,433 - src.migrations.add_fields_to_cd - INFO - history column already exists
+2025-07-23 16:32:24,433 - src.migrations.add_fields_to_cd - INFO - Migration verification successful: all columns exist
+2025-07-23 16:32:24,433 - root - INFO - Successfully ran add_fields_to_cd migration.
+2025-07-23 16:32:24,433 - src.migrations.add_history_to_loan - INFO - Starting migration to add history column to loans table
+2025-07-23 16:32:24,434 - src.migrations.add_history_to_loan - INFO - Column history already exists in loans table; skipping migration
+2025-07-23 16:32:24,434 - root - INFO - Successfully ran add_history_to_loan migration.
+2025-07-23 16:32:24,434 - src.migrations.add_times_passed_go - INFO - Starting migration to add times_passed_go column to players table
+2025-07-23 16:32:24,434 - src.migrations.add_times_passed_go - INFO - Column times_passed_go already exists in players table; skipping migration
+2025-07-23 16:32:24,434 - src.migrations.add_times_passed_go - INFO - Migration verification successful: times_passed_go column exists
+2025-07-23 16:32:24,434 - root - INFO - Successfully ran add_times_passed_go migration.
+2025-07-23 16:32:24,434 - root - INFO - Checking for existing GameState using direct SQL
+2025-07-23 16:32:24,435 - root - INFO - Found existing GameState with ID: 1 and game_id: 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6
+2025-07-23 16:32:24,470 - root - INFO - Using GameState with ID: 1 and game_id: 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6
+2025-07-23 16:32:24,470 - root - INFO - Checking for economic_state column in game_state table
+2025-07-23 16:32:24,471 - root - INFO - economic_state column already exists in game_state table
+2025-07-23 16:32:24,471 - root - INFO - Set economic_state=stable on GameState instance
+2025-07-23 16:32:24,471 - src.migrations.add_economic_cycle_columns - INFO - Starting migration to add economic_cycle_position and economic_cycle_period columns to game_state table
+2025-07-23 16:32:24,471 - src.migrations.add_economic_cycle_columns - INFO - Column economic_cycle_position already exists in game_state table; skipping
+2025-07-23 16:32:24,471 - src.migrations.add_economic_cycle_columns - INFO - Column economic_cycle_period already exists in game_state table; skipping
+2025-07-23 16:32:24,471 - src.migrations.add_economic_cycle_columns - INFO - Migration verification successful: all columns exist
+2025-07-23 16:32:24,471 - root - INFO - Successfully ran economic cycle columns migration.
+2025-07-23 16:32:24,471 - banker - INFO - Banker initialized.
+2025-07-23 16:32:24,471 - src.controllers.economic_cycle_controller - INFO - EconomicCycleController initialized
+2025-07-23 16:32:24,471 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-07-23 16:32:24,471 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-07-23 16:32:24,471 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-07-23 16:32:24,471 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-07-23 16:32:24,471 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-07-23 16:32:24,474 - src.game_logic.game_logic - INFO - GameLogic initialized.
+2025-07-23 16:32:24,475 - src.controllers.property_controller - INFO - PropertyController initialized.
+2025-07-23 16:32:24,475 - src.controllers.auction_controller - INFO - AuctionController initialized (DB Persistence Mode).
+2025-07-23 16:32:24,475 - src.controllers.auction_controller - INFO - Starting background auction monitoring task
+2025-07-23 16:32:24,475 - src.controllers.auction_controller - INFO - Auction monitoring task started successfully
+2025-07-23 16:32:24,475 - bot_controller - INFO - BotController initialized.
+2025-07-23 16:32:24,475 - src.controllers.social.chat_controller - INFO - ChatController initialized
+2025-07-23 16:32:24,475 - src.controllers.social.alliance_controller - INFO - AllianceController initialized
+2025-07-23 16:32:24,475 - src.controllers.social.reputation_controller - INFO - ReputationController initialized
+2025-07-23 16:32:24,475 - trade_controller - INFO - TradeController initialized.
+2025-07-23 16:32:24,477 - bot_controller - INFO - BotController initialized.
+2025-07-23 16:32:24,477 - root - INFO - Core services and controllers initialized and stored in app config
+2025-07-23 16:32:24,478 - src.controllers.socket_game_controller - INFO - Clean socket game handlers registered
+2025-07-23 16:32:24,478 - src.controllers.socket_core - INFO - Core socket handlers registered.
+2025-07-23 16:32:24,478 - src.controllers.auction_controller - INFO - AuctionController event handlers registered.
+2025-07-23 16:32:24,478 - src.controllers.property_controller - INFO - Registering property socket events
+2025-07-23 16:32:24,478 - src.controllers.property_controller - INFO - Property event handlers registered within register_property_events.
+2025-07-23 16:32:24,478 - src.controllers.socket_controller - INFO - SocketController register_event_handlers called (currently minimal).
+2025-07-23 16:32:24,478 - src.controllers.socket_controller - INFO - All socket event handlers registered.
+2025-07-23 16:32:24,478 - src.controllers.economic_cycle_controller - INFO - Economic cycle event handlers registered.
+2025-07-23 16:32:24,478 - src.controllers.trade_controller - INFO - Registering trade socket events
+2025-07-23 16:32:24,478 - src.controllers.trade_controller - INFO - Trade socket events registered successfully
+2025-07-23 16:32:24,480 - src.routes.player_routes - INFO - Player routes registered.
+2025-07-23 16:32:24,482 - src.routes.property_routes - INFO - Property routes registered
+2025-07-23 16:32:24,482 - src.routes.admin_routes - INFO - Main admin blueprint 'admin' registered
+2025-07-23 16:32:24,484 - src.routes.admin_routes - INFO - Admin sub-blueprint 'game_admin' registered with prefix '/api/admin'
+2025-07-23 16:32:24,485 - src.routes.admin_routes - INFO - Admin sub-blueprint 'player_admin' registered with prefix '/api/admin/players'
+2025-07-23 16:32:24,486 - src.routes.admin_routes - INFO - Admin sub-blueprint 'bot_admin' registered with prefix '/api/admin/bots'
+2025-07-23 16:32:24,489 - src.routes.admin_routes - INFO - Admin sub-blueprint 'event_admin' registered with prefix '/api/admin/events'
+2025-07-23 16:32:24,490 - src.routes.admin_routes - INFO - Admin sub-blueprint 'crime_admin' registered with prefix '/api/admin/crime'
+2025-07-23 16:32:24,493 - src.routes.admin_routes - INFO - Admin sub-blueprint 'finance_admin' registered with prefix '/api/admin/finance'
+2025-07-23 16:32:24,495 - src.routes.admin_routes - INFO - Admin sub-blueprint 'property_admin' registered with prefix '/api/admin/properties'
+2025-07-23 16:32:24,497 - src.routes.admin_routes - INFO - Admin sub-blueprint 'auction_admin' registered with prefix '/api/admin/auctions'
+2025-07-23 16:32:24,498 - src.routes.admin_routes - INFO - Admin sub-blueprint 'audit_admin' registered with prefix '/api/admin/audit'
+2025-07-23 16:32:24,499 - src.routes.admin_routes - INFO - Admin sub-blueprint 'economic_admin' registered with prefix '/api/admin/economic'
+2025-07-23 16:32:24,499 - src.routes.admin_routes - INFO - Admin routes registration complete
+2025-07-23 16:32:24,499 - CardDeck_chance - INFO - Chance CardDeck initialized.
+2025-07-23 16:32:24,499 - CardDeck_community_chest - INFO - Community_chest CardDeck initialized.
+2025-07-23 16:32:24,501 - src.routes.finance_routes - INFO - Finance controller initialized with: socketio=True, banker=True, game_state=True
+2025-07-23 16:32:24,502 - src.routes.player.finance_player_routes - INFO - Finance player routes initialized with controller
+2025-07-23 16:32:24,506 - src.routes.remote_routes - INFO - Remote routes registered
+2025-07-23 16:32:24,506 - root - INFO - Remote routes registered successfully
+2025-07-23 16:32:24,507 - src.routes.game_mode_routes - INFO - Game mode routes registered
+2025-07-23 16:32:24,513 - src.routes.auth_routes - INFO - Authentication routes registered.
+2025-07-23 16:32:24,515 - root - INFO - Adaptive difficulty scheduler started with interval of 15 minutes
+2025-07-23 16:32:24,515 - root - INFO - Police patrol scheduler started with interval of 45 minutes
+2025-07-23 16:32:24,515 - root - INFO - Remote play auto-start scheduler initiated
+2025-07-23 16:32:24,515 - root - INFO - Starting server on port 5001 with debug mode disabled
+2025-07-23 16:32:29,518 - root - INFO - Remote play is enabled but no tunnel is configured. Use admin interface to create one.
+2025-07-23 16:32:29,519 - root - INFO - Remote play is enabled but no tunnel is configured. Use admin interface to create one.
+2025-07-23 16:58:41,061 - root - INFO - Running scheduled economic cycle update
+2025-07-23 16:58:41,080 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-23 16:58:41,088 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-23 17:47:17,643 - root - INFO - Running scheduled economic cycle update
+2025-07-23 17:47:17,649 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-23 17:47:17,655 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-23 18:22:25,697 - root - INFO - Running scheduled economic cycle update
+2025-07-23 18:22:25,710 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-23 18:22:25,714 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-23 19:13:38,887 - root - INFO - Running scheduled economic cycle update
+2025-07-23 19:13:38,896 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-23 19:13:38,900 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-23 19:58:59,751 - root - INFO - Running scheduled economic cycle update
+2025-07-23 19:58:59,759 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-23 19:58:59,764 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-23 20:21:12,617 - root - INFO - Running scheduled economic cycle update
+2025-07-23 20:21:12,624 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-23 20:21:12,628 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-23 21:17:05,339 - root - INFO - Running scheduled economic cycle update
+2025-07-23 21:17:05,345 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-23 21:17:05,346 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-23 21:36:36,341 - root - INFO - Running scheduled random economic event
+2025-07-23 21:36:36,344 - root - ERROR - Error triggering random economic event: name 'random' is not defined
+Traceback (most recent call last):
+  File "/Users/kendallgreeven/Monoply mac/app.py", line 966, in trigger_random_economic_event
+    game = random.choice(active_games)
+NameError: name 'random' is not defined
+Traceback (most recent call last):
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/eventlet/hubs/hub.py", line 471, in fire_timers
+    timer()
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/eventlet/hubs/timer.py", line 59, in __call__
+    cb(*args, **kw)
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/eventlet/greenthread.py", line 272, in main
+    result = function(*args, **kwargs)
+  File "/Users/kendallgreeven/Monoply mac/app.py", line 805, in run_delayed_task
+    task_func()
+  File "/Users/kendallgreeven/Monoply mac/app.py", line 984, in trigger_random_economic_event
+    random_interval = random.randint(min_interval, max_interval)
+NameError: name 'random' is not defined
+2025-07-23 21:57:54,190 - root - INFO - Running scheduled economic cycle update
+2025-07-23 21:57:54,204 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-23 21:57:54,208 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-23 22:34:15,083 - root - INFO - Running scheduled economic cycle update
+2025-07-23 22:34:15,090 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-23 22:34:15,091 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-23 23:24:45,759 - root - INFO - Running scheduled economic cycle update
+2025-07-23 23:24:45,768 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-23 23:24:45,773 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 00:23:50,236 - root - INFO - Running scheduled economic cycle update
+2025-07-24 00:23:50,249 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 00:23:50,254 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 01:12:57,280 - root - INFO - Running scheduled economic cycle update
+2025-07-24 01:12:57,290 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 01:12:57,294 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 02:19:33,347 - root - INFO - Running scheduled economic cycle update
+2025-07-24 02:19:33,361 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 02:19:33,365 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 02:54:13,818 - root - INFO - Running scheduled economic cycle update
+2025-07-24 02:54:13,820 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 02:54:13,823 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 03:13:58,151 - root - INFO - Running scheduled economic cycle update
+2025-07-24 03:13:58,157 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 03:13:58,160 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 04:18:59,126 - root - INFO - Running scheduled economic cycle update
+2025-07-24 04:18:59,136 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 04:18:59,140 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 04:51:31,591 - root - INFO - Running scheduled economic cycle update
+2025-07-24 04:51:31,593 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 04:51:31,595 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 05:32:08,374 - root - INFO - Running scheduled economic cycle update
+2025-07-24 05:32:08,381 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 05:32:08,385 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 06:14:00,399 - root - INFO - Running scheduled economic cycle update
+2025-07-24 06:14:00,407 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 06:14:00,411 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 06:59:16,047 - root - INFO - Running scheduled economic cycle update
+2025-07-24 06:59:16,055 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 06:59:16,058 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 07:34:54,382 - root - INFO - Running scheduled economic cycle update
+2025-07-24 07:34:54,394 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 07:34:54,398 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 07:36:54,403 - root - INFO - Running scheduled economic cycle update
+2025-07-24 07:36:54,410 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 07:36:54,414 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 07:37:54,059 - root - INFO - Police patrol completed: Police patrol found no suspicious activity
+2025-07-24 07:38:54,417 - root - INFO - Running scheduled economic cycle update
+2025-07-24 07:38:54,421 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 07:38:54,424 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 07:40:54,428 - root - INFO - Running scheduled economic cycle update
+2025-07-24 07:40:54,436 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 07:40:54,440 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 07:42:54,444 - root - INFO - Running scheduled economic cycle update
+2025-07-24 07:42:54,449 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 07:42:54,453 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 07:44:54,561 - root - INFO - Running scheduled economic cycle update
+2025-07-24 07:44:54,571 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 07:44:54,574 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 07:46:54,583 - root - INFO - Running scheduled economic cycle update
+2025-07-24 07:46:54,589 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 07:46:54,594 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 07:48:54,597 - root - INFO - Running scheduled economic cycle update
+2025-07-24 07:48:54,602 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 07:48:54,605 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 07:50:54,607 - root - INFO - Running scheduled economic cycle update
+2025-07-24 07:50:54,612 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 07:50:54,614 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 07:52:54,617 - root - INFO - Running scheduled economic cycle update
+2025-07-24 07:52:54,621 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 07:52:54,624 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 07:53:50,257 - src.controllers.socket_core - INFO - Client connected: TuCC_BZxioMYSdlCAAAB
+2025-07-24 07:53:50,370 - src.controllers.socket_core - INFO - [AuthSocket] Display mode authentication from SID: TuCC_BZxioMYSdlCAAAB
+2025-07-24 07:53:50,396 - src.controllers.socket_core - INFO - [AuthSocket] All games in database: [(1, '902d3ea9-b9e9-4a57-8b19-afe27a8fecf6', 'active')]
+2025-07-24 07:53:50,401 - src.controllers.socket_core - INFO - [AuthSocket] Found active game: 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (status: active)
+2025-07-24 07:53:50,401 - src.controllers.socket_core - INFO - [AuthSocket] Display SID TuCC_BZxioMYSdlCAAAB joined game room 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (status: active)
+2025-07-24 07:53:50,402 - src.controllers.socket_core - INFO - [ROOM DEBUG] Board joining room: '902d3ea9-b9e9-4a57-8b19-afe27a8fecf6' (type: <class 'str'>)
+2025-07-24 07:53:50,402 - src.controllers.socket_core - INFO - [AuthSocket] SID TuCC_BZxioMYSdlCAAAB is now in rooms: ['TuCC_BZxioMYSdlCAAAB', '902d3ea9-b9e9-4a57-8b19-afe27a8fecf6']
+2025-07-24 07:53:50,402 - src.controllers.socket_core - INFO - [ROOM DEBUG] Testing emit to game room 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6
+2025-07-24 07:53:50,403 - src.controllers.socket_core - INFO - [AuthSocket] Sending initial player positions to board: [{'playerId': 5, 'position': 0, 'name': 'Alice Bot', 'money': 1500}, {'playerId': 6, 'position': 0, 'name': 'Bob Bot', 'money': 1500}, {'playerId': 7, 'position': 0, 'name': 'Charlie Bot', 'money': 1500}, {'playerId': 8, 'position': 0, 'name': 'Diana Bot', 'money': 1500}]
+2025-07-24 07:53:50,404 - src.controllers.socket_game_controller - INFO - [Auth] display authentication from TuCC_BZxioMYSdlCAAAB
+2025-07-24 07:53:50,410 - src.controllers.socket_game_controller - ERROR - Error building game state: 'Player' object has no attribute 'token'
+Traceback (most recent call last):
+  File "/Users/kendallgreeven/Monoply mac/src/controllers/socket_game_controller.py", line 61, in build_complete_game_state
+    'token': player.token or 'car',
+AttributeError: 'Player' object has no attribute 'token'
+2025-07-24 07:53:50,418 - src.controllers.socket_game_controller - INFO - [Auth] display authentication from TuCC_BZxioMYSdlCAAAB
+2025-07-24 07:53:50,424 - src.controllers.socket_game_controller - ERROR - Error building game state: 'Player' object has no attribute 'token'
+Traceback (most recent call last):
+  File "/Users/kendallgreeven/Monoply mac/src/controllers/socket_game_controller.py", line 61, in build_complete_game_state
+    'token': player.token or 'car',
+AttributeError: 'Player' object has no attribute 'token'
+2025-07-24 07:53:50,426 - src.controllers.socket_core - WARNING - Could not find connected player for SID: TuCC_BZxioMYSdlCAAAB
+2025-07-24 07:53:50,426 - src.controllers.socket_controller - INFO - [Socket] Received 'request_game_state' for game 1 from player ID: None (SID: TuCC_BZxioMYSdlCAAAB)
+2025-07-24 07:53:50,426 - src.controllers.socket_controller - WARNING - Received 'request_game_state' from unknown SID.
+2025-07-24 07:53:50,556 - app - WARNING - Unauthorized attempt to get_all_players from SID TuCC_BZxioMYSdlCAAAB
+2025-07-24 07:53:59,923 - src.controllers.socket_core - INFO - Client disconnected: TuCC_BZxioMYSdlCAAAB
+2025-07-24 07:54:01,821 - src.controllers.socket_core - INFO - Client connected: dDP1gZrPDClD8HxWAAAH
+2025-07-24 07:54:01,823 - src.controllers.socket_core - INFO - Client connected: NVWSjvCYB_0WH42FAAAI
+2025-07-24 07:54:01,824 - src.controllers.socket_core - INFO - Client connected: 9_cTKZOF03NQ4TYZAAAJ
+2025-07-24 07:54:01,825 - src.controllers.socket_core - INFO - Client connected: t2IcAIlLAlA_sU3RAAAK
+2025-07-24 07:54:01,826 - src.controllers.socket_core - INFO - Client connected: BXwhghJ-09qrFU_5AAAL
+2025-07-24 07:54:01,859 - src.controllers.socket_core - WARNING - Could not find connected player for SID: NVWSjvCYB_0WH42FAAAI
+2025-07-24 07:54:01,860 - src.controllers.socket_controller - INFO - [Socket] Received 'request_game_state' for game 1 from player ID: None (SID: NVWSjvCYB_0WH42FAAAI)
+2025-07-24 07:54:01,860 - src.controllers.socket_controller - WARNING - Received 'request_game_state' from unknown SID.
+2025-07-24 07:54:01,874 - src.controllers.socket_game_controller - INFO - [Auth] display authentication from NVWSjvCYB_0WH42FAAAI
+2025-07-24 07:54:01,883 - src.controllers.socket_game_controller - ERROR - Error building game state: 'Player' object has no attribute 'token'
+Traceback (most recent call last):
+  File "/Users/kendallgreeven/Monoply mac/src/controllers/socket_game_controller.py", line 61, in build_complete_game_state
+    'token': player.token or 'car',
+AttributeError: 'Player' object has no attribute 'token'
+2025-07-24 07:54:02,960 - src.controllers.socket_core - INFO - Client connected: LxBB1WijqLkuMKgvAAAN
+2025-07-24 07:54:07,455 - src.controllers.socket_core - INFO - Client disconnected: LxBB1WijqLkuMKgvAAAN
+2025-07-24 07:54:07,727 - src.controllers.socket_core - INFO - Client connected: JK5vWM2REOBk7i4FAAAP
+2025-07-24 07:54:31,284 - src.controllers.socket_core - INFO - Client disconnected: JK5vWM2REOBk7i4FAAAP
+2025-07-24 07:54:31,398 - src.controllers.socket_core - INFO - Client connected: rq-Q-GOvswXXfkcyAAAR
+2025-07-24 07:54:36,073 - src.controllers.socket_core - INFO - Client disconnected: rq-Q-GOvswXXfkcyAAAR
+2025-07-24 07:54:36,206 - src.controllers.socket_core - INFO - Client connected: h7SFPI2EPzJVLx68AAAT
+2025-07-24 07:54:54,627 - root - INFO - Running scheduled economic cycle update
+2025-07-24 07:54:54,634 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 07:54:54,637 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 07:55:18,230 - src.controllers.socket_core - INFO - Client disconnected: dDP1gZrPDClD8HxWAAAH
+2025-07-24 07:55:18,235 - src.controllers.socket_core - INFO - Client disconnected: 9_cTKZOF03NQ4TYZAAAJ
+2025-07-24 07:55:18,237 - src.controllers.socket_core - INFO - Client disconnected: t2IcAIlLAlA_sU3RAAAK
+2025-07-24 07:55:18,238 - src.controllers.socket_core - INFO - Client disconnected: BXwhghJ-09qrFU_5AAAL
+2025-07-24 07:55:18,241 - src.controllers.socket_core - INFO - Client disconnected: NVWSjvCYB_0WH42FAAAI
+2025-07-24 07:56:54,640 - root - INFO - Running scheduled economic cycle update
+2025-07-24 07:56:54,644 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 07:56:54,647 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 07:58:54,650 - root - INFO - Running scheduled economic cycle update
+2025-07-24 07:58:54,652 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 07:58:54,654 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:00:54,656 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:00:54,660 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:00:54,662 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:02:54,664 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:02:54,668 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:02:54,671 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:04:54,674 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:04:54,680 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:04:54,685 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found

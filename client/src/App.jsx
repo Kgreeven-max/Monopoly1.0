@@ -16,6 +16,7 @@ import { Box, CircularProgress } from '@mui/material';
 // Import Page Components
 import HomePage from './pages/HomePage';
 import BoardPage from './pages/BoardPage';
+import BoardPageV2 from './pages/BoardPageV2';
 import PlayerPage from './pages/PlayerPage';
 import AdminDashboard from './AdminDashboard';
 import RemotePlayerPage from './pages/RemotePlayerPage';
@@ -132,7 +133,8 @@ function App() {
                 <Routes>
                   <Route path="/" element={<HomePage />} />
                   <Route path="/connect" element={<ConnectPage />} />
-                  <Route path="/board" element={<BoardPage />} />
+                  <Route path="/board" element={<BoardPageV2 />} />
+                  <Route path="/board-old" element={<BoardPage />} />
                   <Route path="/player/:playerId" element={<PlayerPage />} />
                   <Route path="/remote/:playerId" element={<RemotePlayerPage />} />
                   <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />

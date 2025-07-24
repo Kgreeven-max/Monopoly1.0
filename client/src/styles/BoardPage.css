@@ -48,6 +48,24 @@
   margin-right: 0.5rem;
 }
 
+/* Player token bounce animation */
+.player-token {
+  transition: left 0.3s ease-out, top 0.3s ease-out;
+}
+
+.player-token.bouncing {
+  animation: tokenBounce 0.25s ease-in-out;
+}
+
+@keyframes tokenBounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.15);
+  }
+}
+
 .status-indicator.connected {
   background-color: var(--success-500);
 }

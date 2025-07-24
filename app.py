@@ -529,7 +529,12 @@ def health_check():
         }
     })
 
-# Register socket events
+# Register NEW clean socket events
+from src.controllers.socket_game_controller import register_clean_socket_handlers
+register_clean_socket_handlers(socketio, app.config)
+
+# TEMPORARILY keep old handlers for other parts of the app
+# TODO: Remove these once all functionality is migrated
 register_socket_events(socketio, app.config)
 register_economic_events(socketio, app.config)  # Register economic events
 # Register trade socket events

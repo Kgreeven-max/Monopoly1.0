@@ -57,7 +57,9 @@ function gameReducer(state, action) {
       };
     case 'PLAYER_MOVED':
       console.log("[GameContext] Player moved:", action.payload);
-      const { player_id, new_position } = action.payload;
+      // Handle both camelCase (from backend) and snake_case for compatibility
+      const player_id = action.payload.player_id || action.payload.playerId;
+      const new_position = action.payload.new_position || action.payload.newPosition;
       return {
         ...state,
         players: state.players.map(player => 
@@ -74,13 +76,22 @@ function gameReducer(state, action) {
       };
     case 'DICE_ROLLED':
       console.log("[GameContext] Dice rolled:", action.payload);
-      const { dice_values, player_id: rollingPlayerId } = action.payload;
+      // Handle both camelCase (from backend) and snake_case for compatibility
+      const rollingPlayerId = action.payload.player_id || action.payload.playerId;
+      const diceValues = action.payload.dice_values || action.payload.roll;
+      const doubles = action.payload.doubles;
+      
       return {
         ...state,
-        lastDiceRoll: dice_values,
+        lastDiceRoll: {
+          playerId: rollingPlayerId,
+          roll: diceValues,
+          doubles: doubles,
+          timestamp: Date.now()
+        },
         notifications: [
           { 
-            message: `${state.players.find(p => p.id === rollingPlayerId)?.username || `Player ${rollingPlayerId}`} rolled ${dice_values[0]} and ${dice_values[1]}` 
+            message: `${state.players.find(p => p.id === rollingPlayerId)?.username || `Player ${rollingPlayerId}`} rolled ${diceValues[0]} and ${diceValues[1]}` 
           },
           ...state.notifications.slice(0, 19)
         ]

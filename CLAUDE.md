@@ -1,221 +1,267 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides comprehensive guidance to Claude Code (claude.ai/code) when working with the Pinopoly codebase.
 
 ## Project Overview
 
-Pinopoly is a modernized Monopoly-like game with Flask backend and React frontend. It features real-time multiplayer gameplay with WebSocket communication, AI bot players, economic simulation, and advanced financial instruments.
+Pinopoly is a modernized Monopoly-like game built with:
+- **Backend**: Python/Flask with SQLAlchemy ORM, WebSocket support via Flask-SocketIO
+- **Frontend**: React with Vite bundler (dual frontend architecture)
+- **Database**: SQLite for development, configurable for production
+- **Real-time**: WebSocket communication for multiplayer gameplay
+- **Features**: AI bot players, economic simulation, financial instruments, crime system
 
 ## Common Development Commands
 
-### Backend (Python/Flask)
+### Backend Setup & Running
 ```bash
-# Setup backend environment
+# Initial setup
 python scripts/setup_python_backend.py
-
-# Initialize database
 python deployment/init_db.py
 
-# Run the main application
+# Run the application
 python deployment/run_pinopoly.py
 
-# Run tests
+# Testing
 python scripts/run_tests.py
-
-# Run test coverage
 python scripts/run_coverage.py
+python scripts/run_tests.py -t specific_test
 
-# Run specific test
-python scripts/run_tests.py -t test_module_name
+# Database management
+flask db migrate -m "Description"
+flask db upgrade
+python reset_database.py  # Full reset
 ```
 
-### Frontend (React/Vite)
+### Frontend Development
 ```bash
-# Setup frontend (from client/ directory)
+# Main frontend (production)
 cd client
 npm install
+npm run dev      # Development server on port 3001
+npm run build    # Production build
+npm run lint     # Code linting
 
-# Development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Lint code
-npm run lint
-
-# Preview production build
-npm run preview
-```
-
-### Board Organized Frontend (Enhanced/Experimental)
-```bash
-# Alternative frontend with animations (from board_organized/ directory)
+# Enhanced frontend (experimental)
 cd board_organized
 npm install
-
-# Development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Lint code
-npm run lint
-```
-
-### Database Management
-```bash
-# Create migration
-flask db migrate -m "Description"
-
-# Apply migrations
-flask db upgrade
-
-# Reset database (use reset_database.py script)
-python reset_database.py
+npm run dev      # Development server
+npm run build    # Production build
 ```
 
 ## Architecture Overview
 
-### Backend Structure
-- **Controllers**: Business logic for game mechanics, bots, finance, etc. (`src/controllers/`)
-- **Models**: SQLAlchemy database models (`src/models/`)
-- **Routes**: API endpoints organized by domain (`src/routes/`)
-- **Game Logic**: Core game mechanics (`src/game_logic/`)
-- **Socket Events**: Real-time communication handlers (`src/controllers/socket_*`)
+### Backend Structure (`/src/`)
+```
+src/
+├── controllers/          # Business logic controllers
+│   ├── game_controller.py         # Core game mechanics
+│   ├── bot_controller.py          # AI player management
+│   ├── finance_controller.py      # Financial instruments
+│   ├── socket_controller.py       # Socket event registration
+│   ├── socket_core.py            # WebSocket connection management
+│   ├── socket_game_controller.py # Unified game state emissions
+│   └── economic_cycle_controller.py # Economic simulation
+├── models/              # SQLAlchemy database models
+│   ├── player.py               # Player model (human & bot)
+│   ├── property.py             # Board properties
+│   ├── game_state.py           # Game session state
+│   └── bots/                   # Bot personality implementations
+├── routes/              # REST API endpoints
+├── game_logic/          # Core game mechanics
+└── utils/               # Utility functions
+```
 
-### Key Controllers
-- `game_controller.py`: Core game state management
-- `bot_controller.py`: AI player management with 6 bot personalities
-- `finance_controller.py`: Loans, CDs, HELOC, bankruptcy system
-- `socket_core.py`: WebSocket connection management
-- `economic_cycle_controller.py`: Economic simulation
+### Frontend Architecture (Dual System)
 
-### Frontend Structure
-- **Main Frontend** (`client/`): Production-ready React application
-  - Components in `client/src/components/`
-  - Pages in `client/src/pages/`
-  - Socket integration in `client/src/contexts/SocketContext.jsx`
-- **Board Organized Frontend** (`board_organized/`): Enhanced version with animations
-  - Advanced animations using GSAP
-  - Enhanced game board components with animation hooks
-  - Experimental features and improved UX
-  - Contains `AnimationContext.jsx` and `AnimatedGameContext.jsx`
+#### 1. Main Frontend (`/client/`)
+- Production-ready React application
+- Standard game board implementation
+- Stable feature set
 
-### Database Models
-- `Player`: Human and bot players with financial data
-- `Property`: Board properties with development levels
-- `Game`/`GameState`: Game session management
-- `Loan`/`CD`: Financial instruments
-- `Event`: Economic and special events
+#### 2. Enhanced Frontend (`/board_organized/`)
+- Experimental version with advanced animations
+- GSAP integration for smooth transitions
+- Enhanced UX with animation hooks
+- Features:
+  - `AnimationContext.jsx` - Global animation state
+  - `AnimatedGameContext.jsx` - Animation-aware game context
+  - Custom hooks: `usePlayerAnimation.js`, `useSimplePlayerAnimation.js`
+  - Enhanced board components with visual effects
 
-## Development Patterns
+### Database Schema
+- **GameState**: Singleton game state management
+- **Player**: Human and bot players with financial data
+- **Property**: Board spaces with ownership and development
+- **Loan/CD/HELOC**: Financial instruments
+- **Transaction**: Financial transaction history
+- **Event**: Economic and special events
 
-### Adding New Features
-1. Create model in `src/models/` if database changes needed
-2. Add controller logic in `src/controllers/`
-3. Create API routes in `src/routes/`
-4. Add Socket events if real-time updates needed
-5. Update frontend components as needed
-6. Add tests in `tests/`
+## Key Technical Patterns
 
-### Socket Event Pattern
-Real-time events follow this pattern:
+### WebSocket Communication
+The game uses Socket.IO for real-time updates:
+
 ```python
+# Backend event handler pattern
 @socketio.on('event_name')
 def handle_event(data):
     # Process event
-    emit('response_event', response_data, broadcast=True)
+    emit('response_event', response_data, room=room_id)
 ```
 
-### Bot System
-Six bot personalities with different strategies:
-- Conservative, Aggressive, Strategic, Opportunistic, Shark, Investor
-- Located in `src/models/bots/`
-- Managed by `AdaptiveDifficultyController`
-
-### Financial System
-Complex financial instruments including:
-- Loans with variable interest rates
-- Certificates of Deposit (CDs)
-- Home Equity Line of Credit (HELOC)
-- Bankruptcy system
-- Community Fund
-
-## Key Configuration
-
-### Environment Variables
-Required in `.env` file:
-- `SECRET_KEY`: Flask secret key
-- `ADMIN_KEY`: Admin authentication
-- `DATABASE_URI`: Database connection string
-- `ADAPTIVE_DIFFICULTY_ENABLED`: Enable bot difficulty adjustment
-- `POLICE_PATROL_ENABLED`: Enable crime system patrols
-
-### Game Features
-- Economic cycles affecting property values and rent
-- Crime system with 5 crime types and detection mechanics
-- Property development with 5 levels
-- Auction system for property sales
-- Special spaces (Chance, Community Chest, Tax, etc.)
-- Remote multiplayer support via Cloudflare Tunnel
-
-## Testing
-
-### Backend Tests
-- Unit tests in `tests/` directory
-- Integration tests for game flows
-- API endpoint tests
-- Run with `python scripts/run_tests.py`
-
-### Frontend Tests
-- Linting with ESLint: `npm run lint` (in both `client/` and `board_organized/`)
-- Both frontend applications use ESLint with React-specific rules
-
-## Important Notes
-
-### Socket Communication
-The game heavily relies on WebSocket communication for real-time updates. Socket events are handled in:
-- `src/controllers/socket_controller.py`: Main socket event registration
-- `src/controllers/socket_core.py`: Core connection management
-- Individual controller files for domain-specific events
+```javascript
+// Frontend socket pattern
+socket.on('game_state', (state) => {
+    setGameState(state);
+});
+socket.emit('action', { playerId, data });
+```
 
 ### Game State Management
-Game state is managed through:
-- `GameState` model for persistent state
-- `GameController` for game logic
-- Socket events for real-time synchronization
+
+#### Backend Pattern
+- Single source of truth: `GameState` model
+- Unified state emission: `socket_game_controller.build_complete_game_state()`
+- All actions emit complete state after changes
+
+#### Frontend Pattern
+- Single state object in React
+- Socket events update entire state
+- No partial state updates
 
 ### Bot AI System
-AI bots use sophisticated decision-making algorithms:
-- Different strategies for property valuation
-- Auction bidding behaviors
-- Financial instrument usage
-- Adaptive difficulty based on human player performance
-
-### Database Migrations
-Always create migrations for schema changes:
-1. Make model changes
-2. Run `flask db migrate -m "Description"`
-3. Review generated migration
-4. Apply with `flask db upgrade`
-
-### Dual Frontend Architecture
-The project contains two frontend applications:
-- **`client/`**: Stable, production-ready React frontend
-- **`board_organized/`**: Enhanced version with advanced animations and experimental features
-
-When working on frontend features:
-- Use `client/` for stable production code
-- Use `board_organized/` for animation enhancements and experimental UI improvements
-- Both frontends connect to the same Flask backend API
-- Animation-heavy features use GSAP and custom React hooks in `board_organized/`
+Six bot personalities with distinct strategies:
+- **Conservative**: Safe property investments
+- **Aggressive**: High-risk, high-reward
+- **Strategic**: Monopoly-focused
+- **Opportunistic**: Auction specialist
+- **Shark**: Predatory financial tactics
+- **Investor**: Long-term wealth building
 
 ### Animation System (board_organized)
-The enhanced frontend includes:
-- `AnimationContext.jsx`: Global animation state management
-- `usePlayerAnimation.js` and `useSimplePlayerAnimation.js`: Custom hooks for player movement
-- `AnimatedGameBoard.jsx`, `EnhancedGameBoard.jsx`: Advanced board components
-- GSAP integration for smooth transitions and token movements
-- Debug utilities for testing animations
+- **BoardPositionCache**: Pre-calculates all board positions
+- **Player movement**: Smooth transitions with bounce effects
+- **Token stacking**: Multiple players on same space
+- **Performance**: Uses CSS transforms, not DOM manipulation
+
+## Critical Implementation Notes
+
+### Player Movement Animation
+When implementing player movement:
+1. Use pre-calculated positions (BoardPositionCache)
+2. Animate with CSS transforms for performance
+3. Queue movements to prevent overlapping animations
+4. Show dice roll before movement
+5. Bounce through each space, don't teleport
+
+### Socket Event Flow
+1. Frontend sends action (e.g., 'roll_dice')
+2. Backend processes action in controller
+3. Backend emits complete 'game_state'
+4. Frontend updates entire state from emission
+5. Animations triggered by state changes
+
+### Common Pitfalls to Avoid
+- **Don't** query DOM for positions during animations
+- **Don't** use partial state updates
+- **Don't** create new socket events without updating both ends
+- **Don't** modify game state outside of controllers
+- **Don't** use synchronous database queries in socket handlers
+
+### Testing Approach
+1. Backend: Unit tests for controllers and models
+2. API: Integration tests for game flows
+3. Frontend: ESLint for code quality
+4. Socket: Use test scripts (test_board.py, test_bot_move.py)
+
+## Environment Configuration
+
+### Required .env Variables
+```
+SECRET_KEY=your-secret-key
+ADMIN_KEY=admin-authentication-key
+DATABASE_URI=sqlite:///instance/monopoly.db
+ADAPTIVE_DIFFICULTY_ENABLED=true
+POLICE_PATROL_ENABLED=true
+```
+
+### Feature Flags
+- `ADAPTIVE_DIFFICULTY_ENABLED`: Bot difficulty adjustment
+- `POLICE_PATROL_ENABLED`: Crime detection system
+- `PROPERTY_VALUES_FOLLOW_ECONOMY`: Dynamic property values
+- `COMMUNITY_FUND_ENABLED`: Community fund feature
+
+## Current Known Issues
+
+### Player Token Display
+The Player model needs a 'token' attribute for board display:
+```python
+# In socket_game_controller.py line 61
+'token': getattr(player, 'token', None) or 'car',
+```
+
+### Animation Synchronization
+Ensure dice roll completes before movement animation starts.
+
+## Development Workflow
+
+### Adding New Features
+1. Create/modify models in `src/models/`
+2. Add controller logic in `src/controllers/`
+3. Create API routes in `src/routes/`
+4. Add Socket.IO events if real-time needed
+5. Update frontend to handle new events
+6. Write tests in `tests/`
+7. Update this documentation
+
+### Debugging Tools
+- Backend logs: Check console output
+- Frontend: React Developer Tools
+- Socket: Socket.IO client debug mode
+- Database: SQLite browser for direct inspection
+
+## Quick Reference
+
+### Key Files for Common Tasks
+- **Game flow**: `src/controllers/game_controller.py`
+- **Player actions**: `src/controllers/socket_controller.py`
+- **Board display**: `client/src/pages/BoardPage.jsx`
+- **Animations**: `board_organized/hooks/usePlayerAnimation.js`
+- **Game state**: `src/models/game_state.py`
+- **Socket events**: `src/controllers/socket_game_controller.py`
+
+### Testing Game Features
+```bash
+# Create test game with bots
+python test_board.py
+
+# Trigger bot movement
+python test_bot_move.py
+
+# Watch server logs for debugging
+python deployment/run_pinopoly.py
+```
+
+## Architecture Decisions
+
+### Why Dual Frontend?
+- `client/`: Stable, production-ready features
+- `board_organized/`: Experimental animations and UX improvements
+- Allows testing new features without breaking production
+
+### Why Single Game State?
+- Eliminates state synchronization bugs
+- Simplifies debugging
+- Clear source of truth
+- Better performance with complete updates
+
+### Why Pre-calculated Positions?
+- Eliminates DOM queries during animation
+- Consistent positioning across renders
+- Better performance
+- Easier testing
+
+---
+
+*Last updated: Based on recent refactoring for animation system and WebSocket architecture*

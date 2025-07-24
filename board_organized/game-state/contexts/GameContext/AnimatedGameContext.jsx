@@ -129,7 +129,9 @@ function animatedGameReducer(state, action) {
     case 'PLAYER_MOVED':
       console.log("[AnimatedGameContext] Player moved (legacy):", action.payload);
       // For backwards compatibility, but prefer PLAYER_MOVE_INITIATED/COMPLETED
-      const { player_id: legacyPlayerId, new_position: legacyNewPosition } = action.payload;
+      // Handle both camelCase (from backend) and snake_case for compatibility
+      const legacyPlayerId = action.payload.player_id || action.payload.playerId;
+      const legacyNewPosition = action.payload.new_position || action.payload.newPosition;
       return {
         ...state,
         players: state.players.map(player => 

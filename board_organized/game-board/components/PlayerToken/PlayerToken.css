@@ -139,6 +139,11 @@
   transition: transform 0.3s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
+/* Bounce animation for each step */
+.player-token.bouncing {
+  animation: tokenBounce 0.25s ease-in-out;
+}
+
 /* Animation indicator */
 .animation-indicator {
   position: absolute;
@@ -200,6 +205,15 @@
   50% {
     transform: scale(1.05);
     box-shadow: var(--shadow-lg), 0 0 25px rgba(255, 215, 0, 1);
+  }
+}
+
+@keyframes tokenBounce {
+  0%, 100% {
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    transform: scale(1.15) translateY(-8px);
   }
 }
 

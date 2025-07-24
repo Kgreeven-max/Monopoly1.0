@@ -859,6 +859,13 @@ class GameController:
                      self.logger.warning(f"[ROOM DEBUG] Could not get room participants: {e}")
                  
                  self.socketio.emit('dice_rolled', dice_rolled_data, room=room_id)
+                
+                 # ALSO emit complete game state for new architecture
+                 if hasattr(current_app.config, 'socket_game_controller'):
+                     socket_game_controller = current_app.config.get('socket_game_controller')
+                     if socket_game_controller:
+                         socket_game_controller.emit_game_state(room=room_id)
+                
                  if result.get('passed_go'): 
                      go_data = { 'playerId': player_id, 'amount': self.game_logic.GO_SALARY }
                      self.logger.info(f"[SOCKET EMIT DEBUG] Emitting 'go_salary_collected' to room {room_id} with data: {go_data}")
@@ -868,6 +875,26 @@ class GameController:
                  player_moved_data = { 'playerId': player_id, 'newPosition': result.get('new_position'), 'diceTotal': sum(result.get('dice_roll', [0,0])) }
                  self.logger.info(f"[SOCKET EMIT DEBUG] Emitting 'player_moved' to room {room_id} with data: {player_moved_data}")
                  self.socketio.emit('player_moved', player_moved_data, room=room_id)
+                 
+                 # ALSO emit animation event for new architecture
+                 if hasattr(current_app.config, 'socket_game_controller'):
+                     # Calculate path for animation
+                     old_position = player.position if player else 0
+                     new_position = result.get('new_position', 0)
+                     dice_total = sum(result.get('dice_roll', [0,0]))
+                     
+                     # Build path array
+                     path = []
+                     for i in range(dice_total):
+                         path.append((old_position + i + 1) % 40)
+                     
+                     self.socketio.emit('animate_movement', {
+                         'playerId': str(player_id),
+                         'from': old_position,
+                         'to': new_position,
+                         'path': path
+                     }, room=room_id)
+                 
                  if result.get('sent_to_jail'): self.socketio.emit('player_jailed', { 'playerId': player_id, 'reason': result.get('message', 'Sent to jail') }, room=room_id)
                  if landing_action.get('action') == 'paid_rent': self.socketio.emit('rent_paid', { 'payerId': player_id, 'ownerId': landing_action.get('owner_id'), 'amount': landing_action.get('rent_amount'), 'propertyId': landing_action.get('property_id') }, room=room_id)
                  
@@ -1085,6 +1112,12 @@ class GameController:
                 updated_state = None
                 if self.game_logic and hasattr(self.game_logic, 'get_game_state'):
                     updated_state = self.game_logic.get_game_state(game_state.id)
+                
+                # ALSO emit complete game state for new architecture
+                if hasattr(current_app.config, 'socket_game_controller'):
+                    socket_game_controller = current_app.config.get('socket_game_controller')
+                    if socket_game_controller:
+                        socket_game_controller.emit_game_state(room=game_id)
                 
                 if not updated_state:
                     updated_state = self.get_game_state()

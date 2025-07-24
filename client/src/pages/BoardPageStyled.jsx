@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Typography, Button, Paper, Avatar, Chip } from '@mui/material';
+import { Box, Typography, Button, Divider, Paper, Avatar, Chip } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../contexts/SocketContext';
@@ -97,7 +97,6 @@ const BoardPage = () => {
   const [debugMode, setDebugMode] = useState(false);
   const [boardSize, setBoardSize] = useState(80);
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [useTestPlayers, setUseTestPlayers] = useState(false);
   
   // Player position management
   const {
@@ -135,7 +134,6 @@ const BoardPage = () => {
       if (boardRef.current) {
         const rect = boardRef.current.getBoundingClientRect();
         boardPositionCache.initialize(rect.width, rect.height);
-        console.log('[BoardPage] Board size initialized:', rect.width, rect.height);
       }
     };
     
@@ -147,38 +145,9 @@ const BoardPage = () => {
     };
   }, []);
   
-  // Initialize player positions when players update
-  useEffect(() => {
-    if (players.length > 0) {
-      console.log('[BoardPage] Players changed:', players.length, 'players');
-      console.log('[BoardPage] Board initialized:', boardPositionCache.isInitialized());
-      
-      if (boardPositionCache.isInitialized()) {
-        console.log('[BoardPage] Initializing player positions...');
-        players.forEach((player, index) => {
-          console.log(`[BoardPage] Player ${index}:`, player);
-          // Only initialize if not already tracked
-          if (!logicalPositions.has(player.id)) {
-            console.log(`[BoardPage] Initializing position for player ${player.id} at position ${player.position || 0}`);
-            initializePlayer(player.id, player.position || 0);
-          } else {
-            console.log(`[BoardPage] Player ${player.id} already tracked at position`, logicalPositions.get(player.id));
-          }
-        });
-      } else {
-        console.log('[BoardPage] Board not initialized yet, waiting...');
-      }
-    }
-  }, [players, initializePlayer, logicalPositions]);
-  
   // Socket event handlers
   useEffect(() => {
-    if (!socket || !isConnected) {
-      console.log('[BoardPage] Socket not ready:', { socket: !!socket, isConnected });
-      return;
-    }
-    
-    console.log('[BoardPage] Setting up socket handlers');
+    if (!socket || !isConnected) return;
     
     const handleDiceRolled = (data) => {
       console.log('[Dice Rolled]', data);
@@ -202,19 +171,15 @@ const BoardPage = () => {
     };
     
     const handlePlayersUpdate = (data) => {
-      console.log('[Players Update] Received:', data);
-      if (data) {
-        const playersList = data.players || data;
-        if (Array.isArray(playersList)) {
-          console.log('[Players Update] Updating', playersList.length, 'players');
-          setPlayers(playersList);
-          
-          const updates = playersList.map(player => ({
-            playerId: player.id,
-            position: player.position || 0
-          }));
-          batchUpdatePlayers(updates);
-        }
+      console.log('[Players Update]', data);
+      if (data.players) {
+        setPlayers(data.players);
+        
+        const updates = data.players.map(player => ({
+          playerId: player.id,
+          position: player.position || 0
+        }));
+        batchUpdatePlayers(updates);
       }
     };
     
@@ -225,113 +190,20 @@ const BoardPage = () => {
       if (data.status) setGameStatus(data.status);
     };
     
-    // Additional event handlers
-    const handleGameState = (data) => {
-      console.log('[Game State] Received:', data);
-      if (data) {
-        if (data.game_id) {
-          console.log('[Game State] Setting game ID:', data.game_id);
-          setGameId(data.game_id);
-        }
-        if (data.current_player_id) {
-          console.log('[Game State] Setting current player:', data.current_player_id);
-          setCurrentPlayerId(data.current_player_id);
-        }
-        if (data.status) {
-          console.log('[Game State] Setting status:', data.status);
-          setGameStatus(data.status);
-        }
-        if (data.players) {
-          console.log('[Game State] Setting players:', data.players);
-          setPlayers(data.players);
-          // Clear existing positions before updating
-          clearAllPositions();
-          const updates = data.players.map(player => ({
-            playerId: player.id,
-            position: player.position || 0
-          }));
-          batchUpdatePlayers(updates);
-        }
-      }
-    };
-    
-    const handleAllPlayersList = (data) => {
-      console.log('[All Players List] Received:', data);
-      if (data) {
-        const playersList = data.players || data;
-        if (Array.isArray(playersList)) {
-          console.log('[All Players List] Found', playersList.length, 'players');
-          setPlayers(playersList);
-          const updates = playersList.map(player => ({
-            playerId: player.id,
-            position: player.position || 0
-          }));
-          batchUpdatePlayers(updates);
-        } else {
-          console.warn('[All Players List] Invalid data format:', data);
-        }
-      }
-    };
-    
-    const handlePlayerJoined = (data) => {
-      console.log('[Player Joined]', data);
-      if (data && data.player) {
-        setPlayers(prev => [...prev, data.player]);
-        initializePlayer(data.player.id, data.player.position || 0);
-      }
-    };
-    
-    const handlePlayerLeft = (data) => {
-      console.log('[Player Left]', data);
-      if (data && data.playerId) {
-        setPlayers(prev => prev.filter(p => p.id !== data.playerId));
-      }
-    };
-    
-    // Register all event listeners
-    socket.on('game_state', handleGameState);
-    socket.on('all_players_list', handleAllPlayersList);
-    socket.on('player_joined', handlePlayerJoined);
-    socket.on('player_left', handlePlayerLeft);
     socket.on('dice_rolled', handleDiceRolled);
     socket.on('player_moved', handlePlayerMoved);
     socket.on('players_updated', handlePlayersUpdate);
     socket.on('game_state_updated', handleGameStateUpdate);
     
-    // Authenticate and request initial data
-    console.log('[BoardPage] Authenticating socket...');
     socket.emit('authenticate_socket', { mode: 'display' });
     
-    // Request game state and players
-    setTimeout(() => {
-      console.log('[BoardPage] Requesting game state...');
-      socket.emit('get_game_state', {}, (response) => {
-        console.log('[BoardPage] Game state response:', response);
-      });
-      
-      console.log('[BoardPage] Requesting all players...');
-      socket.emit('get_all_players', {}, (response) => {
-        console.log('[BoardPage] All players response:', response);
-        if (response && response.players) {
-          handleAllPlayersList({ players: response.players });
-        }
-      });
-      
-      // Also try without callback
-      socket.emit('request_game_update');
-    }, 200);
-    
     return () => {
-      socket.off('game_state', handleGameState);
-      socket.off('all_players_list', handleAllPlayersList);
-      socket.off('player_joined', handlePlayerJoined);
-      socket.off('player_left', handlePlayerLeft);
       socket.off('dice_rolled', handleDiceRolled);
       socket.off('player_moved', handlePlayerMoved);
       socket.off('players_updated', handlePlayersUpdate);
       socket.off('game_state_updated', handleGameStateUpdate);
     };
-  }, [socket, isConnected, animationEnabled, logicalPositions, animateMovement, moveInstantly, isAnimating, batchUpdatePlayers, clearAllPositions, initializePlayer, players]);
+  }, [socket, isConnected, animationEnabled, logicalPositions, animateMovement, moveInstantly, isAnimating, batchUpdatePlayers]);
   
   // Format property name
   const formatPropertyName = (name) => {
@@ -544,7 +416,7 @@ const BoardPage = () => {
         <Typography variant="h4">Pi-nopoly Board</Typography>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <Chip
-            label={isConnected ? `Connected${players.length > 0 ? ` (${players.length} players)` : ''}` : 'Disconnected'}
+            label={isConnected ? 'Connected' : 'Disconnected'}
             color={isConnected ? 'success' : 'error'}
             size="small"
           />
@@ -693,81 +565,31 @@ const BoardPage = () => {
               
               {/* Test buttons */}
               {debugMode && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => {
-                        const testPlayer = players[0];
-                        if (testPlayer) {
-                          const currentPos = logicalPositions.get(testPlayer.id) || 0;
-                          const newPos = (currentPos + 6) % 40;
-                          animateMovement(testPlayer.id, currentPos, newPos, 6);
-                        }
-                      }}
-                      disabled={isAnyPlayerAnimating()}
-                    >
-                      Test Move (6 spaces)
-                    </Button>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => {
-                        setLastDiceRoll([3, 4]);
-                        setTimeout(() => setLastDiceRoll(null), 3000);
-                      }}
-                    >
-                      Test Dice
-                    </Button>
-                  </Box>
+                <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
                   <Button
-                    variant="outlined"
+                    variant="contained"
                     size="small"
                     onClick={() => {
-                      console.log('[Manual Refresh] Requesting players...');
-                      if (socket && isConnected) {
-                        socket.emit('get_all_players', {}, (response) => {
-                          console.log('[Manual Refresh] Response:', response);
-                        });
-                        socket.emit('request_game_update');
-                        socket.emit('get_game_state');
+                      const testPlayer = players[0];
+                      if (testPlayer) {
+                        const currentPos = logicalPositions.get(testPlayer.id) || 0;
+                        const newPos = (currentPos + 6) % 40;
+                        animateMovement(testPlayer.id, currentPos, newPos, 6);
                       }
                     }}
-                    disabled={!isConnected}
+                    disabled={isAnyPlayerAnimating()}
                   >
-                    Refresh Players
+                    Test Move (6 spaces)
                   </Button>
                   <Button
-                    variant="outlined"
+                    variant="contained"
                     size="small"
-                    color={useTestPlayers ? "secondary" : "primary"}
                     onClick={() => {
-                      setUseTestPlayers(!useTestPlayers);
-                      if (!useTestPlayers) {
-                        // Add test players
-                        const testPlayers = [
-                          { id: 'test1', name: 'Test Player 1', color: '#ff5722', token: 'car', position: 0, is_bot: false },
-                          { id: 'test2', name: 'Test Bot 1', color: '#9c27b0', token: 'hat', position: 5, is_bot: true },
-                          { id: 'test3', name: 'Test Bot 2', color: '#2196f3', token: 'dog', position: 15, is_bot: true }
-                        ];
-                        console.log('[Test Players] Adding test players:', testPlayers);
-                        setPlayers(testPlayers);
-                        clearAllPositions();
-                        const updates = testPlayers.map(player => ({
-                          playerId: player.id,
-                          position: player.position || 0
-                        }));
-                        batchUpdatePlayers(updates);
-                      } else {
-                        // Clear test players
-                        console.log('[Test Players] Clearing test players');
-                        setPlayers([]);
-                        clearAllPositions();
-                      }
+                      setLastDiceRoll([3, 4]);
+                      setTimeout(() => setLastDiceRoll(null), 3000);
                     }}
                   >
-                    {useTestPlayers ? 'Clear Test Players' : 'Add Test Players'}
+                    Test Dice
                   </Button>
                 </Box>
               )}
@@ -784,19 +606,10 @@ const BoardPage = () => {
                 pointerEvents: 'none'
               }}
             >
-              {players.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
-                  No players connected
-                </Typography>
-              ) : (
-                players.map(player => {
+              {players.map(player => {
                 const visualPos = visualPositions.get(player.id);
                 const isCurrentPlayer = player.id === currentPlayerId;
                 const isPlayerAnimating = isAnimating(player.id);
-                
-                if (!visualPos) {
-                  console.warn('[Player Token] No visual position for', player.name, player.id);
-                }
                 
                 return visualPos ? (
                   <Box 
@@ -843,8 +656,7 @@ const BoardPage = () => {
                     </Box>
                   </Box>
                 ) : null;
-                })
-              )}
+              })}
             </Box>
           </Box>
         </Box>
@@ -911,27 +723,11 @@ const BoardPage = () => {
                 Players tracked: {logicalPositions.size}
               </Typography>
               <Typography variant="body2">
-                Visual positions: {visualPositions.size}
-              </Typography>
-              <Typography variant="body2">
-                Total players: {players.length}
-              </Typography>
-              <Typography variant="body2">
                 Animations active: {isAnyPlayerAnimating() ? 'Yes' : 'No'}
               </Typography>
               <Typography variant="body2">
                 Rolling: {isRolling ? 'Yes' : 'No'}
               </Typography>
-              <Box sx={{ borderTop: '1px solid rgba(0,0,0,0.12)', my: 1 }} />
-              <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-                Player positions:
-              </Typography>
-              {players.map(p => (
-                <Typography key={p.id} variant="caption" sx={{ fontSize: '0.7rem', display: 'block' }}>
-                  {p.name}: Logical={logicalPositions.get(p.id) ?? 'none'}, 
-                  Visual={visualPositions.get(p.id) ? 'set' : 'none'}
-                </Typography>
-              ))}
             </Paper>
           )}
         </Box>

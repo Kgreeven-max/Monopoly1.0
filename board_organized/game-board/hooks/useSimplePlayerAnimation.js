@@ -1,65 +1,79 @@
 import { useState, useRef, useCallback } from 'react';
 
 /**
- * Simplified animation hook that integrates with existing GameContext
- * No complex queue system - just smooth CSS-based transitions
+ * Simple animation hook that handles timing for step-by-step player movement
+ * Follows the WARS game pattern: 300ms per space with bounce animation
  */
 export const useSimplePlayerAnimation = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [animatingPlayer, setAnimatingPlayer] = useState(null);
+  const animationInterval = useRef(null);
   const animationTimeouts = useRef(new Set());
 
-  // Clear all animation timeouts
-  const clearAnimationTimeouts = useCallback(() => {
+  // Clear all animation timeouts and intervals
+  const clearAllTimers = useCallback(() => {
+    if (animationInterval.current) {
+      clearInterval(animationInterval.current);
+      animationInterval.current = null;
+    }
     animationTimeouts.current.forEach(timeout => clearTimeout(timeout));
     animationTimeouts.current.clear();
   }, []);
 
-  // Simple step-by-step animation using CSS transitions
-  const animatePlayerMovement = useCallback((playerId, fromPosition, toPosition, steps, onComplete) => {
+  // Animate player movement step by step
+  const animatePlayerMovement = useCallback((playerId, fromPosition, toPosition, steps, onComplete, onStep) => {
     return new Promise((resolve, reject) => {
-      console.log(`[SimpleAnimation] Starting movement for player ${playerId} from ${fromPosition} to ${toPosition} (${steps} steps)`);
+      console.log(`[Animation] Starting movement for player ${playerId} from ${fromPosition} to ${toPosition} (${steps} steps)`);
       
-      // Prevent concurrent animations for the same player
-      if (isAnimating && animatingPlayer === playerId) {
-        console.warn(`Player ${playerId} is already animating, skipping`);
-        return reject(new Error('Player already animating'));
+      // Prevent concurrent animations
+      if (isAnimating) {
+        console.warn(`Animation already in progress, skipping player ${playerId}`);
+        return reject(new Error('Animation already in progress'));
       }
 
-      // Find the player element
-      const playerElement = document.querySelector(`[data-player-id="${playerId}"]`);
-      
-      if (!playerElement) {
-        console.error(`No element found for player ${playerId}`);
-        return reject(new Error('Player element not found'));
+      // Validate inputs
+      if (steps <= 0 || steps > 40) {
+        console.error(`Invalid steps: ${steps}`);
+        return reject(new Error('Invalid number of steps'));
       }
-
-      // Calculate the path the player should take
-      const path = [];
-      let currentPos = fromPosition;
-      
-      for (let i = 0; i < steps; i++) {
-        currentPos = (currentPos + 1) % 40; // Wrap around the board
-        path.push(currentPos);
-      }
-
-      console.log(`[SimpleAnimation] Movement path: ${path.join(' → ')}`);
 
       setIsAnimating(true);
       setAnimatingPlayer(playerId);
 
-      // Add animation class for visual feedback
-      playerElement.classList.add('animating');
+      let currentPos = fromPosition;
+      let moveCount = 0;
 
-      // Animate each step with a delay
-      let stepIndex = 0;
-      const animateStep = () => {
-        if (stepIndex >= path.length) {
+      // Move one space at a time with 300ms interval
+      animationInterval.current = setInterval(() => {
+        if (moveCount < steps) {
+          // Calculate next position (wrap around board)
+          currentPos = (currentPos + 1) % 40;
+          moveCount++;
+
+          console.log(`[Animation] Step ${moveCount}/${steps}: Player ${playerId} at position ${currentPos}`);
+
+          // Call the step callback to update position
+          if (onStep) {
+            onStep(currentPos, moveCount);
+          }
+
+          // Find and animate the player token element
+          const tokenElement = document.querySelector(`[data-player-id="${playerId}"]`);
+          if (tokenElement) {
+            // Add bounce class
+            tokenElement.classList.add('bouncing');
+            
+            // Remove bounce class after 250ms (before next step)
+            const bounceTimeout = setTimeout(() => {
+              tokenElement.classList.remove('bouncing');
+            }, 250);
+            animationTimeouts.current.add(bounceTimeout);
+          }
+        } else {
           // Animation complete
-          console.log(`[SimpleAnimation] Movement complete for player ${playerId}`);
+          clearAllTimers();
           
-          // Remove animation class
-          playerElement.classList.remove('animating');
+          console.log(`[Animation] Movement complete for player ${playerId} at position ${toPosition}`);
           
           setIsAnimating(false);
           setAnimatingPlayer(null);
@@ -69,81 +83,40 @@ export const useSimplePlayerAnimation = () => {
           }
           
           resolve(toPosition);
-          return;
         }
-
-        const targetPosition = path[stepIndex];
-        
-        console.log(`[SimpleAnimation] Step ${stepIndex + 1}/${path.length}: Moving to position ${targetPosition}`);
-
-        // Update the data attribute so the position calculation updates
-        playerElement.dataset.currentPosition = targetPosition.toString();
-        
-        // Trigger a re-render by dispatching a custom event
-        const event = new CustomEvent('playerPositionUpdate', {
-          detail: { playerId, position: targetPosition }
-        });
-        document.dispatchEvent(event);
-
-        stepIndex++;
-        
-        // Schedule next step
-        const timeout = setTimeout(animateStep, 300); // 300ms between steps
-        animationTimeouts.current.add(timeout);
-      };
-
-      // Start the animation
-      animateStep();
+      }, 300); // 300ms per space (matching WARS game)
 
       // Safety timeout to prevent infinite animation
       const safetyTimeout = setTimeout(() => {
-        console.warn(`[SimpleAnimation] Safety timeout reached for player ${playerId}`);
-        clearAnimationTimeouts();
-        playerElement.classList.remove('animating');
+        console.error(`[Animation] Safety timeout reached for player ${playerId}`);
+        clearAllTimers();
         setIsAnimating(false);
         setAnimatingPlayer(null);
         reject(new Error('Animation timeout'));
-      }, steps * 500 + 5000); // Allow 500ms per step plus 5s buffer
+      }, (steps * 300) + 2000); // Allow time for all steps plus 2s buffer
       
       animationTimeouts.current.add(safetyTimeout);
     });
-  }, [isAnimating, animatingPlayer, clearAnimationTimeouts]);
-
-  // Stop animation for a specific player
-  const stopPlayerAnimation = useCallback((playerId) => {
-    if (animatingPlayer === playerId) {
-      console.log(`[SimpleAnimation] Stopping animation for player ${playerId}`);
-      clearAnimationTimeouts();
-      
-      // Remove animation class
-      const playerElement = document.querySelector(`[data-player-id="${playerId}"]`);
-      if (playerElement) {
-        playerElement.classList.remove('animating');
-      }
-      
-      setIsAnimating(false);
-      setAnimatingPlayer(null);
-    }
-  }, [animatingPlayer, clearAnimationTimeouts]);
+  }, [isAnimating, clearAllTimers]);
 
   // Stop all animations
   const stopAllAnimations = useCallback(() => {
-    console.log('[SimpleAnimation] Stopping all animations');
-    clearAnimationTimeouts();
+    console.log('[Animation] Stopping all animations');
+    clearAllTimers();
     
-    // Remove animation class from all players
-    const playerElements = document.querySelectorAll('[data-player-id]');
-    playerElements.forEach(el => el.classList.remove('animating'));
+    // Remove bounce class from any player that might have it
+    document.querySelectorAll('.player-token.bouncing').forEach(el => {
+      el.classList.remove('bouncing');
+    });
     
     setIsAnimating(false);
     setAnimatingPlayer(null);
-  }, [clearAnimationTimeouts]);
+  }, [clearAllTimers]);
 
   return {
     isAnimating,
     animatingPlayer,
     animatePlayerMovement,
-    stopPlayerAnimation,
     stopAllAnimations
   };
 };
