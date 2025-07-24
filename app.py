@@ -86,6 +86,7 @@ from src.migrations.add_fields_to_cd import run_migration as run_add_fields_to_c
 from src.migrations.add_history_to_loan import run_migration as run_add_history_to_loan_migration
 from src.migrations.add_times_passed_go import run_migration as run_add_times_passed_go_migration
 from src.migrations.add_economic_cycle_columns import run_migration as run_add_economic_cycle_columns_migration
+from src.migrations.add_token_color_fields import run_migration as run_add_token_color_fields_migration
 from src.controllers.trade_controller import TradeController # Import TradeController
 from src.routes.trade_routes import trade_routes # Import trade routes
 
@@ -106,7 +107,9 @@ environment = get_environment()
 configure_flask_app(app, environment)
 
 # Set database URI - Add SQLite database connection
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///monopoly.db'
+import os
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "instance", "monopoly.db")}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Set up logging
@@ -270,6 +273,16 @@ with app.app_context(): # Use app context to access db/config safely
                 logging.info('times_passed_go column already exists')
         except Exception as fallback_error:
             logging.error(f'Fallback migration for times_passed_go also failed: {str(fallback_error)}', exc_info=True)
+    
+    # Run migration to add token and color fields to players table
+    try:
+        token_color_migration_result = run_add_token_color_fields_migration(db)
+        if token_color_migration_result:
+            logging.info('Successfully ran add_token_color_fields migration.')
+        else:
+            logging.warning('Failed to run add_token_color_fields migration.')
+    except Exception as e:
+        logging.error(f'Error running add_token_color_fields migration: {str(e)}', exc_info=True)
     
     # Ensure GameState instance exists and has a game_id
     # Use a direct SQL query instead of ORM to avoid issues with missing columns

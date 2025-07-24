@@ -27,6 +27,8 @@ class Player(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     credit_score = db.Column(db.Integer, default=700)  # Credit score range: 300-850
     times_passed_go = db.Column(db.Integer, default=0)  # Track number of times passed GO
+    token = db.Column(db.String(20), default='car')  # Player token (car, shoe, dog, etc.)
+    color = db.Column(db.String(7), default='#999999')  # Player color in hex format
     
     # Foreign Key to link Player to a Game
     game_id = db.Column(db.Integer, db.ForeignKey('games.id'), nullable=True)
@@ -36,18 +38,20 @@ class Player(db.Model):
     # Add ForeignKey to link to Team model
     team_id = db.Column(db.Integer, db.ForeignKey('teams.id'), nullable=True)
     
-    # Relationships
+    # Relationships with optimized lazy loading
     properties = db.relationship(
         'Property',
         primaryjoin='Player.id == Property.owner_id',
-        back_populates='owner'
+        back_populates='owner',
+        lazy='select'  # Default lazy loading
     )
-    crimes = db.relationship('Crime', foreign_keys='Crime.player_id', back_populates='player')
+    crimes = db.relationship('Crime', foreign_keys='Crime.player_id', back_populates='player', lazy='select')
+    loans = db.relationship('Loan', foreign_keys='Loan.player_id', backref='player', lazy='select')
     # The 'team' backref is automatically created by the relationship in Team model
     
     # Transaction relationships
-    outgoing_transactions = db.relationship('Transaction', foreign_keys='Transaction.from_player_id', back_populates='from_player')
-    incoming_transactions = db.relationship('Transaction', foreign_keys='Transaction.to_player_id', back_populates='to_player')
+    outgoing_transactions = db.relationship('Transaction', foreign_keys='Transaction.from_player_id', back_populates='from_player', lazy='select')
+    incoming_transactions = db.relationship('Transaction', foreign_keys='Transaction.to_player_id', back_populates='to_player', lazy='select')
     
     def __repr__(self):
         return f'<Player {self.username} (ID: {self.id})>'
@@ -168,11 +172,15 @@ class Player(db.Model):
         for property in self.properties:
             net_worth += property.current_price
         
+        # Query loans directly to avoid relationship issues
+        from .finance.loan import Loan
+        player_loans = Loan.query.filter_by(player_id=self.id).all()
+        
         # Subtract active loans
-        for loan in self.loans:
-            if loan.is_active and not loan.is_cd:
+        for loan in player_loans:
+            if loan.is_active and loan.loan_type != 'cd':
                 net_worth -= loan.amount
-            elif loan.is_active and loan.is_cd:
+            elif loan.is_active and loan.loan_type == 'cd':
                 net_worth += loan.amount
         
         return net_worth

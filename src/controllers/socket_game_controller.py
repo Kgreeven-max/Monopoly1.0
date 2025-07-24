@@ -36,15 +36,18 @@ class SocketGameController:
             else:
                 # Find most recent active game
                 game_state = GameState.query.filter(
-                    GameState.status.in_(['In Progress', 'Setup', 'Waiting', 'active'])
+                    GameState.status.in_(['In Progress', 'setup', 'Setup', 'Waiting', 'active', 'running'])
                 ).order_by(GameState.id.desc()).first()
                 
             if not game_state:
                 logger.warning("No active game found")
                 return None
                 
-            # Get all players in the game
-            players = Player.query.filter_by(in_game=True).all()
+            # Get all players in the game with their properties eagerly loaded
+            from sqlalchemy.orm import selectinload
+            players = Player.query.filter_by(in_game=True).options(
+                selectinload(Player.properties)
+            ).all()
             
             # Get all properties
             properties = Property.query.all()
@@ -54,18 +57,18 @@ class SocketGameController:
             for player in players:
                 player_data = {
                     'id': str(player.id),
-                    'name': player.username or player.name or f'Player {player.id}',
+                    'name': player.username or f'Player {player.id}',
                     'money': player.money,
                     'position': player.position or 0,
                     'properties': [p.position for p in player.properties],
-                    'token': player.token or 'car',
-                    'color': player.color or '#999999',
+                    'token': getattr(player, 'token', None) or 'car',
+                    'color': getattr(player, 'color', None) or '#999999',
                     'isBot': player.is_bot,
                     'isBankrupt': player.is_bankrupt,
                     'isInJail': player.in_jail,
                     'jailTurns': player.jail_turns,
                     'getOutOfJailCards': player.get_out_of_jail_cards,
-                    'netWorth': player.net_worth,
+                    'netWorth': player.calculate_net_worth(),
                     'isCurrentPlayer': str(player.id) == str(game_state.current_player_id) if game_state.current_player_id else False
                 }
                 player_list.append(player_data)
@@ -79,11 +82,11 @@ class SocketGameController:
                     'type': 'property' if prop.price else 'special',
                     'price': prop.price,
                     'owner': str(prop.owner_id) if prop.owner_id else None,
-                    'houses': prop.house_count,
-                    'hasHotel': prop.has_hotel,
+                    'houses': prop.houses,
+                    'hasHotel': prop.hotel,
                     'isMortgaged': prop.is_mortgaged,
                     'rent': prop.rent,
-                    'group': prop.property_group
+                    'group': prop.color_group
                 }
                 property_list.append(property_data)
             
@@ -91,18 +94,15 @@ class SocketGameController:
             complete_state = {
                 'gameId': game_state.game_id,
                 'status': game_state.status,
-                'round': game_state.round,
+                'round': game_state.turn_number,
                 'currentPlayer': {
                     'id': str(game_state.current_player_id) if game_state.current_player_id else None,
                     'expectedAction': game_state.expected_action_type
                 },
                 'players': player_list,
                 'properties': property_list,
-                'communityFund': game_state.free_parking_money,
-                'lastRoll': {
-                    'dice': game_state.last_dice_roll,
-                    'player': str(game_state.current_player_id) if game_state.last_dice_roll else None
-                } if game_state.last_dice_roll else None,
+                'communityFund': game_state.community_fund,
+                'lastRoll': None,  # TODO: Add last_dice_roll field to GameState model if needed
                 'timestamp': datetime.now().isoformat()
             }
             
@@ -121,7 +121,7 @@ class SocketGameController:
             else:
                 # Find game room and emit
                 game_state = GameState.query.filter(
-                    GameState.status.in_(['In Progress', 'Setup', 'Waiting', 'active'])
+                    GameState.status.in_(['In Progress', 'setup', 'Setup', 'Waiting', 'active', 'running'])
                 ).first()
                 if game_state:
                     self.socketio.emit('game_state', state, room=game_state.game_id)
@@ -144,7 +144,7 @@ class SocketGameController:
                 if game_state:
                     # Join game room
                     game = GameState.query.filter(
-                        GameState.status.in_(['In Progress', 'Setup', 'Waiting', 'active'])
+                        GameState.status.in_(['In Progress', 'setup', 'Setup', 'Waiting', 'active', 'running'])
                     ).first()
                     if game:
                         join_room(game.game_id)
@@ -152,7 +152,7 @@ class SocketGameController:
                     
                     # Send immediate game state
                     emit('game_state', game_state)
-                    emit('auth_success', {'mode': 'display'})
+                    emit('auth_success', {'mode': 'display', 'gameState': game_state})
                 else:
                     emit('auth_error', {'error': 'No active game'})
                     
@@ -166,7 +166,7 @@ class SocketGameController:
                     # Join player room and game room
                     join_room(f'player_{player_id}')
                     game = GameState.query.filter(
-                        GameState.status.in_(['In Progress', 'Setup', 'Waiting', 'active'])
+                        GameState.status.in_(['In Progress', 'setup', 'Setup', 'Waiting', 'active', 'running'])
                     ).first()
                     if game:
                         join_room(game.game_id)

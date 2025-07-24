@@ -19,7 +19,9 @@ Pinopoly is a modernized Monopoly-like game built with:
 python scripts/setup_python_backend.py
 python deployment/init_db.py
 
-# Run the application
+# Run the application (main entry point)
+python app.py
+# Or use the deployment script
 python deployment/run_pinopoly.py
 
 # Testing
@@ -50,6 +52,11 @@ npm run build    # Production build
 ```
 
 ## Architecture Overview
+
+### Application Entry Point
+- **Single app.py**: The main application entry point is `/app.py` at the root level
+- Previous duplicate `src/app.py` has been renamed to `src/app_old.py` to avoid conflicts
+- All initialization, configuration, and route registration happens in the main `app.py`
 
 ### Backend Structure (`/src/`)
 ```

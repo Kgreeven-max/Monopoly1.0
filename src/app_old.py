@@ -25,11 +25,13 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Configure database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///monopoly.db'
+import os
+basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "instance", "monopoly.db")}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize SocketIO
-socketio = SocketIO(app, cors_allowed_origins="*", path="/ws/socket.io")
+socketio = SocketIO(app, cors_allowed_origins="*", path="/ws")
 
 # Initialize GameLogic
 game_logic = GameLogic(app)

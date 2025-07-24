@@ -53,10 +53,10 @@ class Property(db.Model):
     premium_percentage = db.Column(db.Float, nullable=False, default=0)
     premium_amount = db.Column(db.Integer, nullable=False, default=0)
     
-    # Relationship with owner
-    owner = db.relationship('Player', back_populates='properties')
+    # Relationships with optimized lazy loading
+    owner = db.relationship('Player', back_populates='properties', lazy='select')
     # The 'team' backref is automatically created by the relationship in Team model
-    game = db.relationship('Game') # Simple relationship to Game
+    game = db.relationship('Game', lazy='select') # Simple relationship to Game
     
     # Development constants
     DEVELOPMENT_LEVELS = {

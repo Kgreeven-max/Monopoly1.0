@@ -298,9 +298,21 @@ const BoardPage = () => {
     socket.on('players_updated', handlePlayersUpdate);
     socket.on('game_state_updated', handleGameStateUpdate);
     
+    // Authentication response handlers
+    socket.on('auth_success', (data) => {
+      console.log('[BoardPage] Authentication successful:', data);
+      if (data.gameState) {
+        handleGameState(data.gameState);
+      }
+    });
+    
+    socket.on('auth_error', (error) => {
+      console.error('[BoardPage] Authentication failed:', error);
+    });
+    
     // Authenticate and request initial data
     console.log('[BoardPage] Authenticating socket...');
-    socket.emit('authenticate_socket', { mode: 'display' });
+    socket.emit('authenticate', { mode: 'display' });
     
     // Request game state and players
     setTimeout(() => {
@@ -330,6 +342,8 @@ const BoardPage = () => {
       socket.off('player_moved', handlePlayerMoved);
       socket.off('players_updated', handlePlayersUpdate);
       socket.off('game_state_updated', handleGameStateUpdate);
+      socket.off('auth_success');
+      socket.off('auth_error');
     };
   }, [socket, isConnected, animationEnabled, logicalPositions, animateMovement, moveInstantly, isAnimating, batchUpdatePlayers, clearAllPositions, initializePlayer, players]);
   

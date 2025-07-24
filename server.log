@@ -297,3 +297,269 @@ AttributeError: 'Player' object has no attribute 'token'
 2025-07-24 08:04:54,674 - root - INFO - Running scheduled economic cycle update
 2025-07-24 08:04:54,680 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
 2025-07-24 08:04:54,685 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:06:54,688 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:06:54,693 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:06:54,696 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:08:54,699 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:08:54,704 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:08:54,707 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:10:54,711 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:10:54,716 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:10:54,718 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:12:54,722 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:12:54,729 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:12:54,732 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:14:54,772 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:14:54,785 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:14:54,787 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:15:18,492 - src.controllers.socket_core - INFO - Client disconnected: h7SFPI2EPzJVLx68AAAT
+2025-07-24 08:15:18,741 - src.controllers.socket_core - INFO - Client connected: ieeL5yCgdFyf-l2IAAAV
+2025-07-24 08:15:19,738 - src.controllers.socket_core - INFO - Client disconnected: ieeL5yCgdFyf-l2IAAAV
+2025-07-24 08:15:19,822 - src.controllers.socket_core - INFO - Client connected: kvJhwtAIB1QS_xC8AAAX
+2025-07-24 08:16:54,792 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:16:54,797 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:16:54,800 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:18:54,805 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:18:54,812 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:18:54,814 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:20:54,819 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:20:54,825 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:20:54,828 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:22:54,230 - root - INFO - Police patrol completed: Police patrol found no suspicious activity
+2025-07-24 08:22:54,833 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:22:54,837 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:22:54,840 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:24:54,845 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:24:54,852 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:24:54,855 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:26:54,859 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:26:54,864 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:26:54,868 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:28:54,872 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:28:54,873 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:28:54,874 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:29:12,792 - src.controllers.socket_core - INFO - Client disconnected: kvJhwtAIB1QS_xC8AAAX
+2025-07-24 08:29:13,019 - src.controllers.socket_core - INFO - Client connected: 2LXPJismh6JlngaYAAAZ
+2025-07-24 08:29:14,611 - src.controllers.socket_core - INFO - Client disconnected: 2LXPJismh6JlngaYAAAZ
+2025-07-24 08:29:14,713 - src.controllers.socket_core - INFO - Client connected: o9iJC4Ud0GHCes-YAAAb
+2025-07-24 08:29:14,975 - src.controllers.socket_core - INFO - Client disconnected: o9iJC4Ud0GHCes-YAAAb
+2025-07-24 08:29:15,080 - src.controllers.socket_core - INFO - Client connected: DWKxhuYs2K_BR_EeAAAd
+2025-07-24 08:29:22,261 - src.controllers.socket_core - INFO - Client connected: MKf1HbEYCTRNcpxAAAAh
+2025-07-24 08:29:22,264 - src.controllers.socket_core - INFO - Client connected: HMZHR84Uf3FjhIlHAAAi
+2025-07-24 08:29:22,267 - src.controllers.socket_core - INFO - Client connected: sCi-eEqMryBwNgSmAAAj
+2025-07-24 08:29:22,473 - src.controllers.socket_core - INFO - Client connected: jFMIOQf8gGD5QOmNAAAl
+2025-07-24 08:29:22,508 - src.controllers.socket_game_controller - INFO - [Auth] display authentication from jFMIOQf8gGD5QOmNAAAl
+2025-07-24 08:29:22,518 - src.controllers.socket_game_controller - ERROR - Error building game state: 'Player' object has no attribute 'token'
+Traceback (most recent call last):
+  File "/Users/kendallgreeven/Monoply mac/src/controllers/socket_game_controller.py", line 61, in build_complete_game_state
+    'token': player.token or 'car',
+AttributeError: 'Player' object has no attribute 'token'
+2025-07-24 08:30:07,268 - src.controllers.socket_core - INFO - Client disconnected: MKf1HbEYCTRNcpxAAAAh
+2025-07-24 08:30:07,278 - src.controllers.socket_core - INFO - Client disconnected: HMZHR84Uf3FjhIlHAAAi
+2025-07-24 08:30:07,281 - src.controllers.socket_core - INFO - Client disconnected: sCi-eEqMryBwNgSmAAAj
+2025-07-24 08:30:07,511 - src.controllers.socket_core - INFO - Client disconnected: jFMIOQf8gGD5QOmNAAAl
+2025-07-24 08:30:54,878 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:30:54,892 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:30:54,895 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:32:19,006 - src.controllers.socket_core - INFO - Client connected: v852LmYOm7WsjXURAAAn
+2025-07-24 08:32:19,562 - src.controllers.socket_core - INFO - Client connected: qj3xHGA09Gp8XK5AAAAp
+2025-07-24 08:32:19,759 - src.controllers.socket_core - INFO - Client connected: B8Mqgw5EuQYjit5WAAAr
+2025-07-24 08:32:20,026 - src.controllers.socket_core - INFO - Client connected: yhOlLxFGaWkAvDOZAAAt
+2025-07-24 08:32:20,030 - src.controllers.socket_game_controller - INFO - [Auth] display authentication from yhOlLxFGaWkAvDOZAAAt
+2025-07-24 08:32:20,040 - src.controllers.socket_game_controller - ERROR - Error building game state: 'Player' object has no attribute 'token'
+Traceback (most recent call last):
+  File "/Users/kendallgreeven/Monoply mac/src/controllers/socket_game_controller.py", line 61, in build_complete_game_state
+    'token': player.token or 'car',
+AttributeError: 'Player' object has no attribute 'token'
+2025-07-24 08:32:20,042 - src.controllers.socket_core - INFO - Client connected: o8Z8TyFmZ5kAGH_nAAAv
+2025-07-24 08:32:42,086 - src.controllers.socket_core - INFO - Client disconnected: qj3xHGA09Gp8XK5AAAAp
+2025-07-24 08:32:42,091 - src.controllers.socket_core - INFO - Client disconnected: B8Mqgw5EuQYjit5WAAAr
+2025-07-24 08:32:42,093 - src.controllers.socket_core - INFO - Client disconnected: yhOlLxFGaWkAvDOZAAAt
+2025-07-24 08:32:42,095 - src.controllers.socket_core - INFO - Client disconnected: o8Z8TyFmZ5kAGH_nAAAv
+2025-07-24 08:32:42,096 - src.controllers.socket_core - INFO - Client disconnected: v852LmYOm7WsjXURAAAn
+2025-07-24 08:32:43,600 - src.controllers.socket_core - INFO - Client connected: rIBRgvIY92WeITyaAAA2
+2025-07-24 08:32:43,603 - src.controllers.socket_core - INFO - Client connected: NyD83948kETryoBvAAA3
+2025-07-24 08:32:43,604 - src.controllers.socket_core - INFO - Client connected: D9kCqC_iRov4TDA6AAA4
+2025-07-24 08:32:43,604 - src.controllers.socket_core - INFO - Client connected: ABGSfgdGZcNOeU-wAAA5
+2025-07-24 08:32:43,605 - src.controllers.socket_core - INFO - Client connected: o3Vu5YUV_hpmGYKSAAA6
+2025-07-24 08:32:43,607 - src.controllers.socket_core - WARNING - Could not find connected player for SID: o3Vu5YUV_hpmGYKSAAA6
+2025-07-24 08:32:43,607 - src.controllers.socket_controller - INFO - [Socket] Received 'request_game_state' for game 1 from player ID: None (SID: o3Vu5YUV_hpmGYKSAAA6)
+2025-07-24 08:32:43,607 - src.controllers.socket_controller - WARNING - Received 'request_game_state' from unknown SID.
+2025-07-24 08:32:43,612 - src.controllers.socket_game_controller - INFO - [Auth] display authentication from o3Vu5YUV_hpmGYKSAAA6
+2025-07-24 08:32:43,619 - src.controllers.socket_game_controller - ERROR - Error building game state: 'Player' object has no attribute 'token'
+Traceback (most recent call last):
+  File "/Users/kendallgreeven/Monoply mac/src/controllers/socket_game_controller.py", line 61, in build_complete_game_state
+    'token': player.token or 'car',
+AttributeError: 'Player' object has no attribute 'token'
+2025-07-24 08:32:54,900 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:32:54,909 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:32:54,911 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:33:32,614 - src.controllers.socket_core - INFO - Client disconnected: DWKxhuYs2K_BR_EeAAAd
+2025-07-24 08:33:53,350 - src.controllers.socket_core - INFO - Client disconnected: rIBRgvIY92WeITyaAAA2
+2025-07-24 08:33:53,353 - src.controllers.socket_core - INFO - Client disconnected: NyD83948kETryoBvAAA3
+2025-07-24 08:33:53,354 - src.controllers.socket_core - INFO - Client disconnected: D9kCqC_iRov4TDA6AAA4
+2025-07-24 08:33:53,355 - src.controllers.socket_core - INFO - Client disconnected: ABGSfgdGZcNOeU-wAAA5
+2025-07-24 08:33:53,365 - src.controllers.socket_core - INFO - Client disconnected: o3Vu5YUV_hpmGYKSAAA6
+2025-07-24 08:34:54,916 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:34:54,919 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:34:54,920 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:36:54,924 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:36:54,930 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:36:54,932 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:38:54,937 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:38:54,940 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:38:54,942 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:40:54,915 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:40:54,920 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:40:54,923 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:42:54,929 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:42:54,944 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:42:54,947 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:43:14,158 - src.controllers.socket_core - INFO - Client connected: su0NUNr0xdmf7_gjAAA9
+2025-07-24 08:43:14,159 - src.controllers.socket_core - INFO - Client connected: Zvs5GKiSf1vZz65_AAA-
+2025-07-24 08:43:14,164 - src.controllers.socket_game_controller - INFO - [Auth] display authentication from su0NUNr0xdmf7_gjAAA9
+2025-07-24 08:43:14,170 - src.controllers.socket_game_controller - ERROR - Error building game state: 'Player' object has no attribute 'token'
+Traceback (most recent call last):
+  File "/Users/kendallgreeven/Monoply mac/src/controllers/socket_game_controller.py", line 61, in build_complete_game_state
+    'token': getattr(player, 'token', None) or 'car',
+AttributeError: 'Player' object has no attribute 'token'
+2025-07-24 08:43:14,428 - src.controllers.socket_core - INFO - Client connected: S1S4yRgkEA1cpJ2SAABA
+2025-07-24 08:43:14,739 - src.controllers.socket_core - INFO - Client connected: dSVEudAEKwR0cwRNAABC
+2025-07-24 08:43:14,793 - src.controllers.socket_core - INFO - Client connected: BnRdT_DFSzCLuOqiAABE
+2025-07-24 08:43:15,272 - src.controllers.socket_core - INFO - Client disconnected: dSVEudAEKwR0cwRNAABC
+2025-07-24 08:43:15,274 - src.controllers.socket_core - INFO - Client disconnected: su0NUNr0xdmf7_gjAAA9
+2025-07-24 08:43:15,276 - src.controllers.socket_core - INFO - Client disconnected: S1S4yRgkEA1cpJ2SAABA
+2025-07-24 08:43:15,278 - src.controllers.socket_core - INFO - Client disconnected: BnRdT_DFSzCLuOqiAABE
+2025-07-24 08:43:15,279 - src.controllers.socket_core - INFO - Client disconnected: Zvs5GKiSf1vZz65_AAA-
+2025-07-24 08:43:18,665 - src.controllers.socket_core - INFO - Client connected: r8J82TRMwmE_2TVqAABK
+2025-07-24 08:43:18,667 - src.controllers.socket_core - INFO - Client connected: kHeRkvNx-3wcwyaXAABL
+2025-07-24 08:43:18,668 - src.controllers.socket_core - INFO - Client connected: Emyvc7-PBesBIa3ZAABM
+2025-07-24 08:43:18,668 - src.controllers.socket_core - INFO - Client connected: O-JoFHzcHdLCrjaFAABN
+2025-07-24 08:43:18,669 - src.controllers.socket_core - INFO - Client connected: cnCQVSeWaR9y6ZuSAABO
+2025-07-24 08:43:20,155 - src.controllers.socket_core - WARNING - Could not find connected player for SID: cnCQVSeWaR9y6ZuSAABO
+2025-07-24 08:43:20,156 - src.controllers.socket_controller - INFO - [Socket] Received 'request_game_state' for game 1 from player ID: None (SID: cnCQVSeWaR9y6ZuSAABO)
+2025-07-24 08:43:20,156 - src.controllers.socket_controller - WARNING - Received 'request_game_state' from unknown SID.
+2025-07-24 08:43:20,157 - src.controllers.socket_game_controller - INFO - [Auth] display authentication from cnCQVSeWaR9y6ZuSAABO
+2025-07-24 08:43:20,184 - src.controllers.socket_game_controller - ERROR - Error building game state: 'Player' object has no attribute 'token'
+Traceback (most recent call last):
+  File "/Users/kendallgreeven/Monoply mac/src/controllers/socket_game_controller.py", line 61, in build_complete_game_state
+    'token': getattr(player, 'token', None) or 'car',
+AttributeError: 'Player' object has no attribute 'token'
+2025-07-24 08:43:26,450 - src.controllers.socket_core - INFO - Client disconnected: kHeRkvNx-3wcwyaXAABL
+2025-07-24 08:43:26,459 - src.controllers.socket_core - INFO - Client disconnected: cnCQVSeWaR9y6ZuSAABO
+2025-07-24 08:43:26,461 - src.controllers.socket_core - INFO - Client disconnected: O-JoFHzcHdLCrjaFAABN
+2025-07-24 08:43:26,465 - src.controllers.socket_core - INFO - Client disconnected: r8J82TRMwmE_2TVqAABK
+2025-07-24 08:43:26,469 - src.controllers.socket_core - INFO - Client disconnected: Emyvc7-PBesBIa3ZAABM
+2025-07-24 08:43:30,846 - src.controllers.socket_core - INFO - Client connected: 8X4xw9X2OWFHT4tyAABQ
+2025-07-24 08:43:31,954 - src.controllers.socket_core - INFO - Client disconnected: 8X4xw9X2OWFHT4tyAABQ
+2025-07-24 08:43:32,389 - src.controllers.socket_core - INFO - Client connected: GNClRj1B1LwoaQRRAABS
+2025-07-24 08:43:44,616 - src.controllers.socket_core - INFO - Client disconnected: GNClRj1B1LwoaQRRAABS
+2025-07-24 08:43:44,705 - src.controllers.socket_core - INFO - Client connected: 1SKvSIzflUIwq59eAABU
+2025-07-24 08:43:45,993 - src.controllers.socket_core - INFO - Client disconnected: 1SKvSIzflUIwq59eAABU
+2025-07-24 08:43:46,222 - src.controllers.socket_core - INFO - Client connected: fs6fWPAUv8VeoWbDAABW
+2025-07-24 08:44:44,466 - src.controllers.socket_core - INFO - Client disconnected: fs6fWPAUv8VeoWbDAABW
+2025-07-24 08:44:44,632 - src.controllers.socket_core - INFO - Client connected: 6yQL5AIquyy0T6SGAABY
+2025-07-24 08:44:52,914 - src.models.game_state - INFO - Resetting GameState for game_id: 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6
+2025-07-24 08:44:52,987 - src.controllers.admin_controller - ERROR - Failed to reset game: (raised as a result of Query-invoked autoflush; consider using a session.no_autoflush block if this flush is occurring prematurely)
+(sqlite3.OperationalError) attempt to write a readonly database
+[SQL: UPDATE game_state SET current_player_id=?, player_order=?, current_lap=?, community_fund=?, inflation_state=?, inflation_rate=?, base_interest_rate=?, start_time=?, started_at=?, status=?, game_id=?, turn_timer=?, turn_number=?, _community_chest_cards_json=?, game_log=?, expected_action_type=?, _expected_action_details_json=? WHERE game_state.id = ?]
+[parameters: (None, None, 0, 0, 'stable', 0.03, 0.05, '2025-07-24 15:44:52.915451', None, 'setup', '5ff71802-3aa0-4b7c-b466-17c7859ed0c6', None, 0, None, None, None, None, 1)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Traceback (most recent call last):
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: attempt to write a readonly database
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/kendallgreeven/Monoply mac/src/controllers/admin_controller.py", line 91, in reset_game
+    players = Player.query.filter_by(in_game=True).all()
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/query.py", line 2858, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
+    return self._execute_internal(
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/session.py", line 2230, in _execute_internal
+    ) = compile_state_cls.orm_pre_session_exec(
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/context.py", line 577, in orm_pre_session_exec
+    session._autoflush()
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/session.py", line 3065, in _autoflush
+    raise e.with_traceback(sys.exc_info()[2])
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/session.py", line 3054, in _autoflush
+    self.flush()
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/session.py", line 4353, in flush
+    self._flush(objects)
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/session.py", line 4489, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/session.py", line 4449, in _flush
+    flush_context.execute()
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/persistence.py", line 85, in save_obj
+    _emit_update_statements(
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/orm/persistence.py", line 912, in _emit_update_statements
+    c = connection.execute(
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/base.py", line 2352, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/kendallgreeven/Library/Python/3.9/lib/python/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (raised as a result of Query-invoked autoflush; consider using a session.no_autoflush block if this flush is occurring prematurely)
+(sqlite3.OperationalError) attempt to write a readonly database
+[SQL: UPDATE game_state SET current_player_id=?, player_order=?, current_lap=?, community_fund=?, inflation_state=?, inflation_rate=?, base_interest_rate=?, start_time=?, started_at=?, status=?, game_id=?, turn_timer=?, turn_number=?, _community_chest_cards_json=?, game_log=?, expected_action_type=?, _expected_action_details_json=? WHERE game_state.id = ?]
+[parameters: (None, None, 0, 0, 'stable', 0.03, 0.05, '2025-07-24 15:44:52.915451', None, 'setup', '5ff71802-3aa0-4b7c-b466-17c7859ed0c6', None, 0, None, None, None, None, 1)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-07-24 08:44:53,007 - src.routes.admin.game_admin_routes - INFO - Game reset result: {'success': False, 'error': "Failed to reset game: (raised as a result of Query-invoked autoflush; consider using a session.no_autoflush block if this flush is occurring prematurely)\n(sqlite3.OperationalError) attempt to write a readonly database\n[SQL: UPDATE game_state SET current_player_id=?, player_order=?, current_lap=?, community_fund=?, inflation_state=?, inflation_rate=?, base_interest_rate=?, start_time=?, started_at=?, status=?, game_id=?, turn_timer=?, turn_number=?, _community_chest_cards_json=?, game_log=?, expected_action_type=?, _expected_action_details_json=? WHERE game_state.id = ?]\n[parameters: (None, None, 0, 0, 'stable', 0.03, 0.05, '2025-07-24 15:44:52.915451', None, 'setup', '5ff71802-3aa0-4b7c-b466-17c7859ed0c6', None, 0, None, None, None, None, 1)]\n(Background on this error at: https://sqlalche.me/e/20/e3q8)"}
+2025-07-24 08:44:54,950 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:44:54,954 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:44:54,957 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:46:08,306 - src.controllers.socket_core - INFO - Client connected: 8X7xbiZA-fuAJrYUAABe
+2025-07-24 08:46:08,308 - src.controllers.socket_core - INFO - Client connected: 9mpEjGsZj_PMpO6aAABf
+2025-07-24 08:46:08,308 - src.controllers.socket_core - INFO - Client connected: h7lGNvekUDfnzHFwAABg
+2025-07-24 08:46:08,310 - src.controllers.socket_core - INFO - Client connected: 4Xk9OPEicWOWHsCJAABh
+2025-07-24 08:46:08,311 - src.controllers.socket_core - INFO - Client connected: kuwHIlzgAQblk4SiAABi
+2025-07-24 08:46:44,642 - src.controllers.socket_core - INFO - Client disconnected: 6yQL5AIquyy0T6SGAABY
+2025-07-24 08:46:54,961 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:46:54,967 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:46:54,972 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:47:57,696 - src.controllers.socket_core - INFO - Client connected: f0aBUGDwdQwVyOG0AABk
+2025-07-24 08:48:42,714 - src.controllers.socket_core - INFO - Client disconnected: f0aBUGDwdQwVyOG0AABk
+2025-07-24 08:48:54,975 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:48:54,982 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:48:54,985 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:48:58,369 - src.controllers.socket_core - INFO - Client disconnected: 8X7xbiZA-fuAJrYUAABe
+2025-07-24 08:48:58,375 - src.controllers.socket_core - INFO - Client disconnected: 9mpEjGsZj_PMpO6aAABf
+2025-07-24 08:48:58,378 - src.controllers.socket_core - INFO - Client disconnected: h7lGNvekUDfnzHFwAABg
+2025-07-24 08:48:58,380 - src.controllers.socket_core - INFO - Client disconnected: 4Xk9OPEicWOWHsCJAABh
+2025-07-24 08:48:58,382 - src.controllers.socket_core - INFO - Client disconnected: kuwHIlzgAQblk4SiAABi
+2025-07-24 08:50:54,989 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:50:54,993 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:50:54,996 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:52:55,000 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:52:55,007 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:52:55,010 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:54:55,014 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:54:55,018 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:54:55,021 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found
+2025-07-24 08:56:55,024 - root - INFO - Running scheduled economic cycle update
+2025-07-24 08:56:55,028 - root - INFO - Processing economic cycle for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6 (ID: 1)
+2025-07-24 08:56:55,031 - root - WARNING - Economic cycle update failed for game 902d3ea9-b9e9-4a57-8b19-afe27a8fecf6: No active players found

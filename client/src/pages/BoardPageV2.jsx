@@ -126,6 +126,9 @@ const BoardPageV2 = () => {
     // Authentication response
     const handleAuthSuccess = (data) => {
       console.log('[BoardV2] Authentication successful:', data);
+      if (data.gameState) {
+        handleGameState(data.gameState);
+      }
     };
     
     const handleAuthError = (error) => {
