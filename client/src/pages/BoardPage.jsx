@@ -130,46 +130,58 @@ const BoardPage = () => {
   });
   
   // Initialize board position cache when board mounts
+  const [cacheInitialized, setCacheInitialized] = useState(false);
+  
   useEffect(() => {
     const updateBoardSize = () => {
       if (boardRef.current) {
         const rect = boardRef.current.getBoundingClientRect();
-        boardPositionCache.initialize(rect.width, rect.height);
-        console.log('[BoardPage] Board size initialized:', rect.width, rect.height);
+        
+        // Only initialize if we have valid dimensions
+        if (rect.width > 0 && rect.height > 0) {
+          boardPositionCache.initialize(rect.width, rect.height);
+          console.log('[BoardPage] Board size initialized:', rect.width, rect.height);
+          setCacheInitialized(true);
+        } else {
+          console.log('[BoardPage] Invalid board dimensions, retrying...');
+          setTimeout(updateBoardSize, 100); // Retry after 100ms
+        }
       }
     };
     
+    // Initial attempt
     updateBoardSize();
+    
+    // Also try after a short delay in case the board hasn't rendered yet
+    const initTimer = setTimeout(updateBoardSize, 100);
+    
     window.addEventListener('resize', updateBoardSize);
     
     return () => {
+      clearTimeout(initTimer);
       window.removeEventListener('resize', updateBoardSize);
     };
   }, []);
   
-  // Initialize player positions when players update
+  // Initialize player positions when players update and cache is ready
   useEffect(() => {
-    if (players.length > 0) {
+    if (players.length > 0 && cacheInitialized) {
       console.log('[BoardPage] Players changed:', players.length, 'players');
       console.log('[BoardPage] Board initialized:', boardPositionCache.isInitialized());
       
-      if (boardPositionCache.isInitialized()) {
-        console.log('[BoardPage] Initializing player positions...');
-        players.forEach((player, index) => {
-          console.log(`[BoardPage] Player ${index}:`, player);
-          // Only initialize if not already tracked
-          if (!logicalPositions.has(player.id)) {
-            console.log(`[BoardPage] Initializing position for player ${player.id} at position ${player.position || 0}`);
-            initializePlayer(player.id, player.position || 0);
-          } else {
-            console.log(`[BoardPage] Player ${player.id} already tracked at position`, logicalPositions.get(player.id));
-          }
-        });
-      } else {
-        console.log('[BoardPage] Board not initialized yet, waiting...');
-      }
+      console.log('[BoardPage] Initializing player positions...');
+      players.forEach((player, index) => {
+        console.log(`[BoardPage] Player ${index}:`, player);
+        // Only initialize if not already tracked
+        if (!logicalPositions.has(player.id)) {
+          console.log(`[BoardPage] Initializing position for player ${player.id} at position ${player.position || 0}`);
+          initializePlayer(player.id, player.position || 0);
+        } else {
+          console.log(`[BoardPage] Player ${player.id} already tracked at position`, logicalPositions.get(player.id));
+        }
+      });
     }
-  }, [players, initializePlayer, logicalPositions]);
+  }, [players, cacheInitialized, initializePlayer, logicalPositions]);
   
   // Socket event handlers
   useEffect(() => {
@@ -798,9 +810,9 @@ const BoardPage = () => {
                 pointerEvents: 'none'
               }}
             >
-              {players.length === 0 ? (
+              {players.length === 0 || !cacheInitialized ? (
                 <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
-                  No players connected
+                  {!cacheInitialized ? 'Initializing board...' : 'No players connected'}
                 </Typography>
               ) : (
                 players.map(player => {
@@ -808,11 +820,11 @@ const BoardPage = () => {
                 const isCurrentPlayer = player.id === currentPlayerId;
                 const isPlayerAnimating = isAnimating(player.id);
                 
-                if (!visualPos) {
+                if (!visualPos && cacheInitialized) {
                   console.warn('[Player Token] No visual position for', player.name, player.id);
                 }
                 
-                return visualPos ? (
+                return visualPos && cacheInitialized ? (
                   <Box 
                     key={player.id}
                     data-player-id={player.id}
