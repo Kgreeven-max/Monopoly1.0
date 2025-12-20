@@ -4,7 +4,10 @@ import type { GameState } from '@pinopoly/game-engine';
 interface PropertySheetProps {
   position: number;
   gameState: GameState;
+  playerId?: string;
   onClose: () => void;
+  onMortgage?: (propertyId: number) => void;
+  onUnmortgage?: (propertyId: number) => void;
 }
 
 const SPACE_NAMES = [
@@ -29,13 +32,21 @@ const COLOR_CLASSES: Record<string, string> = {
   blue: 'bg-[#0000FF]',
 };
 
-export function PropertySheet({ position, gameState, onClose }: PropertySheetProps) {
+export function PropertySheet({ position, gameState, playerId, onClose, onMortgage, onUnmortgage }: PropertySheetProps) {
   const property = gameState.properties[position];
   const spaceName = SPACE_NAMES[position] || `Space ${position}`;
 
   const owner = property?.ownerId
     ? gameState.players[property.ownerId]
     : null;
+
+  // Check if current player owns this property
+  const isOwner = playerId && property?.ownerId === playerId;
+  const player = playerId ? gameState.players[playerId] : null;
+
+  // Calculate mortgage/unmortgage values
+  const mortgageValue = property ? Math.floor((property.price || 0) / 2) : 0;
+  const unmortgageCost = Math.floor(mortgageValue * 1.1); // 10% interest
 
   return (
     <>
@@ -130,7 +141,7 @@ export function PropertySheet({ position, gameState, onClose }: PropertySheetPro
                   <div>
                     <p className="text-white/60 text-sm">Mortgage Value</p>
                     <p className="text-white font-bold">
-                      ${Math.floor((property.price || 0) / 2)}
+                      ${mortgageValue}
                     </p>
                   </div>
                   <div className="text-right">
@@ -140,6 +151,39 @@ export function PropertySheet({ position, gameState, onClose }: PropertySheetPro
                     </p>
                   </div>
                 </div>
+
+                {/* Mortgage Actions - only show if player owns this property */}
+                {isOwner && (
+                  <div className="space-y-2">
+                    {property.isMortgaged ? (
+                      <button
+                        onClick={() => onUnmortgage?.(position)}
+                        disabled={!player || player.money < unmortgageCost}
+                        className="w-full py-3 bg-green-500 hover:bg-green-600 disabled:bg-green-500/50 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-colors"
+                      >
+                        Unmortgage (${unmortgageCost})
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onMortgage?.(position)}
+                        disabled={(property.houses || 0) > 0}
+                        className="w-full py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-500/50 disabled:cursor-not-allowed text-black rounded-xl font-bold transition-colors"
+                      >
+                        Mortgage (+${mortgageValue})
+                      </button>
+                    )}
+                    {(property.houses || 0) > 0 && !property.isMortgaged && (
+                      <p className="text-yellow-400 text-xs text-center">
+                        Sell all houses before mortgaging
+                      </p>
+                    )}
+                    {property.isMortgaged && player && player.money < unmortgageCost && (
+                      <p className="text-red-400 text-xs text-center">
+                        Need ${unmortgageCost - player.money} more to unmortgage
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </>
           ) : (

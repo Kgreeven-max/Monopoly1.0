@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { usePlayerStore } from '../store/playerStore';
 import { SocketEvents } from '@pinopoly/shared';
 import type { GameState } from '@pinopoly/game-engine';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || '';
+
+// Module-level singleton socket instance - shared across all components
+let socketInstance: Socket | null = null;
+let isSocketInitialized = false;
 
 interface UseSocketReturn {
   socket: Socket | null;
@@ -15,8 +19,7 @@ interface UseSocketReturn {
 }
 
 export function useSocket(): UseSocketReturn {
-  const socketRef = useRef<Socket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(socketInstance?.connected ?? false);
 
   const {
     setPlayer,
@@ -26,16 +29,18 @@ export function useSocket(): UseSocketReturn {
     reset,
   } = usePlayerStore();
 
-  // Initialize socket connection
+  // Initialize socket connection (singleton pattern)
   const initSocket = useCallback(() => {
-    if (socketRef.current?.connected) return;
+    if (socketInstance?.connected) return socketInstance;
+    if (isSocketInitialized && socketInstance) return socketInstance;
 
     const socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       autoConnect: false,
     });
 
-    socketRef.current = socket;
+    socketInstance = socket;
+    isSocketInitialized = true;
 
     socket.on('connect', () => {
       setIsConnected(true);
@@ -112,6 +117,24 @@ export function useSocket(): UseSocketReturn {
     return socket;
   }, [setPlayer, setRoomCode, setGameState, setIsHost, reset]);
 
+  // Sync connection state when socket already exists
+  useEffect(() => {
+    if (socketInstance) {
+      setIsConnected(socketInstance.connected);
+
+      const handleConnect = () => setIsConnected(true);
+      const handleDisconnect = () => setIsConnected(false);
+
+      socketInstance.on('connect', handleConnect);
+      socketInstance.on('disconnect', handleDisconnect);
+
+      return () => {
+        socketInstance?.off('connect', handleConnect);
+        socketInstance?.off('disconnect', handleDisconnect);
+      };
+    }
+  }, []);
+
   // Join game
   const joinGame = useCallback((roomCode: string, playerName: string, token: string, color?: string) => {
     const socket = initSocket();
@@ -138,27 +161,26 @@ export function useSocket(): UseSocketReturn {
 
   // Disconnect
   const disconnect = useCallback(() => {
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-      socketRef.current = null;
+    if (socketInstance) {
+      socketInstance.disconnect();
+      socketInstance = null;
+      isSocketInitialized = false;
     }
     reset();
   }, [reset]);
 
-  // Generic emit
+  // Generic emit - uses module-level socket
   const emit = useCallback((event: string, data?: any) => {
-    if (socketRef.current?.connected) {
-      socketRef.current.emit(event, data);
+    if (socketInstance?.connected) {
+      console.log('[useSocket] Emitting:', event, data);
+      socketInstance.emit(event, data);
+    } else {
+      console.warn('[useSocket] Cannot emit, socket not connected:', event);
     }
   }, []);
 
-  // NOTE: We intentionally do NOT disconnect on component unmount.
-  // The socket should persist across screen changes (JoinScreen -> LobbyScreen -> GameScreen).
-  // Only disconnect when explicitly called via disconnect() function (e.g., when leaving game).
-  // The socket will be cleaned up when the browser tab closes or user navigates away.
-
   return {
-    socket: socketRef.current,
+    socket: socketInstance,
     isConnected,
     joinGame,
     disconnect,

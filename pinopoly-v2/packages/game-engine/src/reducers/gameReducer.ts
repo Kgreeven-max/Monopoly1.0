@@ -208,6 +208,7 @@ export function gameReducer(
           ...state.players,
           [playerId]: newPlayer,
         },
+        playerOrder: [...state.playerOrder, playerId],
         lastActionAt: Date.now(),
       };
 
@@ -261,6 +262,7 @@ export function gameReducer(
           ...state.players,
           [botId]: newBot,
         },
+        playerOrder: [...state.playerOrder, botId],
         lastActionAt: Date.now(),
       };
 
@@ -284,6 +286,7 @@ export function gameReducer(
       const newState: GameState = {
         ...state,
         players: remainingPlayers,
+        playerOrder: state.playerOrder.filter(id => id !== playerId),
         lastActionAt: Date.now(),
       };
 
@@ -749,6 +752,25 @@ export function gameReducer(
       return [newState, events];
     }
 
+    case ActionTypes.ROLL_FOR_DOUBLES: {
+      const { playerId } = action.payload;
+      const currentPlayer = getCurrentPlayer(state);
+
+      if (currentPlayer.id !== playerId) {
+        throw new Error('Not your turn');
+      }
+
+      if (!currentPlayer.inJail) {
+        throw new Error('Player not in jail');
+      }
+
+      if (state.phase !== 'jail_decision') {
+        throw new Error('Cannot roll for doubles in current phase');
+      }
+
+      return handleJailRoll(state, playerId, events);
+    }
+
     // =========================================================================
     // CARD ACTIONS
     // =========================================================================
@@ -829,6 +851,472 @@ export function gameReducer(
       }
 
       return [finalState, events];
+    }
+
+    // =========================================================================
+    // AUCTION ACTIONS
+    // =========================================================================
+
+    case ActionTypes.PLACE_BID: {
+      const { playerId, auctionId, amount } = action.payload;
+      const auction = state.activeAuction;
+
+      if (!auction || auction.id !== auctionId) {
+        throw new Error('No active auction or auction ID mismatch');
+      }
+
+      if (!auction.participants.includes(playerId)) {
+        throw new Error('Not a participant in this auction');
+      }
+
+      if (auction.passed.includes(playerId)) {
+        throw new Error('Player has already passed');
+      }
+
+      const player = state.players[playerId];
+      if (!player) throw new Error('Player not found');
+
+      if (amount <= auction.currentBid) {
+        throw new Error('Bid must be higher than current bid');
+      }
+
+      if (player.money < amount) {
+        throw new Error('Insufficient funds for bid');
+      }
+
+      const updatedAuction = {
+        ...auction,
+        currentBid: amount,
+        highestBidderId: playerId,
+      };
+
+      const newState: GameState = {
+        ...state,
+        activeAuction: updatedAuction,
+        lastActionAt: Date.now(),
+      };
+
+      events.push(
+        createEvent(
+          newState,
+          'BID_PLACED',
+          {
+            playerId,
+            amount,
+            propertyId: auction.propertyId,
+          },
+          playerId
+        )
+      );
+
+      return [newState, events];
+    }
+
+    case ActionTypes.PASS_AUCTION: {
+      const { playerId, auctionId } = action.payload;
+      const auction = state.activeAuction;
+
+      if (!auction || auction.id !== auctionId) {
+        throw new Error('No active auction or auction ID mismatch');
+      }
+
+      if (!auction.participants.includes(playerId)) {
+        throw new Error('Not a participant in this auction');
+      }
+
+      if (auction.passed.includes(playerId)) {
+        throw new Error('Player has already passed');
+      }
+
+      // Add player to passed list
+      const newPassed = [...auction.passed, playerId];
+      const remainingBidders = auction.participants.filter(
+        (id) => !newPassed.includes(id)
+      );
+
+      // Check if auction should end
+      if (remainingBidders.length <= 1) {
+        // Auction ends
+        if (auction.highestBidderId) {
+          // Someone won the auction
+          const winner = state.players[auction.highestBidderId];
+          const property = state.properties[auction.propertyId];
+
+          const updatedWinner = {
+            ...winner,
+            money: winner.money - auction.currentBid,
+          };
+
+          const updatedProperty = {
+            ...property,
+            ownerId: auction.highestBidderId,
+          };
+
+          const newState: GameState = {
+            ...state,
+            players: {
+              ...state.players,
+              [auction.highestBidderId]: updatedWinner,
+            },
+            properties: {
+              ...state.properties,
+              [auction.propertyId]: updatedProperty,
+            },
+            activeAuction: null,
+            phase: 'turn_end',
+            lastActionAt: Date.now(),
+          };
+
+          events.push(
+            createEvent(
+              newState,
+              'AUCTION_ENDED',
+              {
+                propertyId: auction.propertyId,
+                winnerId: auction.highestBidderId,
+                winningBid: auction.currentBid,
+              },
+              playerId
+            )
+          );
+
+          return [newState, events];
+        } else {
+          // No bids - property remains unowned
+          const newState: GameState = {
+            ...state,
+            activeAuction: null,
+            phase: 'turn_end',
+            lastActionAt: Date.now(),
+          };
+
+          events.push(
+            createEvent(
+              newState,
+              'AUCTION_ENDED',
+              {
+                propertyId: auction.propertyId,
+                winnerId: null,
+                winningBid: 0,
+              },
+              playerId
+            )
+          );
+
+          return [newState, events];
+        }
+      }
+
+      // Auction continues
+      const updatedAuction = {
+        ...auction,
+        passed: newPassed,
+      };
+
+      const newState: GameState = {
+        ...state,
+        activeAuction: updatedAuction,
+        lastActionAt: Date.now(),
+      };
+
+      events.push(
+        createEvent(
+          newState,
+          'AUCTION_PLAYER_PASSED',
+          {
+            playerId,
+            propertyId: auction.propertyId,
+            remainingBidders: remainingBidders.length,
+          },
+          playerId
+        )
+      );
+
+      return [newState, events];
+    }
+
+    // =========================================================================
+    // BANKRUPTCY ACTIONS
+    // =========================================================================
+
+    case ActionTypes.BANKRUPT_PLAYER: {
+      const { playerId, creditorId } = action.payload;
+      const player = state.players[playerId];
+
+      if (!player) throw new Error('Player not found');
+      if (player.isBankrupt) throw new Error('Player already bankrupt');
+
+      // Count existing bankruptcies
+      const bankruptCount = Object.values(state.players).filter(
+        (p) => p.isBankrupt
+      ).length;
+
+      // Get all properties owned by the bankrupt player
+      const playerProperties = Object.entries(state.properties)
+        .filter(([_, prop]) => prop.ownerId === playerId)
+        .map(([id, prop]) => ({ id: parseInt(id), prop }));
+
+      // Update player state
+      const bankruptPlayer = {
+        ...player,
+        isBankrupt: true,
+        bankruptcyOrder: bankruptCount + 1,
+        money: 0,
+        getOutOfJailCards: 0,
+      };
+
+      // Transfer properties
+      let updatedProperties = { ...state.properties };
+      let creditorMoney = 0;
+
+      if (creditorId && state.players[creditorId]) {
+        // Transfer to creditor
+        creditorMoney = player.money; // Give remaining cash to creditor
+
+        for (const { id, prop } of playerProperties) {
+          updatedProperties[id] = {
+            ...prop,
+            ownerId: creditorId,
+            // Keep mortgage status - creditor must pay 10% to keep mortgaged
+          };
+        }
+      } else {
+        // Return to bank - unmortgage and make available
+        for (const { id, prop } of playerProperties) {
+          updatedProperties[id] = {
+            ...prop,
+            ownerId: null,
+            isMortgaged: false,
+            houses: 0,
+          };
+        }
+      }
+
+      // Update creditor if applicable
+      let updatedPlayers = {
+        ...state.players,
+        [playerId]: bankruptPlayer,
+      };
+
+      if (creditorId && state.players[creditorId]) {
+        updatedPlayers[creditorId] = {
+          ...state.players[creditorId],
+          money: state.players[creditorId].money + creditorMoney,
+          getOutOfJailCards:
+            state.players[creditorId].getOutOfJailCards + player.getOutOfJailCards,
+        };
+      }
+
+      // Check if game should end
+      const activePlayers = state.playerOrder.filter(
+        (id) => !updatedPlayers[id].isBankrupt
+      );
+
+      let newState: GameState = {
+        ...state,
+        players: updatedPlayers,
+        properties: updatedProperties,
+        phase: 'turn_end',
+        lastActionAt: Date.now(),
+      };
+
+      events.push(
+        createEvent(
+          newState,
+          'PLAYER_BANKRUPT',
+          {
+            playerId,
+            creditorId,
+            propertiesTransferred: playerProperties.length,
+          },
+          playerId
+        )
+      );
+
+      // Check for game end
+      if (activePlayers.length <= 1) {
+        const winnerId = activePlayers[0];
+        newState = {
+          ...newState,
+          status: 'finished',
+        };
+
+        events.push(
+          createEvent(newState, 'GAME_ENDED', {
+            reason: 'bankruptcy',
+            winnerId,
+          })
+        );
+      }
+
+      return [newState, events];
+    }
+
+    // =========================================================================
+    // TRADE ACTIONS
+    // =========================================================================
+
+    case ActionTypes.PROPOSE_TRADE: {
+      const { proposerId, recipientId, offer, request } = action.payload;
+      const proposer = state.players[proposerId];
+      const recipient = state.players[recipientId];
+
+      if (!proposer) throw new Error('Proposer not found');
+      if (!recipient) throw new Error('Recipient not found');
+      if (proposer.isBankrupt) throw new Error('Bankrupt players cannot trade');
+      if (recipient.isBankrupt) throw new Error('Cannot trade with bankrupt player');
+
+      // Validate proposer has offered items
+      if (offer.money > proposer.money) {
+        throw new Error('Insufficient funds for trade offer');
+      }
+      if (offer.getOutOfJailCards > proposer.getOutOfJailCards) {
+        throw new Error('Insufficient Get Out of Jail cards');
+      }
+      for (const propId of offer.propertyIds) {
+        const prop = state.properties[propId];
+        if (!prop || prop.ownerId !== proposerId) {
+          throw new Error('Cannot offer property you do not own');
+        }
+      }
+
+      const trade = {
+        id: `trade-${Date.now()}-${proposerId}`,
+        proposerId,
+        recipientId,
+        offer,
+        request,
+        status: 'pending' as const,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 120000, // 2 minute expiry
+      };
+
+      const newState: GameState = {
+        ...state,
+        activeTrades: [...state.activeTrades, trade],
+        lastActionAt: Date.now(),
+      };
+
+      events.push(
+        createEvent(
+          newState,
+          'TRADE_PROPOSED',
+          { trade },
+          proposerId
+        )
+      );
+
+      return [newState, events];
+    }
+
+    case ActionTypes.ACCEPT_TRADE: {
+      const { tradeId, playerId } = action.payload;
+      const trade = state.activeTrades.find(t => t.id === tradeId);
+
+      if (!trade) throw new Error('Trade not found');
+      if (trade.recipientId !== playerId) throw new Error('Not the trade recipient');
+      if (trade.status !== 'pending') throw new Error('Trade is not pending');
+
+      const proposer = state.players[trade.proposerId];
+      const recipient = state.players[trade.recipientId];
+
+      if (!proposer || !recipient) throw new Error('Trade participants not found');
+
+      // Validate both parties can still fulfill the trade
+      if (trade.offer.money > proposer.money) {
+        throw new Error('Proposer no longer has sufficient funds');
+      }
+      if (trade.request.money > recipient.money) {
+        throw new Error('Recipient cannot afford requested items');
+      }
+
+      // Execute the trade - transfer assets
+      let updatedProposer = { ...proposer };
+      let updatedRecipient = { ...recipient };
+      let updatedProperties = { ...state.properties };
+
+      // Transfer money
+      updatedProposer.money = updatedProposer.money - trade.offer.money + trade.request.money;
+      updatedRecipient.money = updatedRecipient.money - trade.request.money + trade.offer.money;
+
+      // Transfer Get Out of Jail cards
+      updatedProposer.getOutOfJailCards =
+        updatedProposer.getOutOfJailCards - trade.offer.getOutOfJailCards + trade.request.getOutOfJailCards;
+      updatedRecipient.getOutOfJailCards =
+        updatedRecipient.getOutOfJailCards - trade.request.getOutOfJailCards + trade.offer.getOutOfJailCards;
+
+      // Transfer properties from proposer to recipient
+      for (const propId of trade.offer.propertyIds) {
+        updatedProperties[propId] = {
+          ...updatedProperties[propId],
+          ownerId: trade.recipientId,
+        };
+      }
+
+      // Transfer properties from recipient to proposer
+      for (const propId of trade.request.propertyIds) {
+        updatedProperties[propId] = {
+          ...updatedProperties[propId],
+          ownerId: trade.proposerId,
+        };
+      }
+
+      const newState: GameState = {
+        ...state,
+        players: {
+          ...state.players,
+          [trade.proposerId]: updatedProposer,
+          [trade.recipientId]: updatedRecipient,
+        },
+        properties: updatedProperties,
+        activeTrades: state.activeTrades.filter(t => t.id !== tradeId),
+        lastActionAt: Date.now(),
+      };
+
+      events.push(
+        createEvent(
+          newState,
+          'TRADE_ACCEPTED',
+          {
+            tradeId,
+            proposerId: trade.proposerId,
+            recipientId: trade.recipientId,
+          },
+          playerId
+        )
+      );
+
+      return [newState, events];
+    }
+
+    case ActionTypes.REJECT_TRADE: {
+      const { tradeId, playerId } = action.payload;
+      const trade = state.activeTrades.find(t => t.id === tradeId);
+
+      if (!trade) throw new Error('Trade not found');
+      if (trade.recipientId !== playerId && trade.proposerId !== playerId) {
+        throw new Error('Not a trade participant');
+      }
+
+      const newState: GameState = {
+        ...state,
+        activeTrades: state.activeTrades.filter(t => t.id !== tradeId),
+        lastActionAt: Date.now(),
+      };
+
+      events.push(
+        createEvent(
+          newState,
+          'TRADE_REJECTED',
+          {
+            tradeId,
+            rejectedBy: playerId,
+          },
+          playerId
+        )
+      );
+
+      return [newState, events];
     }
 
     default:

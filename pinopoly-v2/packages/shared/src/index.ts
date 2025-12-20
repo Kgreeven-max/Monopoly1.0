@@ -45,6 +45,7 @@ export const SocketEvents = {
   GAME_ROLL_FOR_DOUBLES: 'game:rollForDoubles',
   GAME_EXECUTE_CARD: 'game:executeCard',
   EXECUTE_CARD: 'game:executeCard', // Alias for controller compatibility
+  GAME_DECLARE_BANKRUPTCY: 'game:declareBankruptcy',
 
   TRADE_PROPOSE: 'trade:propose',
   TRADE_ACCEPT: 'trade:accept',
@@ -92,6 +93,7 @@ export const SocketEvents = {
   GAME_HOUSE_BUILT: 'game:houseBuilt',
   GAME_CARD_DRAWN: 'game:cardDrawn',
   GAME_PLAYER_BANKRUPT: 'game:playerBankrupt',
+  GAME_PLAYER_RELEASED_FROM_JAIL: 'game:playerReleasedFromJail',
   GAME_TURN_CHANGED: 'game:turnChanged',
   GAME_ENDED: 'game:ended',
 

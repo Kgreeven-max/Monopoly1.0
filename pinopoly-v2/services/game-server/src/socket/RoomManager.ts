@@ -61,6 +61,10 @@ export class RoomManager {
       // Jail events
       socket.on(SocketEvents.GAME_PAY_JAIL_FINE, () => this.handlePayJailFine(socket));
       socket.on(SocketEvents.GAME_USE_JAIL_CARD, () => this.handleUseJailCard(socket));
+      socket.on(SocketEvents.GAME_ROLL_FOR_DOUBLES, () => this.handleRollForDoubles(socket));
+
+      // Bankruptcy events
+      socket.on(SocketEvents.GAME_DECLARE_BANKRUPTCY, () => this.handleDeclareBankruptcy(socket));
 
       // Card events
       socket.on(SocketEvents.GAME_EXECUTE_CARD, () => this.handleExecuteCard(socket));
@@ -68,6 +72,11 @@ export class RoomManager {
       // Auction events
       socket.on(SocketEvents.AUCTION_BID, (data) => this.handleAuctionBid(socket, data));
       socket.on(SocketEvents.AUCTION_PASS, (data) => this.handleAuctionPass(socket, data));
+
+      // Trade events
+      socket.on(SocketEvents.TRADE_PROPOSE, (data) => this.handleProposeTrade(socket, data));
+      socket.on(SocketEvents.TRADE_ACCEPT, (data) => this.handleAcceptTrade(socket, data));
+      socket.on(SocketEvents.TRADE_REJECT, (data) => this.handleRejectTrade(socket, data));
 
       // Disconnect
       socket.on('disconnect', () => this.handleDisconnect(socket));
@@ -103,15 +112,19 @@ export class RoomManager {
 
     this.rooms.set(roomCode, room);
 
-    // Save to database
-    await this.prisma.game.create({
-      data: {
-        id: gameId,
-        roomCode,
-        status: 'lobby',
-        gameConfig: gameConfig as any,
-      },
-    });
+    // Save to database (optional - may not have DATABASE_URL in dev)
+    try {
+      await this.prisma.game.create({
+        data: {
+          id: gameId,
+          roomCode,
+          status: 'lobby',
+          gameConfig: gameConfig as any,
+        },
+      });
+    } catch (dbError) {
+      console.warn('[RoomManager] Database save skipped (no DATABASE_URL)');
+    }
 
     return room;
   }
@@ -212,16 +225,20 @@ export class RoomManager {
       // Also send lobby state for displays
       socket.emit(SocketEvents.LOBBY_STATE, this.getLobbyState(room));
 
-      // Save participant to database
-      await this.prisma.gameParticipant.create({
-        data: {
-          gameId: room.id,
-          playerName,
-          token,
-          color,
-          isBot: false,
-        },
-      });
+      // Save participant to database (optional)
+      try {
+        await this.prisma.gameParticipant.create({
+          data: {
+            gameId: room.id,
+            playerName,
+            token,
+            color,
+            isBot: false,
+          },
+        });
+      } catch (dbError) {
+        console.warn('[RoomManager] Database participant save skipped');
+      }
     } catch (error) {
       console.error('Join error:', error);
       socket.emit(SocketEvents.JOIN_ERROR, { message: 'Failed to join game' });
@@ -294,8 +311,8 @@ export class RoomManager {
 
     room.state = newState;
 
-    this.io.to(roomCode).emit(SocketEvents.LOBBY_PLAYER_JOINED, {
-      player: newState.players[botId],
+    this.io.to(roomCode).emit(SocketEvents.PLAYER_JOINED, {
+      gameState: newState,
     });
   }
 
@@ -313,8 +330,8 @@ export class RoomManager {
 
     room.state = newState;
 
-    this.io.to(roomCode).emit(SocketEvents.LOBBY_PLAYER_LEFT, {
-      playerId: data.botId,
+    this.io.to(roomCode).emit(SocketEvents.PLAYER_LEFT, {
+      gameState: newState,
     });
   }
 
@@ -352,14 +369,18 @@ export class RoomManager {
 
       room.state = newState;
 
-      // Update database
-      await this.prisma.game.update({
-        where: { id: room.id },
-        data: {
-          status: 'playing',
-          startedAt: new Date(),
-        },
-      });
+      // Update database (optional)
+      try {
+        await this.prisma.game.update({
+          where: { id: room.id },
+          data: {
+            status: 'playing',
+            startedAt: new Date(),
+          },
+        });
+      } catch (dbError) {
+        console.warn('[RoomManager] Database game update skipped');
+      }
 
       // Broadcast game started event (controller expects this)
       this.io.to(roomCode).emit(SocketEvents.GAME_STARTED, newState);
@@ -585,6 +606,96 @@ export class RoomManager {
     }
   }
 
+  private handleRollForDoubles(socket: AuthenticatedSocket): void {
+    const room = this.getRoomBySocket(socket);
+    if (!room || !this.isCurrentPlayer(room, socket.playerId)) return;
+
+    try {
+      const [newState, events] = gameReducer(room.state, {
+        type: ActionTypes.ROLL_FOR_DOUBLES,
+        payload: { playerId: socket.playerId! },
+      });
+
+      room.state = newState;
+
+      // Emit dice roll event
+      const diceEvent = events.find(e => e.type === 'DICE_ROLLED');
+      if (diceEvent) {
+        const diceData = diceEvent.payload.dice as { die1: number; die2: number };
+        this.io.to(room.code).emit(SocketEvents.GAME_DICE_ROLLED, {
+          playerId: socket.playerId,
+          dice: [diceData.die1, diceData.die2],
+        });
+      }
+
+      // Emit jail release if applicable
+      const releaseEvent = events.find(e => e.type === 'RELEASED_FROM_JAIL');
+      if (releaseEvent) {
+        this.io.to(room.code).emit(SocketEvents.GAME_PLAYER_RELEASED_FROM_JAIL, {
+          playerId: socket.playerId,
+          reason: 'doubles',
+        });
+      }
+
+      // Emit move event if player moved
+      const moveEvent = events.find(e => e.type === 'PLAYER_MOVED');
+      if (moveEvent) {
+        this.io.to(room.code).emit(SocketEvents.GAME_PLAYER_MOVED, moveEvent.payload);
+      }
+
+      this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
+    } catch (error) {
+      socket.emit(SocketEvents.ERROR, { code: 'ACTION_ERROR', message: String(error) });
+    }
+  }
+
+  private handleDeclareBankruptcy(socket: AuthenticatedSocket): void {
+    const room = this.getRoomBySocket(socket);
+    if (!room || !socket.playerId) return;
+
+    try {
+      // Determine creditor - find who is owed money (rent owner, etc.)
+      // For simplicity, we'll check if we're on someone else's property
+      const player = room.state.players[socket.playerId];
+      const currentProperty = room.state.properties[player.position];
+      const creditorId = currentProperty?.ownerId !== socket.playerId
+        ? currentProperty?.ownerId || null
+        : null;
+
+      const [newState, events] = gameReducer(room.state, {
+        type: ActionTypes.BANKRUPT_PLAYER,
+        payload: {
+          playerId: socket.playerId,
+          creditorId,
+        },
+      });
+
+      room.state = newState;
+
+      // Emit bankruptcy event
+      const bankruptEvent = events.find(e => e.type === 'PLAYER_BANKRUPT');
+      if (bankruptEvent) {
+        this.io.to(room.code).emit(SocketEvents.GAME_PLAYER_BANKRUPT, bankruptEvent.payload);
+      }
+
+      // Check for game end
+      const gameEndEvent = events.find(e => e.type === 'GAME_ENDED');
+      if (gameEndEvent) {
+        this.io.to(room.code).emit(SocketEvents.GAME_ENDED, gameEndEvent.payload);
+      }
+
+      this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
+
+      // Check if next player is bot
+      if (newState.status === 'playing') {
+        this.checkBotTurn(room);
+      }
+    } catch (error) {
+      console.error('Declare bankruptcy error:', error);
+      socket.emit(SocketEvents.ERROR, { code: 'ACTION_ERROR', message: String(error) });
+    }
+  }
+
   private handleExecuteCard(socket: AuthenticatedSocket): void {
     const room = this.getRoomBySocket(socket);
     if (!room || !this.isCurrentPlayer(room, socket.playerId)) return;
@@ -681,6 +792,95 @@ export class RoomManager {
 
       this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
     } catch (error) {
+      socket.emit(SocketEvents.ERROR, { code: 'ACTION_ERROR', message: String(error) });
+    }
+  }
+
+  private handleProposeTrade(
+    socket: AuthenticatedSocket,
+    data: { recipientId: string; offer: any; request: any }
+  ): void {
+    const room = this.getRoomBySocket(socket);
+    if (!room || !socket.playerId) return;
+
+    try {
+      const [newState, events] = gameReducer(room.state, {
+        type: ActionTypes.PROPOSE_TRADE,
+        payload: {
+          proposerId: socket.playerId,
+          recipientId: data.recipientId,
+          offer: data.offer,
+          request: data.request,
+        },
+      });
+
+      room.state = newState;
+
+      // Emit trade proposed event
+      const tradeEvent = events.find(e => e.type === 'TRADE_PROPOSED');
+      if (tradeEvent) {
+        this.io.to(room.code).emit(SocketEvents.TRADE_PROPOSED, tradeEvent.payload);
+      }
+
+      this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
+    } catch (error) {
+      console.error('Propose trade error:', error);
+      socket.emit(SocketEvents.ERROR, { code: 'ACTION_ERROR', message: String(error) });
+    }
+  }
+
+  private handleAcceptTrade(socket: AuthenticatedSocket, data: { tradeId: string }): void {
+    const room = this.getRoomBySocket(socket);
+    if (!room || !socket.playerId) return;
+
+    try {
+      const [newState, events] = gameReducer(room.state, {
+        type: ActionTypes.ACCEPT_TRADE,
+        payload: {
+          tradeId: data.tradeId,
+          playerId: socket.playerId,
+        },
+      });
+
+      room.state = newState;
+
+      // Emit trade accepted event
+      const tradeEvent = events.find(e => e.type === 'TRADE_ACCEPTED');
+      if (tradeEvent) {
+        this.io.to(room.code).emit(SocketEvents.TRADE_ACCEPTED, tradeEvent.payload);
+      }
+
+      this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
+    } catch (error) {
+      console.error('Accept trade error:', error);
+      socket.emit(SocketEvents.ERROR, { code: 'ACTION_ERROR', message: String(error) });
+    }
+  }
+
+  private handleRejectTrade(socket: AuthenticatedSocket, data: { tradeId: string }): void {
+    const room = this.getRoomBySocket(socket);
+    if (!room || !socket.playerId) return;
+
+    try {
+      const [newState, events] = gameReducer(room.state, {
+        type: ActionTypes.REJECT_TRADE,
+        payload: {
+          tradeId: data.tradeId,
+          playerId: socket.playerId,
+        },
+      });
+
+      room.state = newState;
+
+      // Emit trade rejected event
+      const tradeEvent = events.find(e => e.type === 'TRADE_REJECTED');
+      if (tradeEvent) {
+        this.io.to(room.code).emit(SocketEvents.TRADE_REJECTED, tradeEvent.payload);
+      }
+
+      this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
+    } catch (error) {
+      console.error('Reject trade error:', error);
       socket.emit(SocketEvents.ERROR, { code: 'ACTION_ERROR', message: String(error) });
     }
   }

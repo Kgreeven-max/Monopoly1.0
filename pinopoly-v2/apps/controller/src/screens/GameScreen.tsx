@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePlayerStore, useMyPlayer, useIsMyTurn, useCurrentPhase } from '../store/playerStore';
 import { useSocket } from '../hooks/useSocket';
@@ -6,6 +7,7 @@ import { ActionPanel } from '../components/ActionPanel';
 import { StatusBar } from '../components/StatusBar';
 import { PropertySheet } from '../components/PropertySheet';
 import { DiceButton } from '../components/DiceButton';
+import { TradeProposalModal, TradeResponseModal, TradeBadge } from '../components/TradeModal';
 
 export function GameScreen() {
   const { gameState, showPropertyDetails, showProperty } = usePlayerStore();
@@ -13,8 +15,23 @@ export function GameScreen() {
   const isMyTurn = useIsMyTurn();
   const phase = useCurrentPhase();
   const { emit } = useSocket();
+  const [showTradeModal, setShowTradeModal] = useState(false);
+  const [selectedTrade, setSelectedTrade] = useState<string | null>(null);
 
   if (!gameState || !myPlayer) return null;
+
+  // Get pending trades for this player
+  const myPendingTrades = gameState.activeTrades?.filter(
+    (t) => t.recipientId === myPlayer.id && t.status === 'pending'
+  ) || [];
+
+  const myProposedTrades = gameState.activeTrades?.filter(
+    (t) => t.proposerId === myPlayer.id && t.status === 'pending'
+  ) || [];
+
+  const activeTrade = selectedTrade
+    ? gameState.activeTrades?.find((t) => t.id === selectedTrade)
+    : myPendingTrades[0] || myProposedTrades[0] || null;
 
   // Get current space info
   const currentSpace = gameState.properties[myPlayer.position];
@@ -85,6 +102,15 @@ export function GameScreen() {
             onBuildHouse={(propertyId) => emit(SocketEvents.BUILD_HOUSE, { propertyId })}
             onUseJailCard={() => emit(SocketEvents.USE_JAIL_CARD)}
             onExecuteCard={() => emit(SocketEvents.EXECUTE_CARD)}
+            onPlaceBid={(amount) => emit(SocketEvents.AUCTION_BID, {
+              auctionId: gameState.activeAuction?.id,
+              amount,
+            })}
+            onPassAuction={() => emit(SocketEvents.AUCTION_PASS, {
+              auctionId: gameState.activeAuction?.id,
+            })}
+            onDeclareBankruptcy={() => emit(SocketEvents.GAME_DECLARE_BANKRUPTCY)}
+            onMortgage={(propertyId) => emit(SocketEvents.GAME_MORTGAGE, { propertyId })}
           />
         )}
 
@@ -114,10 +140,72 @@ export function GameScreen() {
           <PropertySheet
             position={showPropertyDetails}
             gameState={gameState}
+            playerId={myPlayer.id}
             onClose={() => showProperty(null)}
+            onMortgage={(propertyId) => emit(SocketEvents.GAME_MORTGAGE, { propertyId })}
+            onUnmortgage={(propertyId) => emit(SocketEvents.GAME_UNMORTGAGE, { propertyId })}
           />
         )}
       </AnimatePresence>
+
+      {/* Trade button - floating */}
+      {phase === 'pre_roll' && (
+        <button
+          onClick={() => setShowTradeModal(true)}
+          className="fixed bottom-24 left-4 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-full w-12 h-12 flex items-center justify-center shadow-lg z-40"
+        >
+          💱
+        </button>
+      )}
+
+      {/* Trade proposal modal */}
+      <AnimatePresence>
+        {showTradeModal && (
+          <TradeProposalModal
+            gameState={gameState}
+            myPlayer={myPlayer}
+            onClose={() => setShowTradeModal(false)}
+            onPropose={(recipientId, offer, request) => {
+              emit(SocketEvents.TRADE_PROPOSE, {
+                recipientId,
+                offer,
+                request,
+              });
+              setShowTradeModal(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Trade response modal */}
+      <AnimatePresence>
+        {activeTrade && (
+          <TradeResponseModal
+            trade={activeTrade}
+            gameState={gameState}
+            myPlayerId={myPlayer.id}
+            onAccept={() => {
+              emit(SocketEvents.TRADE_ACCEPT, { tradeId: activeTrade.id });
+              setSelectedTrade(null);
+            }}
+            onReject={() => {
+              emit(SocketEvents.TRADE_REJECT, { tradeId: activeTrade.id });
+              setSelectedTrade(null);
+            }}
+            onClose={() => setSelectedTrade(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Trade notification badge */}
+      <TradeBadge
+        count={myPendingTrades.length}
+        onClick={() => {
+          if (myPendingTrades.length > 0) {
+            setSelectedTrade(myPendingTrades[0].id);
+          }
+        }}
+      />
     </div>
   );
 }
