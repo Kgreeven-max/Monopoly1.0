@@ -1173,7 +1173,7 @@ export function gameReducer(
       if (offer.getOutOfJailCards > proposer.getOutOfJailCards) {
         throw new Error('Insufficient Get Out of Jail cards');
       }
-      for (const propId of offer.propertyIds) {
+      for (const propId of offer.propertyIds || []) {
         const prop = state.properties[propId];
         if (!prop || prop.ownerId !== proposerId) {
           throw new Error('Cannot offer property you do not own');
@@ -1246,7 +1246,7 @@ export function gameReducer(
         updatedRecipient.getOutOfJailCards - trade.request.getOutOfJailCards + trade.offer.getOutOfJailCards;
 
       // Transfer properties from proposer to recipient
-      for (const propId of trade.offer.propertyIds) {
+      for (const propId of trade.offer.propertyIds || []) {
         updatedProperties[propId] = {
           ...updatedProperties[propId],
           ownerId: trade.recipientId,
@@ -1254,7 +1254,7 @@ export function gameReducer(
       }
 
       // Transfer properties from recipient to proposer
-      for (const propId of trade.request.propertyIds) {
+      for (const propId of trade.request.propertyIds || []) {
         updatedProperties[propId] = {
           ...updatedProperties[propId],
           ownerId: trade.proposerId,
