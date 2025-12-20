@@ -104,7 +104,7 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD:-pinopoly_dev}
       - POSTGRES_DB=pinopoly_master
     ports:
-      - "5432:5432"
+      - "5433:5432"  # Use 5433 on host to avoid conflict with local postgres
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U pinopoly -d pinopoly_master"]

@@ -1,0 +1,151 @@
+// Pinopoly Database Schema
+// Using PostgreSQL with per-game schema isolation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// USERS
+// =============================================================================
+
+model User {
+  id                String    @id @default(uuid())
+  username          String    @unique
+  email             String?   @unique
+  passwordHash      String    @map("password_hash")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  lastLogin         DateTime? @map("last_login")
+  totalGamesPlayed  Int       @default(0) @map("total_games_played")
+  totalWins         Int       @default(0) @map("total_wins")
+  lifetimeEarnings  BigInt    @default(0) @map("lifetime_earnings")
+
+  // Relations
+  hostedGames       Game[]    @relation("HostedGames")
+  wonGames          Game[]    @relation("WonGames")
+  participations    GameParticipant[]
+  sessions          Session[]
+
+  @@map("users")
+}
+
+// =============================================================================
+// SESSIONS
+// =============================================================================
+
+model Session {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  tokenHash   String   @map("token_hash")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([tokenHash])
+  @@map("sessions")
+}
+
+// =============================================================================
+// GAMES
+// =============================================================================
+
+model Game {
+  id              String    @id @default(uuid())
+  roomCode        String    @unique @map("room_code")
+  status          String    @default("lobby")
+  schemaName      String?   @map("schema_name")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  startedAt       DateTime? @map("started_at")
+  endedAt         DateTime? @map("ended_at")
+  hostUserId      String?   @map("host_user_id")
+  winnerUserId    String?   @map("winner_user_id")
+  gameConfig      Json      @default("{}") @map("game_config")
+  finalSnapshot   Json?     @map("final_snapshot")
+  durationSeconds Int?      @map("duration_seconds")
+
+  // Relations
+  host            User?     @relation("HostedGames", fields: [hostUserId], references: [id])
+  winner          User?     @relation("WonGames", fields: [winnerUserId], references: [id])
+  participants    GameParticipant[]
+  auditLogs       AuditLog[]
+
+  @@index([roomCode])
+  @@index([status])
+  @@index([createdAt])
+  @@index([hostUserId])
+  @@map("games")
+}
+
+// =============================================================================
+// GAME PARTICIPANTS
+// =============================================================================
+
+model GameParticipant {
+  id              String    @id @default(uuid())
+  gameId          String    @map("game_id")
+  userId          String?   @map("user_id")
+  playerName      String    @map("player_name")
+  token           String
+  color           String
+  isBot           Boolean   @default(false) @map("is_bot")
+  botPersonality  String?   @map("bot_personality")
+  finalPosition   Int?      @map("final_position")
+  finalNetWorth   BigInt?   @map("final_net_worth")
+  joinedAt        DateTime  @default(now()) @map("joined_at")
+
+  // Relations
+  game            Game      @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user            User?     @relation(fields: [userId], references: [id])
+
+  @@index([gameId])
+  @@index([userId])
+  @@map("game_participants")
+}
+
+// =============================================================================
+// AUDIT LOG
+// =============================================================================
+
+model AuditLog {
+  id          BigInt    @id @default(autoincrement())
+  gameId      String?   @map("game_id")
+  playerId    String?   @map("player_id")
+  actionType  String    @map("action_type")
+  actionData  Json?     @map("action_data")
+  timestamp   DateTime  @default(now())
+
+  // Relations
+  game        Game?     @relation(fields: [gameId], references: [id])
+
+  @@index([gameId])
+  @@index([timestamp])
+  @@index([actionType])
+  @@map("audit_log")
+}
+
+// =============================================================================
+// DAILY STATS
+// =============================================================================
+
+model DailyStats {
+  date                    DateTime @id @db.Date
+  gamesStarted            Int      @default(0) @map("games_started")
+  gamesCompleted          Int      @default(0) @map("games_completed")
+  uniquePlayers           Int      @default(0) @map("unique_players")
+  totalPlayTimeSeconds    BigInt   @default(0) @map("total_play_time_seconds")
+  mostPopularBot          String?  @map("most_popular_bot")
+  avgGameDurationSeconds  Int?     @map("avg_game_duration_seconds")
+
+  @@map("daily_stats")
+}

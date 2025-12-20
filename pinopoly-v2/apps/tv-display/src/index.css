@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --board-size: min(90vh, 90vw);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  min-height: 100vh;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Board space colors */
+.property-brown { background-color: #8B4513; }
+.property-lightblue { background-color: #87CEEB; }
+.property-pink { background-color: #FF69B4; }
+.property-orange { background-color: #FFA500; }
+.property-red { background-color: #FF0000; }
+.property-yellow { background-color: #FFFF00; }
+.property-green { background-color: #008000; }
+.property-blue { background-color: #0000FF; }
+.property-railroad { background-color: #1a1a1a; }
+.property-utility { background-color: #808080; }
+
+/* Token colors */
+.token-car { background-color: #e74c3c; }
+.token-dog { background-color: #3498db; }
+.token-hat { background-color: #2ecc71; }
+.token-ship { background-color: #9b59b6; }
+.token-boot { background-color: #f39c12; }
+.token-thimble { background-color: #1abc9c; }
+.token-iron { background-color: #e91e63; }
+.token-wheelbarrow { background-color: #00bcd4; }

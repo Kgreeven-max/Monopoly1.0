@@ -86,12 +86,13 @@ export function getNearestRailroad(position: number): number {
  * Get the nearest utility from a position (for Chance card)
  */
 export function getNearestUtility(position: number): number {
-  const utilities = [12, 28]; // Electric Company, Water Works
+  const electricCompany = 12;
+  const waterWorks = 28;
 
-  if (position < 12 || position >= 28) {
-    return 12; // Electric Company
+  if (position < electricCompany || position >= waterWorks) {
+    return electricCompany;
   }
-  return 28; // Water Works
+  return waterWorks;
 }
 
 /**

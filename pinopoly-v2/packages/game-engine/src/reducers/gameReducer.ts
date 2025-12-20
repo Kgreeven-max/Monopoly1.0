@@ -11,15 +11,12 @@ import { SeededRandom } from '../rng/SeededRandom';
 import {
   calculateRent,
   canBuildHouse,
-  getPropertyByPosition,
-  isPropertyOwned,
 } from '../rules/property';
 import {
   getNextPosition,
   wouldPassGo,
   JAIL_POSITION,
   GO_POSITION,
-  BOARD_SIZE,
 } from '../rules/movement';
 import { createInitialState } from './initialState';
 

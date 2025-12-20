@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  touch-action: manipulation;
+}
+
+#root {
+  width: 100vw;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+/* Prevent pull-to-refresh on mobile */
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* Large touch targets */
+button, a, input {
+  min-height: 44px;
+}
+
+/* Custom button styles */
+.btn-action {
+  @apply w-full py-4 rounded-2xl font-bold text-xl transition-all active:scale-95;
+}
+
+.btn-primary {
+  @apply bg-green-500 hover:bg-green-600 text-white;
+}
+
+.btn-secondary {
+  @apply bg-blue-500 hover:bg-blue-600 text-white;
+}
+
+.btn-danger {
+  @apply bg-red-500 hover:bg-red-600 text-white;
+}
+
+.btn-disabled {
+  @apply bg-gray-600 text-gray-400 cursor-not-allowed;
+}
+
+/* Token colors */
+.token-car { background-color: #e74c3c; }
+.token-dog { background-color: #3498db; }
+.token-hat { background-color: #2ecc71; }
+.token-ship { background-color: #9b59b6; }
+.token-boot { background-color: #f39c12; }
+.token-thimble { background-color: #1abc9c; }
+.token-iron { background-color: #e91e63; }
+.token-wheelbarrow { background-color: #00bcd4; }

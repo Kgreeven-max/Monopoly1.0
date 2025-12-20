@@ -18,7 +18,7 @@ COPY packages/game-engine/package.json ./packages/game-engine/
 COPY services/game-server/package.json ./services/game-server/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 # =============================================================================
 # Stage 2: Builder
@@ -39,6 +39,9 @@ COPY --from=deps /app/services/game-server/node_modules ./services/game-server/n
 # Copy source
 COPY . .
 
+# Generate Prisma client (in builder where devDeps are available)
+RUN pnpm --filter game-server exec prisma generate
+
 # Build packages in order
 RUN pnpm --filter @pinopoly/shared build
 RUN pnpm --filter @pinopoly/game-engine build
@@ -47,7 +50,10 @@ RUN pnpm --filter game-server build
 # =============================================================================
 # Stage 3: Production
 # =============================================================================
-FROM node:20-alpine AS production
+FROM node:20-slim AS production
+
+# Install openssl for Prisma
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -55,8 +61,8 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
 
 # Create non-root user
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 pinopoly
+RUN groupadd --gid 1001 nodejs && \
+    useradd --uid 1001 --gid nodejs --shell /bin/bash --create-home pinopoly
 
 # Copy built artifacts
 COPY --from=builder --chown=pinopoly:nodejs /app/package.json ./
@@ -70,7 +76,10 @@ COPY --from=builder --chown=pinopoly:nodejs /app/services/game-server/package.js
 COPY --from=builder --chown=pinopoly:nodejs /app/services/game-server/prisma ./services/game-server/prisma
 
 # Install production dependencies only
-RUN pnpm install --prod --frozen-lockfile
+RUN pnpm install --prod
+
+# Generate Prisma client (use npx with specific version to match package.json)
+RUN cd services/game-server && npx prisma@5.22.0 generate
 
 USER pinopoly
 

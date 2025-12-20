@@ -15,16 +15,18 @@ RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 COPY apps/controller/package.json ./apps/controller/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/game-engine/package.json ./packages/game-engine/
 COPY packages/ui-components/package.json ./packages/ui-components/
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 # Copy source
 COPY . .
 
 # Build shared packages first
 RUN pnpm --filter @pinopoly/shared build
+RUN pnpm --filter @pinopoly/game-engine build
 RUN pnpm --filter @pinopoly/ui-components build
 
 # Build controller
