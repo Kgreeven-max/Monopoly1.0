@@ -1,0 +1,174 @@
+version: '3.8'
+
+services:
+  # =============================================================================
+  # GAME SERVER - Main backend service
+  # =============================================================================
+  game-server:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.game-server
+    container_name: pinopoly-game-server
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://pinopoly:${DB_PASSWORD:-pinopoly_dev}@postgres:5432/pinopoly_master
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-change-in-production}
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-admin-dev-token}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - pinopoly-network
+
+  # =============================================================================
+  # TV DISPLAY - Main board view for projector/TV
+  # =============================================================================
+  tv-display:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.tv-display
+    container_name: pinopoly-tv-display
+    ports:
+      - "3001:80"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+      - VITE_WS_URL=ws://localhost:3000
+    depends_on:
+      - game-server
+    restart: unless-stopped
+    networks:
+      - pinopoly-network
+
+  # =============================================================================
+  # CONTROLLER - Phone controller for players
+  # =============================================================================
+  controller:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.controller
+    container_name: pinopoly-controller
+    ports:
+      - "3002:80"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+      - VITE_WS_URL=ws://localhost:3000
+    depends_on:
+      - game-server
+    restart: unless-stopped
+    networks:
+      - pinopoly-network
+
+  # =============================================================================
+  # ADMIN CONSOLE - Admin dashboard
+  # =============================================================================
+  admin-console:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.admin-console
+    container_name: pinopoly-admin-console
+    ports:
+      - "3003:80"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+      - VITE_WS_URL=ws://localhost:3000
+    depends_on:
+      - game-server
+    restart: unless-stopped
+    networks:
+      - pinopoly-network
+
+  # =============================================================================
+  # POSTGRESQL - Master database
+  # =============================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: pinopoly-postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    environment:
+      - POSTGRES_USER=pinopoly
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-pinopoly_dev}
+      - POSTGRES_DB=pinopoly_master
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pinopoly -d pinopoly_master"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pinopoly-network
+
+  # =============================================================================
+  # REDIS - Bot worker queue and caching
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: pinopoly-redis
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pinopoly-network
+
+  # =============================================================================
+  # NGINX - Reverse proxy (production only)
+  # =============================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: pinopoly-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - game-server
+      - tv-display
+      - controller
+      - admin-console
+    restart: unless-stopped
+    profiles:
+      - production
+    networks:
+      - pinopoly-network
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  pinopoly-network:
+    driver: bridge
