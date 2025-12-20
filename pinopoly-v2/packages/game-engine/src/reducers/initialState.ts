@@ -168,6 +168,7 @@ export function createInitialState(
       cards: communityChestDeck,
       discarded: [],
     },
+    currentCard: null,
     freeParkingPot: 0,
     activeAuction: null,
     activeTrades: [],

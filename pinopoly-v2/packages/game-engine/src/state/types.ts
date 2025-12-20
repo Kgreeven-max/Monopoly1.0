@@ -115,6 +115,9 @@ export interface GameState {
   /** Community Chest card deck */
   communityChestDeck: CardDeck;
 
+  /** Currently drawn card (null if no card active) */
+  currentCard: DrawnCard | null;
+
   /** Free Parking pot (optional rule) */
   freeParkingPot: number;
 
@@ -326,6 +329,11 @@ export interface DiceRoll {
 export interface CardDeck {
   cards: string[];  // Card IDs in order
   discarded: string[];
+}
+
+export interface DrawnCard {
+  cardId: string;
+  deck: 'chance' | 'community_chest';
 }
 
 export interface AuctionState {

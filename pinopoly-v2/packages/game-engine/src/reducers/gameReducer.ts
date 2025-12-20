@@ -18,6 +18,12 @@ import {
   JAIL_POSITION,
   GO_POSITION,
 } from '../rules/movement';
+import {
+  drawCard,
+  discardCard,
+  executeCardEffect,
+  getCardDefinition,
+} from '../rules/cards';
 import { createInitialState } from './initialState';
 
 /**
@@ -743,6 +749,88 @@ export function gameReducer(
       return [newState, events];
     }
 
+    // =========================================================================
+    // CARD ACTIONS
+    // =========================================================================
+
+    case ActionTypes.DRAW_CARD: {
+      const { playerId, deck } = action.payload;
+
+      if (state.phase !== 'card_action') {
+        throw new Error('Cannot draw card in current phase');
+      }
+
+      const rng = new SeededRandom(state.rngState);
+      const deckToUse = deck === 'chance' ? state.chanceDeck : state.communityChestDeck;
+
+      const { cardId, newDeck } = drawCard(deckToUse, rng);
+      const cardDef = getCardDefinition(cardId);
+
+      const newState: GameState = {
+        ...state,
+        chanceDeck: deck === 'chance' ? newDeck : state.chanceDeck,
+        communityChestDeck: deck === 'community_chest' ? newDeck : state.communityChestDeck,
+        currentCard: { cardId, deck },
+        rngState: rng.getState(),
+        lastActionAt: Date.now(),
+      };
+
+      events.push(
+        createEvent(
+          newState,
+          'CARD_DRAWN',
+          {
+            cardId,
+            deck,
+            name: cardDef?.name || cardId,
+            description: cardDef?.description || '',
+          },
+          playerId
+        )
+      );
+
+      return [newState, events];
+    }
+
+    case ActionTypes.EXECUTE_CARD: {
+      const { playerId, cardId } = action.payload;
+
+      if (!state.currentCard || state.currentCard.cardId !== cardId) {
+        throw new Error('Invalid card to execute');
+      }
+
+      const { newState, events: cardEvents, requiresLanding, newPosition } = executeCardEffect(
+        state,
+        playerId,
+        cardId,
+        createEvent
+      );
+
+      // Discard the card (unless it's a "Get Out of Jail Free" card)
+      const deck = state.currentCard.deck;
+      const updatedDeck = discardCard(
+        deck === 'chance' ? newState.chanceDeck : newState.communityChestDeck,
+        cardId
+      );
+
+      let finalState: GameState = {
+        ...newState,
+        chanceDeck: deck === 'chance' ? updatedDeck : newState.chanceDeck,
+        communityChestDeck: deck === 'community_chest' ? updatedDeck : newState.communityChestDeck,
+        currentCard: null,
+        lastActionAt: Date.now(),
+      };
+
+      events.push(...cardEvents);
+
+      // If card caused movement, handle landing on new space
+      if (requiresLanding && newPosition !== undefined) {
+        return handleLanding(finalState, playerId, newPosition, events);
+      }
+
+      return [finalState, events];
+    }
+
     default:
       // Unknown action - return state unchanged
       return [state, events];
@@ -946,25 +1034,63 @@ function handleSpecialSpace(
 
     case 2:
     case 17:
-    case 33: // Community Chest
+    case 33: { // Community Chest
+      const rng = new SeededRandom(state.rngState);
+      const { cardId, newDeck } = drawCard(state.communityChestDeck, rng);
+      const cardDef = getCardDefinition(cardId);
+
       const newState: GameState = {
         ...state,
+        communityChestDeck: newDeck,
+        currentCard: { cardId, deck: 'community_chest' },
         phase: 'card_action',
+        rngState: rng.getState(),
       };
       events.push(
-        createEvent(newState, 'COMMUNITY_CHEST_DRAWN', {}, playerId)
+        createEvent(
+          newState,
+          'CARD_DRAWN',
+          {
+            cardId,
+            deck: 'community_chest',
+            name: cardDef?.name || cardId,
+            description: cardDef?.description || '',
+          },
+          playerId
+        )
       );
       return [newState, events];
+    }
 
     case 7:
     case 22:
-    case 36: // Chance
+    case 36: { // Chance
+      const rng2 = new SeededRandom(state.rngState);
+      const { cardId: cardId2, newDeck: newDeck2 } = drawCard(state.chanceDeck, rng2);
+      const cardDef2 = getCardDefinition(cardId2);
+
       const newState2: GameState = {
         ...state,
+        chanceDeck: newDeck2,
+        currentCard: { cardId: cardId2, deck: 'chance' },
         phase: 'card_action',
+        rngState: rng2.getState(),
       };
-      events.push(createEvent(newState2, 'CHANCE_DRAWN', {}, playerId));
+      events.push(
+        createEvent(
+          newState2,
+          'CARD_DRAWN',
+          {
+            cardId: cardId2,
+            deck: 'chance',
+            name: cardDef2?.name || cardId2,
+            description: cardDef2?.description || '',
+          },
+          playerId
+        )
+      );
       return [newState2, events];
+    }
 
     case 4: // Income Tax
       const player = state.players[playerId];

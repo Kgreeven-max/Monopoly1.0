@@ -36,8 +36,8 @@ export function JoinScreen() {
   }, []);
 
   const handleCodeSubmit = () => {
-    if (roomCode.length !== 4) {
-      setError('Room code must be 4 characters');
+    if (roomCode.length !== 6) {
+      setError('Room code must be 6 characters');
       return;
     }
     setError('');
@@ -86,8 +86,8 @@ export function JoinScreen() {
               type="text"
               value={roomCode}
               onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-              placeholder="ABCD"
-              maxLength={4}
+              placeholder="ABCDEF"
+              maxLength={6}
               autoFocus
               className="w-full px-4 py-4 text-3xl text-center font-mono tracking-[0.5em]
                        bg-white/20 border border-white/30 rounded-xl text-white
@@ -100,7 +100,7 @@ export function JoinScreen() {
 
             <button
               onClick={handleCodeSubmit}
-              disabled={roomCode.length !== 4}
+              disabled={roomCode.length !== 6}
               className="btn-action btn-primary mt-6 disabled:btn-disabled"
             >
               Continue

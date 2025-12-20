@@ -22,6 +22,7 @@ export type {
   HELOCState,
   DiceRoll,
   CardDeck,
+  DrawnCard,
   AuctionState,
   TradeState,
   TradeOffer,
@@ -80,6 +81,7 @@ export type {
   PlaceBidAction,
   PassAuctionAction,
   DrawCardAction,
+  ExecuteCardAction,
   MovePlayerAction,
   CollectRentAction,
   SendToJailAction,
@@ -140,3 +142,19 @@ export {
   calculateNetWorth,
   getHouseSellValue,
 } from './rules/property';
+
+// Card rules
+export {
+  CARD_DEFINITIONS,
+  getCardDefinition,
+  calculateRepairsCost,
+  executeCardEffect,
+  drawCard,
+  discardCard,
+} from './rules/cards';
+
+export type {
+  CardDefinition,
+  CardEffectType,
+  CardExecutionResult,
+} from './rules/cards';

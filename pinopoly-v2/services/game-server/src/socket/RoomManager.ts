@@ -62,6 +62,9 @@ export class RoomManager {
       socket.on(SocketEvents.GAME_PAY_JAIL_FINE, () => this.handlePayJailFine(socket));
       socket.on(SocketEvents.GAME_USE_JAIL_CARD, () => this.handleUseJailCard(socket));
 
+      // Card events
+      socket.on(SocketEvents.GAME_EXECUTE_CARD, () => this.handleExecuteCard(socket));
+
       // Auction events
       socket.on(SocketEvents.AUCTION_BID, (data) => this.handleAuctionBid(socket, data));
       socket.on(SocketEvents.AUCTION_PASS, (data) => this.handleAuctionPass(socket, data));
@@ -173,6 +176,12 @@ export class RoomManager {
       room.playerSockets.set(playerId, socket.id);
       this.socketToRoom.set(socket.id, roomCode);
 
+      // First player to join becomes the host
+      if (room.hostSocketId === 'host-placeholder' || !room.hostSocketId) {
+        room.hostSocketId = socket.id;
+        console.log(`Player ${playerName} became host of game ${roomCode}`);
+      }
+
       // Set socket context
       socket.playerId = playerId;
       socket.gameId = room.id;
@@ -233,11 +242,23 @@ export class RoomManager {
     personality: BotPersonality;
     difficulty: Difficulty;
   }): Promise<void> {
+    console.log('handleAddBot called with:', data);
     const roomCode = this.socketToRoom.get(socket.id);
-    if (!roomCode) return;
+    if (!roomCode) {
+      console.log('handleAddBot: No room code for socket', socket.id);
+      return;
+    }
 
     const room = this.rooms.get(roomCode);
-    if (!room || room.hostSocketId !== socket.id) return;
+    if (!room) {
+      console.log('handleAddBot: Room not found:', roomCode);
+      return;
+    }
+    if (room.hostSocketId !== socket.id) {
+      console.log('handleAddBot: Not host. hostSocketId:', room.hostSocketId, 'socket.id:', socket.id);
+      return;
+    }
+    console.log('handleAddBot: Adding bot to room', roomCode);
 
     const botId = uuid();
     const botNumber = Object.values(room.state.players).filter(p => p.isBot).length + 1;
@@ -283,11 +304,23 @@ export class RoomManager {
   }
 
   private async handleStartGame(socket: AuthenticatedSocket): Promise<void> {
+    console.log('handleStartGame called');
     const roomCode = this.socketToRoom.get(socket.id);
-    if (!roomCode) return;
+    if (!roomCode) {
+      console.log('handleStartGame: No room code for socket', socket.id);
+      return;
+    }
 
     const room = this.rooms.get(roomCode);
-    if (!room || room.hostSocketId !== socket.id) return;
+    if (!room) {
+      console.log('handleStartGame: Room not found:', roomCode);
+      return;
+    }
+    if (room.hostSocketId !== socket.id) {
+      console.log('handleStartGame: Not host. hostSocketId:', room.hostSocketId, 'socket.id:', socket.id);
+      return;
+    }
+    console.log('handleStartGame: Starting game', roomCode, 'with', Object.keys(room.state.players).length, 'players');
 
     try {
       // Countdown
@@ -315,6 +348,9 @@ export class RoomManager {
 
       // Broadcast game state
       this.io.to(roomCode).emit(SocketEvents.GAME_STATE, newState);
+
+      // Check if first player is a bot
+      this.checkBotTurn(room);
     } catch (error) {
       console.error('Start game error:', error);
       socket.emit(SocketEvents.ERROR, { code: 'START_ERROR', message: 'Failed to start game' });
@@ -340,9 +376,10 @@ export class RoomManager {
       // Emit dice roll event
       const diceEvent = events.find(e => e.type === 'DICE_ROLLED');
       if (diceEvent) {
+        const diceData = diceEvent.payload.dice as { die1: number; die2: number };
         this.io.to(room.code).emit(SocketEvents.GAME_DICE_ROLLED, {
           playerId: socket.playerId,
-          dice: diceEvent.payload.dice,
+          dice: [diceData.die1, diceData.die2],
         });
       }
 
@@ -527,6 +564,50 @@ export class RoomManager {
     }
   }
 
+  private handleExecuteCard(socket: AuthenticatedSocket): void {
+    const room = this.getRoomBySocket(socket);
+    if (!room || !this.isCurrentPlayer(room, socket.playerId)) return;
+
+    try {
+      if (!room.state.currentCard) {
+        socket.emit(SocketEvents.ERROR, { code: 'ACTION_ERROR', message: 'No card to execute' });
+        return;
+      }
+
+      const [newState, events] = gameReducer(room.state, {
+        type: ActionTypes.EXECUTE_CARD,
+        payload: {
+          playerId: socket.playerId!,
+          cardId: room.state.currentCard.cardId,
+        },
+      });
+
+      room.state = newState;
+
+      // Emit card drawn event with details
+      const cardEvent = events.find(e => e.type === 'CARD_DRAWN');
+      if (cardEvent) {
+        this.io.to(room.code).emit(SocketEvents.GAME_CARD_DRAWN, cardEvent.payload);
+      }
+
+      // Emit move event if player moved
+      const moveEvent = events.find(e => e.type === 'PLAYER_MOVED');
+      if (moveEvent) {
+        this.io.to(room.code).emit(SocketEvents.GAME_PLAYER_MOVED, moveEvent.payload);
+      }
+
+      this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
+
+      // Check if next player is a bot
+      if (newState.phase === 'turn_end' || newState.phase === 'pre_roll') {
+        // Allow turn to continue if needed
+      }
+    } catch (error) {
+      console.error('Execute card error:', error);
+      socket.emit(SocketEvents.ERROR, { code: 'ACTION_ERROR', message: String(error) });
+    }
+  }
+
   private handleAuctionBid(socket: AuthenticatedSocket, data: { auctionId: string; amount: number }): void {
     const room = this.getRoomBySocket(socket);
     if (!room || !room.state.activeAuction) return;
@@ -658,6 +739,7 @@ export class RoomManager {
 
   private async executeBotTurn(room: GameRoom, botId: string): Promise<void> {
     // Simple bot logic - just roll and end turn
+    console.log('Bot', botId, 'taking turn');
     try {
       // Roll dice
       let [newState, events] = gameReducer(room.state, {
@@ -665,6 +747,24 @@ export class RoomManager {
         payload: { playerId: botId },
       });
       room.state = newState;
+
+      // Emit dice roll event
+      const diceEvent = events.find(e => e.type === 'DICE_ROLLED');
+      if (diceEvent) {
+        const diceData = diceEvent.payload.dice as { die1: number; die2: number };
+        this.io.to(room.code).emit(SocketEvents.GAME_DICE_ROLLED, {
+          playerId: botId,
+          dice: [diceData.die1, diceData.die2],
+        });
+        console.log('Bot rolled:', diceData.die1, '+', diceData.die2);
+      }
+
+      // Emit move event
+      const moveEvent = events.find(e => e.type === 'PLAYER_MOVED');
+      if (moveEvent) {
+        this.io.to(room.code).emit(SocketEvents.GAME_PLAYER_MOVED, moveEvent.payload);
+      }
+
       this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
 
       await this.sleep(1000);
@@ -682,6 +782,11 @@ export class RoomManager {
               payload: { playerId: botId, propertyId: currentPosition },
             });
             room.state = newState;
+            this.io.to(room.code).emit(SocketEvents.GAME_PROPERTY_BOUGHT, {
+              playerId: botId,
+              propertyId: currentPosition,
+            });
+            console.log('Bot bought property:', currentPosition);
           } else {
             [newState, events] = gameReducer(newState, {
               type: ActionTypes.DECLINE_PROPERTY,
@@ -694,6 +799,68 @@ export class RoomManager {
         }
       }
 
+      // Handle card action (Chance/Community Chest)
+      if (newState.phase === 'card_action' && newState.currentCard) {
+        console.log('Bot executing card:', newState.currentCard.cardId);
+
+        // Emit the card drawn event
+        this.io.to(room.code).emit(SocketEvents.GAME_CARD_DRAWN, {
+          cardId: newState.currentCard.cardId,
+          deck: newState.currentCard.deck,
+          playerId: botId,
+        });
+
+        await this.sleep(1500); // Let players see the card
+
+        // Execute the card
+        [newState, events] = gameReducer(newState, {
+          type: ActionTypes.EXECUTE_CARD,
+          payload: {
+            playerId: botId,
+            cardId: newState.currentCard.cardId,
+          },
+        });
+        room.state = newState;
+
+        // Emit any movement events
+        const moveEvent = events.find(e => e.type === 'PLAYER_MOVED');
+        if (moveEvent) {
+          this.io.to(room.code).emit(SocketEvents.GAME_PLAYER_MOVED, moveEvent.payload);
+        }
+
+        this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
+        await this.sleep(500);
+
+        // If the card caused us to land on a new space, handle it
+        if (newState.phase === 'buy_decision') {
+          const currentPosition = newState.players[botId].position;
+          const property = newState.properties[currentPosition];
+
+          if (property && !property.ownerId) {
+            if (newState.players[botId].money >= property.price) {
+              [newState, events] = gameReducer(newState, {
+                type: ActionTypes.BUY_PROPERTY,
+                payload: { playerId: botId, propertyId: currentPosition },
+              });
+              room.state = newState;
+              this.io.to(room.code).emit(SocketEvents.GAME_PROPERTY_BOUGHT, {
+                playerId: botId,
+                propertyId: currentPosition,
+              });
+              console.log('Bot bought property after card:', currentPosition);
+            } else {
+              [newState, events] = gameReducer(newState, {
+                type: ActionTypes.DECLINE_PROPERTY,
+                payload: { playerId: botId, propertyId: currentPosition },
+              });
+              room.state = newState;
+            }
+            this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
+            await this.sleep(500);
+          }
+        }
+      }
+
       // End turn
       if (newState.phase === 'turn_end' || newState.phase === 'landed') {
         [newState, events] = gameReducer(newState, {
@@ -701,7 +868,15 @@ export class RoomManager {
           payload: { playerId: botId },
         });
         room.state = newState;
+
+        // Emit turn change event
+        const turnEvent = events.find(e => e.type === 'TURN_CHANGED');
+        if (turnEvent) {
+          this.io.to(room.code).emit(SocketEvents.GAME_TURN_CHANGED, turnEvent.payload);
+        }
+
         this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
+        console.log('Bot ended turn, next player index:', newState.currentPlayerIndex);
 
         // Check if next player is also a bot
         this.checkBotTurn(room);

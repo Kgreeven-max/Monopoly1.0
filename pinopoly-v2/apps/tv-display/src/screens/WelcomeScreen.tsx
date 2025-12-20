@@ -1,24 +1,29 @@
 import { useState } from 'react';
-import { useSocket } from '../hooks/useSocket';
+import { useGameStore } from '../store/gameStore';
 import { motion } from 'framer-motion';
 
-export function WelcomeScreen() {
+interface WelcomeScreenProps {
+  onConnect: (roomCode: string) => void;
+}
+
+export function WelcomeScreen({ onConnect }: WelcomeScreenProps) {
   const [roomCode, setRoomCode] = useState('');
   const [error, setError] = useState('');
-  const { connect } = useSocket();
+  const [isCreating, setIsCreating] = useState(false);
 
   const handleJoin = () => {
     const code = roomCode.trim().toUpperCase();
-    if (code.length !== 4) {
-      setError('Room code must be 4 characters');
+    if (code.length !== 6) {
+      setError('Room code must be 6 characters');
       return;
     }
     setError('');
-    connect(code);
+    onConnect(code);
   };
 
   const handleCreateGame = async () => {
     try {
+      setIsCreating(true);
       const response = await fetch('/api/games', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -30,9 +35,10 @@ export function WelcomeScreen() {
       }
 
       const data = await response.json();
-      connect(data.roomCode);
+      onConnect(data.roomCode);
     } catch (err) {
       setError('Failed to create game. Please try again.');
+      setIsCreating(false);
     }
   };
 
@@ -67,7 +73,7 @@ export function WelcomeScreen() {
             value={roomCode}
             onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
             placeholder="Enter Room Code"
-            maxLength={4}
+            maxLength={6}
             className="w-full px-6 py-4 text-3xl text-center font-mono tracking-widest
                      bg-white/20 border border-white/30 rounded-xl text-white
                      placeholder-white/50 focus:outline-none focus:border-white/60"
@@ -86,7 +92,7 @@ export function WelcomeScreen() {
 
         <button
           onClick={handleJoin}
-          disabled={roomCode.length !== 4}
+          disabled={roomCode.length !== 6}
           className="w-full py-4 bg-green-500 hover:bg-green-600 disabled:bg-gray-600
                    text-white text-xl font-bold rounded-xl transition-colors mb-4"
         >
@@ -101,10 +107,11 @@ export function WelcomeScreen() {
 
         <button
           onClick={handleCreateGame}
-          className="w-full py-4 bg-blue-500 hover:bg-blue-600
+          disabled={isCreating}
+          className="w-full py-4 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-400
                    text-white text-xl font-bold rounded-xl transition-colors"
         >
-          Create New Game
+          {isCreating ? 'Creating...' : 'Create New Game'}
         </button>
       </motion.div>
 

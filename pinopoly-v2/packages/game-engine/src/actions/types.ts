@@ -371,6 +371,14 @@ export interface DrawCardAction {
   };
 }
 
+export interface ExecuteCardAction {
+  type: typeof ActionTypes.EXECUTE_CARD;
+  payload: {
+    playerId: string;
+    cardId: string;
+  };
+}
+
 // System Actions
 export interface MovePlayerAction {
   type: typeof ActionTypes.MOVE_PLAYER;
@@ -472,6 +480,7 @@ export type GameAction =
   | PlaceBidAction
   | PassAuctionAction
   | DrawCardAction
+  | ExecuteCardAction
   | MovePlayerAction
   | CollectRentAction
   | SendToJailAction

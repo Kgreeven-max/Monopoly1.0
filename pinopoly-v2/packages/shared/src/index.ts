@@ -30,6 +30,7 @@ export const SocketEvents = {
   GAME_PAY_JAIL_FINE: 'game:payJailFine',
   GAME_USE_JAIL_CARD: 'game:useJailCard',
   GAME_ROLL_FOR_DOUBLES: 'game:rollForDoubles',
+  GAME_EXECUTE_CARD: 'game:executeCard',
 
   TRADE_PROPOSE: 'trade:propose',
   TRADE_ACCEPT: 'trade:accept',

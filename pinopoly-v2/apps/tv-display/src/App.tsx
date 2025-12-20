@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useGameStore } from './store/gameStore';
 import { useSocket } from './hooks/useSocket';
 import { LobbyScreen } from './screens/LobbyScreen';
@@ -10,20 +10,25 @@ function App() {
   const { gameState, roomCode } = useGameStore();
   const { connect, isConnected } = useSocket();
 
+  // Handle connection from WelcomeScreen or URL
+  const handleConnect = useCallback((code: string) => {
+    connect(code);
+  }, [connect]);
+
   useEffect(() => {
     // Extract room code from URL if present
     const params = new URLSearchParams(window.location.search);
     const code = params.get('room');
 
     if (code) {
-      connect(code);
+      handleConnect(code);
     }
-  }, [connect]);
+  }, [handleConnect]);
 
   // Render appropriate screen based on game state
   const renderScreen = () => {
     if (!roomCode) {
-      return <WelcomeScreen />;
+      return <WelcomeScreen onConnect={handleConnect} />;
     }
 
     if (!gameState) {
