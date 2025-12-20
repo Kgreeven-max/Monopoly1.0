@@ -18,13 +18,19 @@ const TOKEN_COLORS: Record<string, string> = {
 };
 
 const PHASE_MESSAGES: Record<TurnPhase, string> = {
-  preRoll: 'Preparing to roll...',
-  roll: 'Rolling dice...',
-  postRoll: 'Taking action...',
-  jail: 'In jail...',
-  bankrupt: 'Managing finances...',
-  trading: 'Trading...',
-  end: 'Ending turn...',
+  pre_roll: 'Preparing to roll...',
+  rolling: 'Rolling dice...',
+  moving: 'Moving...',
+  landed: 'Taking action...',
+  buy_decision: 'Deciding on property...',
+  auction: 'Auction in progress...',
+  rent_payment: 'Paying rent...',
+  card_action: 'Card action...',
+  jail_decision: 'In jail...',
+  development: 'Building...',
+  trade: 'Trading...',
+  bankruptcy: 'Managing finances...',
+  turn_end: 'Ending turn...',
 };
 
 export function TurnIndicator({ player, phase }: TurnIndicatorProps) {
@@ -54,7 +60,7 @@ export function TurnIndicator({ player, phase }: TurnIndicatorProps) {
 
         {/* Phase indicator dots */}
         <div className="flex gap-1">
-          {['preRoll', 'roll', 'postRoll', 'end'].map((p, i) => (
+          {['pre_roll', 'rolling', 'landed', 'turn_end'].map((p, i) => (
             <div
               key={p}
               className={`w-2 h-2 rounded-full transition-colors ${
@@ -70,13 +76,19 @@ export function TurnIndicator({ player, phase }: TurnIndicatorProps) {
 
 function getPhaseOrder(phase: TurnPhase): number {
   const order: Record<TurnPhase, number> = {
-    preRoll: 0,
-    roll: 1,
-    postRoll: 2,
-    jail: 1,
-    bankrupt: 2,
-    trading: 2,
-    end: 3,
+    pre_roll: 0,
+    rolling: 1,
+    moving: 1,
+    landed: 2,
+    buy_decision: 2,
+    auction: 2,
+    rent_payment: 2,
+    card_action: 2,
+    jail_decision: 1,
+    development: 2,
+    trade: 2,
+    bankruptcy: 2,
+    turn_end: 3,
   };
   return order[phase] || 0;
 }

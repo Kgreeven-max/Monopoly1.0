@@ -176,7 +176,7 @@ function PropertyBuyCard({ property, playerMoney, onBuy }: PropertyBuyCardProps)
         <div>
           <p className="text-white font-bold">{property.name || 'Property'}</p>
           <p className="text-white/60 text-sm capitalize">
-            {property.colorGroup || property.type}
+            {property.group || property.type}
           </p>
         </div>
         <div className="text-right">
@@ -214,12 +214,12 @@ function BuildingActions({ gameState, player, onBuildHouse }: BuildingActionsPro
   const buildableProperties = Object.entries(gameState.properties)
     .filter(([_, prop]) => {
       if (prop.ownerId !== player.id) return false;
-      if (!prop.colorGroup) return false;
+      if (!prop.group) return false;
       if ((prop.houses || 0) >= 5) return false;
 
       // Check if player owns all properties in color group
       const sameColor = Object.values(gameState.properties)
-        .filter(p => p.colorGroup === prop.colorGroup);
+        .filter(p => p.group === prop.group);
       const allOwned = sameColor.every(p => p.ownerId === player.id);
 
       return allOwned && player.money >= (prop.houseCost || 0);
@@ -304,7 +304,7 @@ function AuctionPanel({ gameState, player, onPlaceBid, onPassAuction }: AuctionP
       <div className="bg-yellow-500/20 border border-yellow-500 rounded-2xl p-4 text-center">
         <p className="text-yellow-400 text-lg font-bold mb-1">AUCTION</p>
         <p className="text-white font-bold">{property?.name || `Property ${auction.propertyId}`}</p>
-        <p className="text-white/60 text-sm capitalize">{property?.colorGroup || property?.type}</p>
+        <p className="text-white/60 text-sm capitalize">{property?.group || property?.type}</p>
       </div>
 
       {/* Current Bid */}

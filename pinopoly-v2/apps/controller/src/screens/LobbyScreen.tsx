@@ -112,7 +112,7 @@ export function LobbyScreen() {
                     <p className="text-white font-bold">{player.name}</p>
                     {player.isBot && (
                       <p className="text-purple-400 text-sm capitalize">
-                        🤖 {player.personality}
+                        🤖 {player.botPersonality}
                       </p>
                     )}
                   </div>

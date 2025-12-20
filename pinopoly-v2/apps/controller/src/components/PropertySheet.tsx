@@ -73,8 +73,8 @@ export function PropertySheet({ position, gameState, playerId, onClose, onMortga
         </div>
 
         {/* Color band */}
-        {property?.colorGroup && (
-          <div className={`h-4 ${COLOR_CLASSES[property.colorGroup]}`} />
+        {property?.group && (
+          <div className={`h-4 ${COLOR_CLASSES[property.group]}`} />
         )}
 
         {/* Content */}
@@ -103,22 +103,22 @@ export function PropertySheet({ position, gameState, playerId, onClose, onMortga
                 </div>
 
                 {/* Rent table */}
-                {property.colorGroup && (
+                {property.group && (
                   <div className="bg-white/10 rounded-xl p-4">
                     <p className="text-white/60 text-sm mb-3">Rent</p>
                     <div className="space-y-2 text-sm">
-                      <RentRow label="Base rent" amount={property.rent?.[0] || 0} />
-                      <RentRow label="1 house" amount={property.rent?.[1] || 0} />
-                      <RentRow label="2 houses" amount={property.rent?.[2] || 0} />
-                      <RentRow label="3 houses" amount={property.rent?.[3] || 0} />
-                      <RentRow label="4 houses" amount={property.rent?.[4] || 0} />
-                      <RentRow label="Hotel" amount={property.rent?.[5] || 0} highlight />
+                      <RentRow label="Base rent" amount={property.baseRent || 0} />
+                      <RentRow label="1 house" amount={property.rentLevels?.[0] || 0} />
+                      <RentRow label="2 houses" amount={property.rentLevels?.[1] || 0} />
+                      <RentRow label="3 houses" amount={property.rentLevels?.[2] || 0} />
+                      <RentRow label="4 houses" amount={property.rentLevels?.[3] || 0} />
+                      <RentRow label="Hotel" amount={property.rentLevels?.[4] || 0} highlight />
                     </div>
                   </div>
                 )}
 
                 {/* Houses */}
-                {property.colorGroup && (
+                {property.group && (
                   <div className="flex items-center justify-between bg-white/10 rounded-xl p-4">
                     <div>
                       <p className="text-white/60 text-sm">Buildings</p>

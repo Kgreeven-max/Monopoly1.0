@@ -50,7 +50,7 @@ function App() {
       case 'finished':
         return <ResultsScreen />;
       default:
-        return <WelcomeScreen />;
+        return <WelcomeScreen onConnect={handleConnect} />;
     }
   };
 

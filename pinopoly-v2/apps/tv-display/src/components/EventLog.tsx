@@ -60,42 +60,42 @@ function getEventDisplay(event: GameEvent): { icon: string; message: string; col
     case 'PLAYER_JOINED':
       return {
         icon: '👋',
-        message: `${event.data?.playerName || 'Player'} joined the game`,
+        message: `${event.payload?.playerName || 'Player'} joined the game`,
         color: 'text-green-400',
       };
 
     case 'DICE_ROLLED':
       return {
         icon: '🎲',
-        message: `Rolled ${event.data?.dice?.[0]} + ${event.data?.dice?.[1]} = ${(event.data?.dice?.[0] || 0) + (event.data?.dice?.[1] || 0)}`,
+        message: `Rolled ${event.payload?.dice?.[0]} + ${event.payload?.dice?.[1]} = ${(event.payload?.dice?.[0] || 0) + (event.payload?.dice?.[1] || 0)}`,
         color: 'text-blue-400',
       };
 
     case 'PLAYER_MOVED':
       return {
         icon: '🚶',
-        message: `Moved to ${event.data?.spaceName || `space ${event.data?.position}`}`,
+        message: `Moved to ${event.payload?.spaceName || `space ${event.payload?.position}`}`,
         color: 'text-white/70',
       };
 
     case 'PROPERTY_PURCHASED':
       return {
         icon: '🏠',
-        message: `Bought ${event.data?.propertyName} for $${event.data?.price}`,
+        message: `Bought ${event.payload?.propertyName} for $${event.payload?.price}`,
         color: 'text-yellow-400',
       };
 
     case 'RENT_PAID':
       return {
         icon: '💰',
-        message: `Paid $${event.data?.amount} rent`,
+        message: `Paid $${event.payload?.amount} rent`,
         color: 'text-red-400',
       };
 
     case 'PASSED_GO':
       return {
         icon: '✅',
-        message: `Collected $${event.data?.amount || 200} passing GO`,
+        message: `Collected $${event.payload?.amount || 200} passing GO`,
         color: 'text-green-400',
       };
 
@@ -116,42 +116,42 @@ function getEventDisplay(event: GameEvent): { icon: string; message: string; col
     case 'HOUSE_BUILT':
       return {
         icon: '🏗️',
-        message: `Built house on ${event.data?.propertyName}`,
+        message: `Built house on ${event.payload?.propertyName}`,
         color: 'text-yellow-400',
       };
 
     case 'HOTEL_BUILT':
       return {
         icon: '🏨',
-        message: `Built hotel on ${event.data?.propertyName}`,
+        message: `Built hotel on ${event.payload?.propertyName}`,
         color: 'text-purple-400',
       };
 
     case 'PLAYER_BANKRUPT':
       return {
         icon: '💸',
-        message: `${event.data?.playerName || 'Player'} went bankrupt!`,
+        message: `${event.payload?.playerName || 'Player'} went bankrupt!`,
         color: 'text-red-500',
       };
 
     case 'GAME_WON':
       return {
         icon: '🏆',
-        message: `${event.data?.winnerName || 'Player'} wins the game!`,
+        message: `${event.payload?.winnerName || 'Player'} wins the game!`,
         color: 'text-yellow-500',
       };
 
     case 'ECONOMY_CHANGED':
       return {
         icon: '📈',
-        message: `Economy shifted to ${event.data?.phase}`,
+        message: `Economy shifted to ${event.payload?.phase}`,
         color: 'text-blue-400',
       };
 
     case 'FREE_PARKING':
       return {
         icon: '🅿️',
-        message: `Collected $${event.data?.amount} from Free Parking`,
+        message: `Collected $${event.payload?.amount} from Free Parking`,
         color: 'text-green-400',
       };
 

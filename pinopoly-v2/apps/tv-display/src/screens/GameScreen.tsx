@@ -86,7 +86,7 @@ export function GameScreen() {
             <div className="text-right">
               <h2 className="text-sm text-white/50">Free Parking</h2>
               <p className="text-2xl font-bold text-green-400">
-                ${gameState.freeParkingPool.toLocaleString()}
+                ${gameState.freeParkingPot.toLocaleString()}
               </p>
             </div>
           </div>
@@ -97,15 +97,15 @@ export function GameScreen() {
           <h2 className="text-sm text-white/50 mb-2">Economy</h2>
           <div className="flex items-center gap-3">
             <div className={`px-3 py-1 rounded-full text-sm font-bold ${
-              gameState.economy.phase === 'boom' ? 'bg-green-500' :
-              gameState.economy.phase === 'bust' ? 'bg-red-500' :
-              gameState.economy.phase === 'recovery' ? 'bg-yellow-500' :
+              gameState.economy.phase === 'boom' ? 'bg-green-600' :
+              gameState.economy.phase === 'growth' ? 'bg-green-500' :
+              gameState.economy.phase === 'recession' ? 'bg-red-500' :
               'bg-blue-500'
             }`}>
               {gameState.economy.phase.toUpperCase()}
             </div>
             <div className="text-white">
-              {(gameState.economy.multiplier * 100).toFixed(0)}%
+              {(gameState.economy.rentMultiplier * 100).toFixed(0)}%
             </div>
           </div>
         </div>

@@ -53,7 +53,7 @@ export function PlayerPanel({ player, isCurrentTurn }: PlayerPanelProps) {
         <div className="flex-1 min-w-0">
           <p className="text-white font-bold truncate">{player.name}</p>
           {player.isBot && (
-            <p className="text-xs text-purple-400 capitalize">{player.personality}</p>
+            <p className="text-xs text-purple-400 capitalize">{player.botPersonality}</p>
           )}
         </div>
 
