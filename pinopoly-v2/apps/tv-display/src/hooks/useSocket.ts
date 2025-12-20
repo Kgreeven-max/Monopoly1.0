@@ -6,6 +6,13 @@ import type { GameState, GameEvent } from '@pinopoly/game-engine';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || '';
 
+/**
+ * CLEAN ARCHITECTURE - TV Display Socket Hook
+ *
+ * Key Principle: GAME_STATE is the ONLY event that updates state.
+ * Animation events trigger UI effects only, they do NOT update state.
+ */
+
 interface UseSocketReturn {
   socket: Socket | null;
   isConnected: boolean;
@@ -40,8 +47,12 @@ export function useSocket(): UseSocketReturn {
 
     socketRef.current = socket;
 
-    // Connection events
+    // ===========================================
+    // CONNECTION EVENTS
+    // ===========================================
+
     socket.on('connect', () => {
+      console.log('[TV Socket] Connected');
       setIsConnected(true);
       setRoomCode(roomCode);
 
@@ -50,75 +61,85 @@ export function useSocket(): UseSocketReturn {
     });
 
     socket.on('disconnect', () => {
+      console.log('[TV Socket] Disconnected');
       setIsConnected(false);
     });
 
     socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      console.error('[TV Socket] Connection error:', error);
       setIsConnected(false);
     });
 
-    // Game state events
+    // ===========================================
+    // STATE EVENTS - These update the Zustand store
+    // ===========================================
+
+    // GAME_STATE - THE SINGLE SOURCE OF TRUTH
+    // This is the ONLY event that should update game state
     socket.on(SocketEvents.GAME_STATE, (state: GameState) => {
+      console.log('[TV Socket] Game state update, phase:', state.phase, 'round:', state.round);
       setGameState(state);
     });
 
-    socket.on(SocketEvents.PLAYER_JOINED, (data: { player: any; gameState: GameState }) => {
-      setGameState(data.gameState);
+    // ===========================================
+    // ANIMATION EVENTS - UI effects only, NO state updates
+    // ===========================================
+
+    // Dice roll animation
+    socket.on(SocketEvents.GAME_DICE_ROLLED, (data: {
+      playerId: string;
+      dice: [number, number];
+    }) => {
+      console.log('[TV Socket] Dice rolled:', data.dice);
+      setIsRolling(false);
+      setDiceRoll(data.dice);
+      setMovingPlayer(data.playerId);
+
+      // Auto-clear dice after animation
+      setTimeout(() => {
+        setDiceRoll(null);
+      }, 3000);
+    });
+
+    // Player movement animation
+    socket.on(SocketEvents.GAME_PLAYER_MOVED, (data: {
+      playerId: string;
+      from: number;
+      to: number;
+      spaces: number;
+    }) => {
+      console.log('[TV Socket] Player moved:', data.from, '->', data.to);
+      setMovingPlayer(data.playerId);
+
+      // Auto-clear after animation (adjust timing based on spaces)
+      setTimeout(() => {
+        setMovingPlayer(null);
+      }, 1500 + (data.spaces * 200));
+    });
+
+    // Card reveal animation
+    socket.on(SocketEvents.GAME_CARD_DRAWN, (data: {
+      playerId: string;
+      cardId: string;
+      deck: 'chance' | 'community_chest';
+    }) => {
+      console.log('[TV Socket] Card drawn:', data.cardId);
       addEvent({
-        type: 'PLAYER_JOINED',
-        playerId: data.player.id,
-        data: { playerName: data.player.name },
+        id: `card-${Date.now()}`,
+        type: 'CARD_DRAWN',
+        playerId: data.playerId,
+        payload: { cardId: data.cardId, deck: data.deck },
+        round: 0,
         timestamp: Date.now(),
       });
     });
 
-    socket.on(SocketEvents.PLAYER_LEFT, (data: { playerId: string; gameState: GameState }) => {
-      setGameState(data.gameState);
-    });
+    // ===========================================
+    // EVENT LOG - For UI event display only
+    // ===========================================
 
-    socket.on(SocketEvents.GAME_STARTED, (state: GameState) => {
-      setGameState(state);
-    });
-
-    // Dice roll animation
-    socket.on(SocketEvents.DICE_ROLLING, () => {
-      setIsRolling(true);
-    });
-
-    socket.on(SocketEvents.DICE_RESULT, (data: { dice: [number, number]; playerId: string }) => {
-      setIsRolling(false);
-      setDiceRoll(data.dice);
-      setMovingPlayer(data.playerId);
-    });
-
-    // Movement complete
-    socket.on(SocketEvents.MOVEMENT_COMPLETE, () => {
-      setMovingPlayer(null);
-    });
-
-    // Game events for the event log
     socket.on(SocketEvents.GAME_EVENT, (event: GameEvent) => {
       addEvent(event);
-    });
-
-    // Turn change
-    socket.on(SocketEvents.TURN_CHANGED, (data: { playerId: string; gameState: GameState }) => {
-      setGameState(data.gameState);
-    });
-
-    // Property events
-    socket.on(SocketEvents.PROPERTY_PURCHASED, (data: { gameState: GameState }) => {
-      setGameState(data.gameState);
-    });
-
-    socket.on(SocketEvents.RENT_PAID, (data: { gameState: GameState }) => {
-      setGameState(data.gameState);
-    });
-
-    // Game end
-    socket.on(SocketEvents.GAME_ENDED, (data: { gameState: GameState; winner: any }) => {
-      setGameState(data.gameState);
     });
 
     socket.connect();

@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { usePlayerStore } from '../store/playerStore';
+import { useAnimation } from '../contexts/AnimationContext';
 import { SocketEvents } from '@pinopoly/shared';
 import type { GameState } from '@pinopoly/game-engine';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || '';
+
+/**
+ * CLEAN ARCHITECTURE - Socket Hook
+ *
+ * Key Principle: GAME_STATE is the ONLY event that updates state.
+ * Animation events trigger UI effects only, they do NOT update state.
+ */
 
 // Module-level singleton socket instance - shared across all components
 let socketInstance: Socket | null = null;
@@ -13,7 +21,7 @@ let isSocketInitialized = false;
 interface UseSocketReturn {
   socket: Socket | null;
   isConnected: boolean;
-  joinGame: (roomCode: string, playerName: string, token: string) => void;
+  joinGame: (roomCode: string, playerName: string, token: string, color?: string) => void;
   disconnect: () => void;
   emit: (event: string, data?: any) => void;
 }
@@ -29,6 +37,9 @@ export function useSocket(): UseSocketReturn {
     reset,
   } = usePlayerStore();
 
+  // Animation context - for triggering UI effects
+  const animation = useAnimation();
+
   // Initialize socket connection (singleton pattern)
   const initSocket = useCallback(() => {
     if (socketInstance?.connected) return socketInstance;
@@ -42,20 +53,30 @@ export function useSocket(): UseSocketReturn {
     socketInstance = socket;
     isSocketInitialized = true;
 
+    // ===========================================
+    // CONNECTION EVENTS
+    // ===========================================
+
     socket.on('connect', () => {
+      console.log('[Socket] Connected');
       setIsConnected(true);
     });
 
     socket.on('disconnect', () => {
+      console.log('[Socket] Disconnected');
       setIsConnected(false);
     });
 
     socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      console.error('[Socket] Connection error:', error);
       setIsConnected(false);
     });
 
-    // Game events
+    // ===========================================
+    // STATE EVENTS - These update the Zustand store
+    // ===========================================
+
+    // Initial join - sets up player identity and initial state
     socket.on(SocketEvents.JOINED_GAME, (data: {
       playerId: string;
       playerName: string;
@@ -63,50 +84,30 @@ export function useSocket(): UseSocketReturn {
       isHost: boolean;
       gameState: GameState;
     }) => {
+      console.log('[Socket] Joined game:', data.playerId);
       setPlayer(data.playerId, data.playerName, data.token);
       setIsHost(data.isHost);
       setGameState(data.gameState);
     });
 
+    // GAME_STATE - THE SINGLE SOURCE OF TRUTH
+    // This is the ONLY event that should update game state
+    socket.on(SocketEvents.GAME_STATE, (state: GameState) => {
+      console.log('[Socket] Game state update, phase:', state.phase, 'round:', state.round);
+      setGameState(state);
+    });
+
+    // ===========================================
+    // ERROR EVENTS
+    // ===========================================
+
     socket.on(SocketEvents.JOIN_ERROR, (error: { message: string }) => {
-      console.error('Join error:', error.message);
+      console.error('[Socket] Join error:', error.message);
       alert(error.message);
     });
 
-    socket.on(SocketEvents.GAME_STATE, (state: GameState) => {
-      setGameState(state);
-    });
-
-    socket.on(SocketEvents.PLAYER_JOINED, (data: { gameState: GameState }) => {
-      setGameState(data.gameState);
-    });
-
-    socket.on(SocketEvents.PLAYER_LEFT, (data: { gameState: GameState }) => {
-      setGameState(data.gameState);
-    });
-
-    socket.on(SocketEvents.GAME_STARTED, (state: GameState) => {
-      setGameState(state);
-    });
-
-    socket.on(SocketEvents.TURN_CHANGED, (data: { gameState: GameState }) => {
-      setGameState(data.gameState);
-    });
-
-    socket.on(SocketEvents.DICE_RESULT, (data: { gameState: GameState }) => {
-      setGameState(data.gameState);
-    });
-
-    socket.on(SocketEvents.PROPERTY_PURCHASED, (data: { gameState: GameState }) => {
-      setGameState(data.gameState);
-    });
-
-    socket.on(SocketEvents.RENT_PAID, (data: { gameState: GameState }) => {
-      setGameState(data.gameState);
-    });
-
-    socket.on(SocketEvents.GAME_ENDED, (data: { gameState: GameState }) => {
-      setGameState(data.gameState);
+    socket.on(SocketEvents.ERROR, (error: { code: string; message: string }) => {
+      console.error('[Socket] Error:', error.code, error.message);
     });
 
     socket.on(SocketEvents.KICKED, () => {
@@ -114,8 +115,42 @@ export function useSocket(): UseSocketReturn {
       reset();
     });
 
+    // ===========================================
+    // ANIMATION EVENTS - UI effects only, NO state updates
+    // ===========================================
+
+    // Dice roll animation
+    socket.on(SocketEvents.GAME_DICE_ROLLED, (data: {
+      playerId: string;
+      dice: [number, number];
+    }) => {
+      console.log('[Socket] Dice rolled:', data.dice);
+      animation.showDiceResult(data.dice);
+    });
+
+    // Player movement animation
+    socket.on(SocketEvents.GAME_PLAYER_MOVED, (data: {
+      playerId: string;
+      from: number;
+      to: number;
+      spaces: number;
+    }) => {
+      console.log('[Socket] Player moved:', data.from, '->', data.to);
+      animation.startPlayerMove(data.playerId, data.from, data.to, data.spaces);
+    });
+
+    // Card reveal animation
+    socket.on(SocketEvents.GAME_CARD_DRAWN, (data: {
+      playerId: string;
+      cardId: string;
+      deck: 'chance' | 'community_chest';
+    }) => {
+      console.log('[Socket] Card drawn:', data.cardId);
+      animation.startCardReveal(data.cardId, data.deck);
+    });
+
     return socket;
-  }, [setPlayer, setRoomCode, setGameState, setIsHost, reset]);
+  }, [setPlayer, setRoomCode, setGameState, setIsHost, reset, animation]);
 
   // Sync connection state when socket already exists
   useEffect(() => {
@@ -172,10 +207,10 @@ export function useSocket(): UseSocketReturn {
   // Generic emit - uses module-level socket
   const emit = useCallback((event: string, data?: any) => {
     if (socketInstance?.connected) {
-      console.log('[useSocket] Emitting:', event, data);
+      console.log('[Socket] Emit:', event, data);
       socketInstance.emit(event, data);
     } else {
-      console.warn('[useSocket] Cannot emit, socket not connected:', event);
+      console.warn('[Socket] Cannot emit, not connected:', event);
     }
   }, []);
 

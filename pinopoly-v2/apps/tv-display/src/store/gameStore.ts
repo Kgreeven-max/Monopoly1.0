@@ -25,7 +25,7 @@ interface GameStore {
   setIsHost: (isHost: boolean) => void;
   setGameState: (state: GameState) => void;
   addEvent: (event: GameEvent) => void;
-  setDiceRoll: (dice: [number, number]) => void;
+  setDiceRoll: (dice: [number, number] | null) => void;
   setIsRolling: (rolling: boolean) => void;
   setMovingPlayer: (playerId: string | null) => void;
   reset: () => void;

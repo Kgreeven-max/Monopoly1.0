@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { usePlayerStore } from './store/playerStore';
 import { useSocket } from './hooks/useSocket';
+import { AnimationProvider } from './contexts/AnimationContext';
 import { JoinScreen } from './screens/JoinScreen';
 import { LobbyScreen } from './screens/LobbyScreen';
 import { GameScreen } from './screens/GameScreen';
 import { ResultsScreen } from './screens/ResultsScreen';
 
-function App() {
+function AppContent() {
   const { playerId, gameState } = usePlayerStore();
   const { isConnected } = useSocket();
 
@@ -54,6 +55,15 @@ function App() {
 
       {renderScreen()}
     </div>
+  );
+}
+
+// Wrap with AnimationProvider for animation context
+function App() {
+  return (
+    <AnimationProvider>
+      <AppContent />
+    </AnimationProvider>
   );
 }
 
