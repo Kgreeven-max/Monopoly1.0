@@ -76,21 +76,20 @@ export function GameScreen() {
             gameState={gameState}
             player={myPlayer}
             phase={phase}
-            onRoll={() => emit(SocketEvents.ROLL_DICE, { playerId: myPlayer.id })}
+            onRoll={() => emit(SocketEvents.ROLL_DICE)}
             onBuy={() => emit(SocketEvents.BUY_PROPERTY, {
-              playerId: myPlayer.id,
-              propertyPosition: myPlayer.position,
+              propertyId: myPlayer.position,
             })}
-            onEndTurn={() => emit(SocketEvents.END_TURN, { playerId: myPlayer.id })}
-            onPayJailFine={() => emit(SocketEvents.PAY_JAIL_FINE, { playerId: myPlayer.id })}
+            onEndTurn={() => emit(SocketEvents.END_TURN)}
+            onPayJailFine={() => emit(SocketEvents.PAY_JAIL_FINE)}
           />
         )}
 
         {/* Dice button for rolling */}
-        {isMyTurn && (phase === 'roll' || phase === 'preRoll') && (
+        {isMyTurn && phase === 'pre_roll' && (
           <div className="flex-1 flex items-center justify-center">
             <DiceButton
-              onRoll={() => emit(SocketEvents.ROLL_DICE, { playerId: myPlayer.id })}
+              onRoll={() => emit(SocketEvents.ROLL_DICE)}
             />
           </div>
         )}
@@ -122,14 +121,22 @@ export function GameScreen() {
 
 function getPhaseInstruction(phase: string | null): string {
   switch (phase) {
-    case 'preRoll':
+    case 'pre_roll':
       return 'Build houses or roll the dice';
-    case 'roll':
-      return 'Roll the dice!';
-    case 'postRoll':
-      return 'Buy property or end your turn';
+    case 'rolling':
+      return 'Rolling the dice...';
+    case 'moving':
+      return 'Moving...';
+    case 'buy_decision':
+      return 'Buy property or decline';
+    case 'landed':
+    case 'turn_end':
+      return 'End your turn';
     case 'jail':
+    case 'jail_decision':
       return 'Pay fine or try to roll doubles';
+    case 'card_action':
+      return 'Execute card action';
     default:
       return 'Take your action';
   }

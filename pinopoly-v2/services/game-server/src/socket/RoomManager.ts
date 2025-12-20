@@ -144,17 +144,20 @@ export class RoomManager {
       const room = this.rooms.get(roomCode);
 
       if (!room) {
+        socket.emit(SocketEvents.JOIN_ERROR, { message: 'Game not found' });
         socket.emit(SocketEvents.ERROR, { code: 'ROOM_NOT_FOUND', message: 'Game not found' });
         return;
       }
 
       if (room.state.status !== 'lobby') {
+        socket.emit(SocketEvents.JOIN_ERROR, { message: 'Game already started' });
         socket.emit(SocketEvents.ERROR, { code: 'GAME_STARTED', message: 'Game already started' });
         return;
       }
 
       const playerCount = Object.keys(room.state.players).length;
       if (playerCount >= room.state.config.maxPlayers) {
+        socket.emit(SocketEvents.JOIN_ERROR, { message: 'Game is full' });
         socket.emit(SocketEvents.ERROR, { code: 'GAME_FULL', message: 'Game is full' });
         return;
       }
@@ -190,12 +193,23 @@ export class RoomManager {
       // Join socket room
       socket.join(roomCode);
 
-      // Notify all
+      // Notify all about new player
       this.io.to(roomCode).emit(SocketEvents.LOBBY_PLAYER_JOINED, {
         player: newState.players[playerId],
+        gameState: newState,
       });
 
-      // Send lobby state to new player
+      // Send joined confirmation to new player (controller expects this)
+      const isHost = room.hostSocketId === socket.id;
+      socket.emit(SocketEvents.JOINED_GAME, {
+        playerId,
+        playerName,
+        token,
+        isHost,
+        gameState: newState,
+      });
+
+      // Also send lobby state for displays
       socket.emit(SocketEvents.LOBBY_STATE, this.getLobbyState(room));
 
       // Save participant to database
@@ -210,6 +224,7 @@ export class RoomManager {
       });
     } catch (error) {
       console.error('Join error:', error);
+      socket.emit(SocketEvents.JOIN_ERROR, { message: 'Failed to join game' });
       socket.emit(SocketEvents.ERROR, { code: 'JOIN_ERROR', message: 'Failed to join game' });
     }
   }
@@ -345,6 +360,9 @@ export class RoomManager {
           startedAt: new Date(),
         },
       });
+
+      // Broadcast game started event (controller expects this)
+      this.io.to(roomCode).emit(SocketEvents.GAME_STARTED, newState);
 
       // Broadcast game state
       this.io.to(roomCode).emit(SocketEvents.GAME_STATE, newState);

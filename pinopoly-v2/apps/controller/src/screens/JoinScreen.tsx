@@ -54,7 +54,9 @@ export function JoinScreen() {
   };
 
   const handleJoin = () => {
-    joinGame(roomCode, playerName.trim(), selectedToken);
+    const tokenData = TOKENS.find(t => t.id === selectedToken);
+    const color = tokenData?.color || '#FF6B6B';
+    joinGame(roomCode, playerName.trim(), selectedToken, color);
   };
 
   return (

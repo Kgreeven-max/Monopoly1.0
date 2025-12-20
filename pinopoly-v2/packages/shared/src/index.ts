@@ -12,23 +12,36 @@ export const SocketEvents = {
   AUTH_DISPLAY: 'auth:display',
   AUTH_ADMIN: 'auth:admin',
 
+  // Lobby events (client -> server)
+  JOIN_GAME: 'lobby:join',           // Alias for controller compatibility
   LOBBY_JOIN: 'lobby:join',
   LOBBY_READY: 'lobby:ready',
   LOBBY_UNREADY: 'lobby:unready',
   LOBBY_ADD_BOT: 'lobby:addBot',
+  ADD_BOT: 'lobby:addBot',           // Alias for controller compatibility
   LOBBY_REMOVE_BOT: 'lobby:removeBot',
+  REMOVE_BOT: 'lobby:removeBot',     // Alias for controller compatibility
   LOBBY_START_GAME: 'lobby:startGame',
+  START_GAME: 'lobby:startGame',     // Alias for controller compatibility
 
+  // Game actions (client -> server)
   GAME_ROLL_DICE: 'game:rollDice',
+  ROLL_DICE: 'game:rollDice',        // Alias for controller compatibility
   GAME_END_TURN: 'game:endTurn',
+  END_TURN: 'game:endTurn',          // Alias for controller compatibility
   GAME_BUY_PROPERTY: 'game:buyProperty',
+  BUY_PROPERTY: 'game:buyProperty',  // Alias for controller compatibility
   GAME_DECLINE_PROPERTY: 'game:declineProperty',
+  DECLINE_PROPERTY: 'game:declineProperty', // Alias
   GAME_BUILD_HOUSE: 'game:buildHouse',
+  BUILD_HOUSE: 'game:buildHouse',    // Alias
   GAME_SELL_HOUSE: 'game:sellHouse',
   GAME_MORTGAGE: 'game:mortgageProperty',
   GAME_UNMORTGAGE: 'game:unmortgageProperty',
   GAME_PAY_JAIL_FINE: 'game:payJailFine',
+  PAY_JAIL_FINE: 'game:payJailFine', // Alias for controller compatibility
   GAME_USE_JAIL_CARD: 'game:useJailCard',
+  USE_JAIL_CARD: 'game:useJailCard', // Alias
   GAME_ROLL_FOR_DOUBLES: 'game:rollForDoubles',
   GAME_EXECUTE_CARD: 'game:executeCard',
 
@@ -49,16 +62,27 @@ export const SocketEvents = {
 
   CHAT_MESSAGE: 'chat:message',
 
-  // Server -> Client
+  // Server -> Client responses
   AUTH_SUCCESS: 'auth:success',
   AUTH_ERROR: 'auth:error',
 
+  // Join responses
+  JOINED_GAME: 'lobby:joined',       // Response to JOIN_GAME
+  JOIN_ERROR: 'lobby:joinError',     // Error response to JOIN_GAME
+
+  // Lobby state updates
   LOBBY_STATE: 'lobby:state',
   LOBBY_PLAYER_JOINED: 'lobby:playerJoined',
   LOBBY_PLAYER_LEFT: 'lobby:playerLeft',
   LOBBY_PLAYER_READY: 'lobby:playerReady',
   LOBBY_GAME_STARTING: 'lobby:gameStarting',
 
+  // Aliases for controller compatibility
+  PLAYER_JOINED: 'lobby:playerJoined',
+  PLAYER_LEFT: 'lobby:playerLeft',
+  GAME_STARTED: 'game:started',
+
+  // Game state updates
   GAME_STATE: 'game:state',
   GAME_DICE_ROLLED: 'game:diceRolled',
   GAME_PLAYER_MOVED: 'game:playerMoved',
@@ -68,6 +92,21 @@ export const SocketEvents = {
   GAME_CARD_DRAWN: 'game:cardDrawn',
   GAME_PLAYER_BANKRUPT: 'game:playerBankrupt',
   GAME_TURN_CHANGED: 'game:turnChanged',
+  GAME_ENDED: 'game:ended',
+
+  // Aliases for controller compatibility
+  DICE_RESULT: 'game:diceRolled',
+  TURN_CHANGED: 'game:turnChanged',
+  PROPERTY_PURCHASED: 'game:propertyBought',
+  RENT_PAID: 'game:rentPaid',
+
+  // Animation/display events
+  DICE_ROLLING: 'game:diceRolling',
+  MOVEMENT_COMPLETE: 'game:movementComplete',
+  GAME_EVENT: 'game:event',
+
+  // Player events
+  KICKED: 'player:kicked',
 
   AUCTION_STARTED: 'auction:started',
   AUCTION_BID_PLACED: 'auction:bid',

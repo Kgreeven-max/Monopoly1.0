@@ -113,7 +113,7 @@ export function useSocket(): UseSocketReturn {
   }, [setPlayer, setRoomCode, setGameState, setIsHost, reset]);
 
   // Join game
-  const joinGame = useCallback((roomCode: string, playerName: string, token: string) => {
+  const joinGame = useCallback((roomCode: string, playerName: string, token: string, color?: string) => {
     const socket = initSocket();
     if (!socket) return;
 
@@ -123,10 +123,16 @@ export function useSocket(): UseSocketReturn {
       socket.connect();
     }
 
+    // Use provided color or pick one based on token
+    const playerColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
+    const tokenIndex = ['car', 'dog', 'hat', 'ship', 'thimble', 'boot', 'wheelbarrow', 'cat'].indexOf(token);
+    const assignedColor = color || playerColors[tokenIndex >= 0 ? tokenIndex : 0];
+
     socket.emit(SocketEvents.JOIN_GAME, {
       roomCode: roomCode.toUpperCase(),
       playerName,
       token,
+      color: assignedColor,
     });
   }, [initSocket, setRoomCode]);
 

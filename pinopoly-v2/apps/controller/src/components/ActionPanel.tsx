@@ -26,10 +26,11 @@ export function ActionPanel({
     currentProperty.price &&
     player.money >= currentProperty.price;
 
-  // Render different actions based on phase
+  // Render different actions based on phase (using snake_case from game engine)
   const renderActions = () => {
     switch (phase) {
       case 'jail':
+      case 'jail_decision':
         return (
           <div className="space-y-3">
             <p className="text-orange-400 text-center mb-4">
@@ -53,10 +54,12 @@ export function ActionPanel({
           </div>
         );
 
-      case 'postRoll':
+      case 'buy_decision':
+      case 'landed':
+      case 'turn_end':
         return (
           <div className="space-y-3">
-            {canBuyProperty && (
+            {canBuyProperty && phase === 'buy_decision' && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -75,7 +78,7 @@ export function ActionPanel({
           </div>
         );
 
-      case 'preRoll':
+      case 'pre_roll':
         return (
           <div className="space-y-3">
             <BuildingActions

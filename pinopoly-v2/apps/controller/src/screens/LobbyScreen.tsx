@@ -33,7 +33,10 @@ export function LobbyScreen() {
   };
 
   const handleAddBot = () => {
-    emit(SocketEvents.ADD_BOT);
+    // Select a random personality for variety
+    const personalities = ['conservative', 'aggressive', 'strategic', 'opportunistic', 'shark', 'investor'];
+    const randomPersonality = personalities[Math.floor(Math.random() * personalities.length)];
+    emit(SocketEvents.ADD_BOT, { personality: randomPersonality, difficulty: 'normal' });
   };
 
   return (
