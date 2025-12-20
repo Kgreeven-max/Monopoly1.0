@@ -11,6 +11,7 @@ interface UseSocketReturn {
   isConnected: boolean;
   connect: (roomCode: string) => void;
   disconnect: () => void;
+  emit: (event: string, data?: any) => void;
 }
 
 export function useSocket(): UseSocketReturn {
@@ -131,6 +132,13 @@ export function useSocket(): UseSocketReturn {
     reset();
   }, [reset]);
 
+  // Generic emit function
+  const emit = useCallback((event: string, data?: any) => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit(event, data);
+    }
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -145,5 +153,6 @@ export function useSocket(): UseSocketReturn {
     isConnected,
     connect,
     disconnect,
+    emit,
   };
 }

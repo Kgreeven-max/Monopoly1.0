@@ -1,5 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore, usePlayers } from '../store/gameStore';
+import { useSocket } from '../hooks/useSocket';
+import { SocketEvents } from '@pinopoly/shared';
 import { QRCode } from '../components/QRCode';
 import { PlayerCard } from '../components/PlayerCard';
 
@@ -17,10 +19,15 @@ const TOKEN_COLORS: Record<string, string> = {
 export function LobbyScreen() {
   const { roomCode, gameState, isHost } = useGameStore();
   const players = usePlayers();
+  const { emit } = useSocket();
 
   const joinUrl = `${window.location.origin}/play?room=${roomCode}`;
   const minPlayers = 2;
   const canStart = players.length >= minPlayers && isHost;
+
+  const handleStartGame = () => {
+    emit(SocketEvents.START_GAME);
+  };
 
   return (
     <div className="flex h-screen p-8 gap-8">
@@ -124,6 +131,7 @@ export function LobbyScreen() {
             className="mt-6"
           >
             <button
+              onClick={handleStartGame}
               disabled={!canStart}
               className="w-full py-5 text-2xl font-bold rounded-xl transition-all
                        bg-green-500 hover:bg-green-600 disabled:bg-gray-600

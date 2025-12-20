@@ -44,6 +44,7 @@ export const SocketEvents = {
   USE_JAIL_CARD: 'game:useJailCard', // Alias
   GAME_ROLL_FOR_DOUBLES: 'game:rollForDoubles',
   GAME_EXECUTE_CARD: 'game:executeCard',
+  EXECUTE_CARD: 'game:executeCard', // Alias for controller compatibility
 
   TRADE_PROPOSE: 'trade:propose',
   TRADE_ACCEPT: 'trade:accept',

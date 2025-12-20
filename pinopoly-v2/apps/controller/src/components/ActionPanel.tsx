@@ -9,6 +9,9 @@ interface ActionPanelProps {
   onBuy: () => void;
   onEndTurn: () => void;
   onPayJailFine: () => void;
+  onBuildHouse?: (propertyId: number) => void;
+  onUseJailCard?: () => void;
+  onExecuteCard?: () => void;
 }
 
 export function ActionPanel({
@@ -19,6 +22,9 @@ export function ActionPanel({
   onBuy,
   onEndTurn,
   onPayJailFine,
+  onBuildHouse,
+  onUseJailCard,
+  onExecuteCard,
 }: ActionPanelProps) {
   const currentProperty = gameState.properties[player.position];
   const canBuyProperty = currentProperty &&
@@ -46,8 +52,11 @@ export function ActionPanel({
             <button onClick={onRoll} className="btn-action btn-secondary">
               Try to Roll Doubles
             </button>
-            {player.getOutOfJailCards && player.getOutOfJailCards > 0 && (
-              <button className="btn-action bg-yellow-500 hover:bg-yellow-600 text-black">
+            {player.getOutOfJailCards && player.getOutOfJailCards > 0 && onUseJailCard && (
+              <button
+                onClick={onUseJailCard}
+                className="btn-action bg-yellow-500 hover:bg-yellow-600 text-black"
+              >
                 Use Get Out of Jail Card ({player.getOutOfJailCards})
               </button>
             )}
@@ -84,7 +93,26 @@ export function ActionPanel({
             <BuildingActions
               gameState={gameState}
               player={player}
+              onBuildHouse={onBuildHouse}
             />
+          </div>
+        );
+
+      case 'card_action':
+        return (
+          <div className="space-y-3">
+            <div className="bg-purple-500/20 border border-purple-500 rounded-2xl p-4 text-center">
+              <p className="text-purple-400 text-lg font-bold mb-2">Card Action</p>
+              <p className="text-white/60 text-sm mb-4">Execute the card effect</p>
+              {onExecuteCard && (
+                <button
+                  onClick={onExecuteCard}
+                  className="btn-action btn-primary"
+                >
+                  Execute Card
+                </button>
+              )}
+            </div>
           </div>
         );
 
@@ -149,9 +177,10 @@ function PropertyBuyCard({ property, playerMoney, onBuy }: PropertyBuyCardProps)
 interface BuildingActionsProps {
   gameState: GameState;
   player: PlayerState;
+  onBuildHouse?: (propertyId: number) => void;
 }
 
-function BuildingActions({ gameState, player }: BuildingActionsProps) {
+function BuildingActions({ gameState, player, onBuildHouse }: BuildingActionsProps) {
   // Find properties where player can build
   const buildableProperties = Object.entries(gameState.properties)
     .filter(([_, prop]) => {
@@ -193,7 +222,11 @@ function BuildingActions({ gameState, player }: BuildingActionsProps) {
                 {prop.houses || 0} houses • ${prop.houseCost}/house
               </p>
             </div>
-            <button className="px-3 py-1 bg-yellow-500 text-black text-sm font-bold rounded-lg">
+            <button
+              onClick={() => onBuildHouse?.(prop.position)}
+              disabled={!onBuildHouse}
+              className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-black text-sm font-bold rounded-lg disabled:opacity-50"
+            >
               Build
             </button>
           </div>

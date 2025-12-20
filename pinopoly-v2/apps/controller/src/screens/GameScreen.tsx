@@ -82,6 +82,9 @@ export function GameScreen() {
             })}
             onEndTurn={() => emit(SocketEvents.END_TURN)}
             onPayJailFine={() => emit(SocketEvents.PAY_JAIL_FINE)}
+            onBuildHouse={(propertyId) => emit(SocketEvents.BUILD_HOUSE, { propertyId })}
+            onUseJailCard={() => emit(SocketEvents.USE_JAIL_CARD)}
+            onExecuteCard={() => emit(SocketEvents.EXECUTE_CARD)}
           />
         )}
 
