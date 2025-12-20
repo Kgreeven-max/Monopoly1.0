@@ -427,10 +427,13 @@ export class RoomManager {
 
       room.state = newState;
 
-      // Emit turn change
+      // Emit turn change with full game state (controller expects { gameState: GameState })
       const turnEvent = events.find(e => e.type === 'TURN_CHANGED');
       if (turnEvent) {
-        this.io.to(room.code).emit(SocketEvents.GAME_TURN_CHANGED, turnEvent.payload);
+        this.io.to(room.code).emit(SocketEvents.GAME_TURN_CHANGED, {
+          ...turnEvent.payload,
+          gameState: newState,
+        });
       }
 
       // Emit full state
@@ -887,10 +890,13 @@ export class RoomManager {
         });
         room.state = newState;
 
-        // Emit turn change event
+        // Emit turn change event with full game state
         const turnEvent = events.find(e => e.type === 'TURN_CHANGED');
         if (turnEvent) {
-          this.io.to(room.code).emit(SocketEvents.GAME_TURN_CHANGED, turnEvent.payload);
+          this.io.to(room.code).emit(SocketEvents.GAME_TURN_CHANGED, {
+            ...turnEvent.payload,
+            gameState: newState,
+          });
         }
 
         this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);

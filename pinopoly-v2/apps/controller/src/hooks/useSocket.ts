@@ -152,14 +152,10 @@ export function useSocket(): UseSocketReturn {
     }
   }, []);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
-    };
-  }, []);
+  // NOTE: We intentionally do NOT disconnect on component unmount.
+  // The socket should persist across screen changes (JoinScreen -> LobbyScreen -> GameScreen).
+  // Only disconnect when explicitly called via disconnect() function (e.g., when leaving game).
+  // The socket will be cleaned up when the browser tab closes or user navigates away.
 
   return {
     socket: socketRef.current,
