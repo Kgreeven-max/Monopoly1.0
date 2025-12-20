@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
 import { usePlayerStore } from './store/playerStore';
 import { useSocket } from './hooks/useSocket';
 import { AnimationProvider } from './contexts/AnimationContext';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { ToastContainer } from './components/Toast';
 import { JoinScreen } from './screens/JoinScreen';
 import { LobbyScreen } from './screens/LobbyScreen';
 import { GameScreen } from './screens/GameScreen';
@@ -58,12 +59,15 @@ function AppContent() {
   );
 }
 
-// Wrap with AnimationProvider for animation context
+// Wrap with providers for animation and notification contexts
 function App() {
   return (
-    <AnimationProvider>
-      <AppContent />
-    </AnimationProvider>
+    <NotificationProvider>
+      <AnimationProvider>
+        <AppContent />
+        <ToastContainer />
+      </AnimationProvider>
+    </NotificationProvider>
   );
 }
 

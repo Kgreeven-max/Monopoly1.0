@@ -29,6 +29,11 @@ export const config = {
     maxConcurrentGames: parseInt(process.env.MAX_CONCURRENT_GAMES || '10', 10),
     maxPlayersPerGame: parseInt(process.env.MAX_PLAYERS_PER_GAME || '8', 10),
     botThinkDelayMs: parseInt(process.env.BOT_THINK_DELAY_MS || '1500', 10),
+    // Timeout settings
+    turnTimeoutMs: parseInt(process.env.TURN_TIMEOUT_MS || '120000', 10), // 2 minutes
+    turnWarningMs: parseInt(process.env.TURN_WARNING_MS || '30000', 10), // 30 second warning
+    auctionBidTimeoutMs: parseInt(process.env.AUCTION_BID_TIMEOUT_MS || '30000', 10), // 30 seconds
+    disconnectGraceMs: parseInt(process.env.DISCONNECT_GRACE_MS || '300000', 10), // 5 minutes
   },
 
   cors: {

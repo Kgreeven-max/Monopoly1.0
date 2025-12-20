@@ -125,6 +125,22 @@ export const SocketEvents = {
 
   CHAT_RECEIVED: 'chat:message',
   ERROR: 'error',
+
+  // Reconnection events (Phase 4)
+  RECONNECT_REQUEST: 'reconnect:request',
+  RECONNECT_SUCCESS: 'reconnect:success',
+  RECONNECT_FAILED: 'reconnect:failed',
+  SESSION_EXPIRED: 'session:expired',
+  PLAYER_DISCONNECTED: 'player:disconnected',
+  PLAYER_RECONNECTED: 'player:reconnected',
+
+  // Host migration events (Phase 5)
+  HOST_MIGRATED: 'host:migrated',
+
+  // Timeout events (Phase 6)
+  TURN_TIMEOUT: 'turn:timeout',
+  TURN_WARNING: 'turn:warning',
+  AUCTION_TIMEOUT: 'auction:timeout',
 } as const;
 
 // =============================================================================

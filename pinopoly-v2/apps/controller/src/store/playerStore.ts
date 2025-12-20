@@ -11,6 +11,7 @@ interface PlayerStore {
 
   // Connection state
   roomCode: string | null;
+  sessionToken: string | null; // For reconnection support
 
   // Game state
   gameState: GameState | null;
@@ -23,9 +24,11 @@ interface PlayerStore {
   setPlayer: (id: string, name: string, token: string) => void;
   setIsHost: (isHost: boolean) => void;
   setRoomCode: (code: string) => void;
+  setSessionToken: (token: string) => void;
   setGameState: (state: GameState) => void;
   showProperty: (position: number | null) => void;
   setPendingAction: (action: string | null) => void;
+  clearSession: () => void; // Clear only session data (for failed reconnect)
   reset: () => void;
 }
 
@@ -38,6 +41,7 @@ export const usePlayerStore = create<PlayerStore>()(
       token: null,
       isHost: false,
       roomCode: null,
+      sessionToken: null,
       gameState: null,
       showPropertyDetails: null,
       pendingAction: null,
@@ -53,18 +57,33 @@ export const usePlayerStore = create<PlayerStore>()(
 
       setRoomCode: (code) => set({ roomCode: code }),
 
+      setSessionToken: (token) => set({ sessionToken: token }),
+
       setGameState: (state) => set({ gameState: state }),
 
       showProperty: (position) => set({ showPropertyDetails: position }),
 
       setPendingAction: (action) => set({ pendingAction: action }),
 
+      // Clear session data only (for failed reconnect, keep name/token preferences)
+      clearSession: () => set({
+        playerId: null,
+        roomCode: null,
+        sessionToken: null,
+        gameState: null,
+        isHost: false,
+        showPropertyDetails: null,
+        pendingAction: null,
+      }),
+
+      // Full reset including preferences
       reset: () => set({
         playerId: null,
         playerName: null,
         token: null,
         isHost: false,
         roomCode: null,
+        sessionToken: null,
         gameState: null,
         showPropertyDetails: null,
         pendingAction: null,
@@ -73,8 +92,13 @@ export const usePlayerStore = create<PlayerStore>()(
     {
       name: 'pinopoly-player',
       partialize: (state) => ({
+        // User preferences (always persist)
         playerName: state.playerName,
         token: state.token,
+        // Session data (for reconnection)
+        playerId: state.playerId,
+        roomCode: state.roomCode,
+        sessionToken: state.sessionToken,
       }),
     }
   )

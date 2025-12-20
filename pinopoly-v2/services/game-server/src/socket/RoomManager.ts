@@ -19,13 +19,24 @@ import { SocketEvents, generateRoomCode, uuid } from '@pinopoly/shared';
 import { AuthenticatedSocket } from './SocketServer';
 import { config } from '../config';
 
+interface PlayerSession {
+  playerId: string;
+  sessionToken: string;
+  lastSeen: number;
+  isConnected: boolean;
+  disconnectTimeout?: NodeJS.Timeout;
+}
+
 interface GameRoom {
   id: string;
   code: string;
   state: GameState;
   hostSocketId: string | null;
+  hostPlayerId: string | null; // Track host by player ID for migration
   displaySockets: Set<string>;
   playerSockets: Map<string, string>; // playerId -> socketId
+  sessions: Map<string, PlayerSession>; // playerId -> session
+  turnTimer: NodeJS.Timeout | null; // For turn timeouts
 }
 
 export class RoomManager {
@@ -78,6 +89,9 @@ export class RoomManager {
       socket.on(SocketEvents.TRADE_ACCEPT, (data) => this.handleAcceptTrade(socket, data));
       socket.on(SocketEvents.TRADE_REJECT, (data) => this.handleRejectTrade(socket, data));
 
+      // Reconnection events
+      socket.on(SocketEvents.RECONNECT_REQUEST, (data) => this.handleReconnect(socket, data));
+
       // Disconnect
       socket.on('disconnect', () => this.handleDisconnect(socket));
     });
@@ -106,8 +120,11 @@ export class RoomManager {
       code: roomCode,
       state,
       hostSocketId,
+      hostPlayerId: null,
       displaySockets: new Set(),
       playerSockets: new Map(),
+      sessions: new Map(),
+      turnTimer: null,
     };
 
     this.rooms.set(roomCode, room);
@@ -192,9 +209,19 @@ export class RoomManager {
       room.playerSockets.set(playerId, socket.id);
       this.socketToRoom.set(socket.id, roomCode);
 
+      // Generate session token for reconnection
+      const sessionToken = uuid();
+      room.sessions.set(playerId, {
+        playerId,
+        sessionToken,
+        lastSeen: Date.now(),
+        isConnected: true,
+      });
+
       // First player to join becomes the host
       if (room.hostSocketId === 'host-placeholder' || !room.hostSocketId) {
         room.hostSocketId = socket.id;
+        room.hostPlayerId = playerId;
         console.log(`Player ${playerName} became host of game ${roomCode}`);
       }
 
@@ -213,12 +240,13 @@ export class RoomManager {
       });
 
       // Send joined confirmation to new player (controller expects this)
-      const isHost = room.hostSocketId === socket.id;
+      const isHost = room.hostPlayerId === playerId;
       socket.emit(SocketEvents.JOINED_GAME, {
         playerId,
         playerName,
         token,
         isHost,
+        sessionToken, // Include session token for reconnection
         gameState: newState,
       });
 
@@ -388,6 +416,9 @@ export class RoomManager {
       // Broadcast game state
       this.io.to(roomCode).emit(SocketEvents.GAME_STATE, newState);
 
+      // Start turn timer for first player
+      this.startTurnTimer(room);
+
       // Check if first player is a bot
       this.checkBotTurn(room);
     } catch (error) {
@@ -459,6 +490,9 @@ export class RoomManager {
 
       // Emit full state
       this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
+
+      // Start timer for next player
+      this.startTurnTimer(room);
 
       // Check if next player is bot
       this.checkBotTurn(room);
@@ -896,18 +930,201 @@ export class RoomManager {
     this.socketToRoom.delete(socket.id);
     if (socket.playerId) {
       room.playerSockets.delete(socket.playerId);
+
+      // Mark session as disconnected (don't delete yet)
+      const session = room.sessions.get(socket.playerId);
+      if (session) {
+        session.isConnected = false;
+        session.lastSeen = Date.now();
+
+        // Set cleanup timeout (5 minutes grace period)
+        session.disconnectTimeout = setTimeout(() => {
+          // If still disconnected after timeout, clean up
+          if (session && !session.isConnected) {
+            console.log(`[RoomManager] Session expired for player ${socket.playerId}`);
+            room.sessions.delete(socket.playerId!);
+
+            // If game hasn't started, remove player from game state
+            if (room.state.status === 'lobby') {
+              // Could remove player here if needed
+            }
+          }
+        }, 5 * 60 * 1000); // 5 minutes
+      }
     }
 
     // Notify room
     if (socket.playerId) {
-      this.io.to(roomCode).emit('player:disconnected', {
+      this.io.to(roomCode).emit(SocketEvents.PLAYER_DISCONNECTED, {
         playerId: socket.playerId,
       });
+
+      // Check if host disconnected - migrate host
+      if (room.hostPlayerId === socket.playerId) {
+        this.migrateHost(room);
+      }
     }
 
     // If room is empty and in lobby, delete it
     if (room.playerSockets.size === 0 && room.state.status === 'lobby') {
       this.rooms.delete(roomCode);
+    }
+  }
+
+  private handleReconnect(socket: AuthenticatedSocket, data: {
+    playerId: string;
+    roomCode: string;
+    sessionToken: string;
+  }): void {
+    const { playerId, roomCode, sessionToken } = data;
+    const room = this.rooms.get(roomCode);
+
+    if (!room) {
+      socket.emit(SocketEvents.RECONNECT_FAILED, { reason: 'Room not found' });
+      return;
+    }
+
+    const session = room.sessions.get(playerId);
+    if (!session) {
+      socket.emit(SocketEvents.RECONNECT_FAILED, { reason: 'Session not found' });
+      return;
+    }
+
+    if (session.sessionToken !== sessionToken) {
+      socket.emit(SocketEvents.RECONNECT_FAILED, { reason: 'Invalid session token' });
+      return;
+    }
+
+    // Clear disconnect timeout if pending
+    if (session.disconnectTimeout) {
+      clearTimeout(session.disconnectTimeout);
+      session.disconnectTimeout = undefined;
+    }
+
+    // Reconnect player
+    session.isConnected = true;
+    session.lastSeen = Date.now();
+    room.playerSockets.set(playerId, socket.id);
+    this.socketToRoom.set(socket.id, roomCode);
+
+    // Set socket context
+    socket.playerId = playerId;
+    socket.gameId = room.id;
+    socket.role = 'player';
+
+    // Join socket room
+    socket.join(roomCode);
+
+    const isHost = room.hostPlayerId === playerId;
+
+    // Send success with current state
+    socket.emit(SocketEvents.RECONNECT_SUCCESS, {
+      playerId,
+      isHost,
+      gameState: room.state,
+    });
+
+    // Notify room
+    this.io.to(roomCode).emit(SocketEvents.PLAYER_RECONNECTED, {
+      playerId,
+    });
+
+    console.log(`[RoomManager] Player ${playerId} reconnected to ${roomCode}`);
+  }
+
+  private migrateHost(room: GameRoom): void {
+    // Find next connected human player to become host
+    const newHostId = room.state.playerOrder.find(playerId => {
+      const session = room.sessions.get(playerId);
+      const player = room.state.players[playerId];
+      return session?.isConnected && !player.isBot;
+    });
+
+    if (newHostId) {
+      room.hostPlayerId = newHostId;
+      room.hostSocketId = room.playerSockets.get(newHostId) || null;
+
+      this.io.to(room.code).emit(SocketEvents.HOST_MIGRATED, {
+        newHostId,
+        gameState: room.state,
+      });
+
+      console.log(`[RoomManager] Host migrated to ${newHostId} in room ${room.code}`);
+    } else {
+      console.log(`[RoomManager] No eligible host found in room ${room.code}`);
+    }
+  }
+
+  // ===========================================================================
+  // TURN TIMER METHODS
+  // ===========================================================================
+
+  private startTurnTimer(room: GameRoom): void {
+    this.clearTurnTimer(room);
+
+    const currentPlayerId = room.state.playerOrder[room.state.currentPlayerIndex];
+    const currentPlayer = room.state.players[currentPlayerId];
+
+    // Don't set timer for bots - they handle their own turns
+    if (currentPlayer?.isBot) return;
+
+    // Set warning timer
+    const warningTimer = setTimeout(() => {
+      this.io.to(room.code).emit(SocketEvents.TURN_WARNING, {
+        playerId: currentPlayerId,
+        remainingMs: config.game.turnTimeoutMs - config.game.turnWarningMs,
+      });
+    }, config.game.turnWarningMs);
+
+    // Set turn timeout
+    room.turnTimer = setTimeout(() => {
+      clearTimeout(warningTimer);
+      this.handleTurnTimeout(room, currentPlayerId);
+    }, config.game.turnTimeoutMs);
+
+    console.log(`[RoomManager] Turn timer started for ${currentPlayerId} (${config.game.turnTimeoutMs}ms)`);
+  }
+
+  private clearTurnTimer(room: GameRoom): void {
+    if (room.turnTimer) {
+      clearTimeout(room.turnTimer);
+      room.turnTimer = null;
+    }
+  }
+
+  private handleTurnTimeout(room: GameRoom, playerId: string): void {
+    console.log(`[RoomManager] Turn timeout for ${playerId}`);
+
+    // Notify room about timeout
+    this.io.to(room.code).emit(SocketEvents.TURN_TIMEOUT, {
+      playerId,
+    });
+
+    // Force end the turn
+    try {
+      const [newState, events] = gameReducer(room.state, {
+        type: ActionTypes.END_TURN,
+        payload: { playerId },
+      });
+
+      room.state = newState;
+
+      // Emit turn change
+      const turnEvent = events.find(e => e.type === 'TURN_CHANGED');
+      if (turnEvent) {
+        this.io.to(room.code).emit(SocketEvents.GAME_TURN_CHANGED, {
+          ...turnEvent.payload,
+          gameState: newState,
+        });
+      }
+
+      this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
+
+      // Start new turn timer and check for bot
+      this.startTurnTimer(room);
+      this.checkBotTurn(room);
+    } catch (error) {
+      console.error('[RoomManager] Error handling turn timeout:', error);
     }
   }
 
