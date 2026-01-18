@@ -44,24 +44,24 @@ export function PlayerToken({
 
   return (
     <motion.div
-      layoutId={`token-${player.id}`}
-      initial={false}
-      animate={{
+      key={`token-${player.id}-${player.position}`}
+      layout
+      style={{
+        position: 'absolute',
         left: `${position.x + stackOffset.x}%`,
         top: `${position.y + stackOffset.y}%`,
+        zIndex: 20 + stackIndex,
       }}
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
       transition={{
         type: 'spring',
         stiffness: 300,
         damping: 30,
       }}
-      className="absolute z-20 transform -translate-x-1/2 -translate-y-1/2"
-      style={{ zIndex: 20 + stackIndex }}
+      className="z-20 transform -translate-x-1/2 -translate-y-1/2"
     >
-      <motion.div
-        whileHover={{ scale: 1.2 }}
-        className="relative"
-      >
+      <div className="relative">
         {/* Token body */}
         <div
           className="w-6 h-6 rounded-full flex items-center justify-center text-sm shadow-lg border-2 border-white"
@@ -83,7 +83,7 @@ export function PlayerToken({
             🔒
           </div>
         )}
-      </motion.div>
+      </div>
     </motion.div>
   );
 }

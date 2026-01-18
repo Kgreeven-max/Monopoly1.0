@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useMemo } from 'react';
+import { motion, LayoutGroup } from 'framer-motion';
 import type { GameState, PlayerState } from '@pinopoly/game-engine';
 import { BoardSpace } from './BoardSpace';
 import { PlayerToken } from './PlayerToken';
@@ -38,6 +38,11 @@ export function GameBoard({ gameState, players }: GameBoardProps) {
     return groups;
   }, [players]);
 
+  // Debug logging for player positions
+  useEffect(() => {
+    console.log('[GameBoard] Players:', players.map(p => ({ name: p.name, position: p.position })));
+  }, [players]);
+
   return (
     <div className="relative" style={{ width: 'var(--board-size)', height: 'var(--board-size)' }}>
       {/* Board background */}
@@ -70,20 +75,22 @@ export function GameBoard({ gameState, players }: GameBoardProps) {
       })}
 
       {/* Player tokens */}
-      {Object.entries(playersByPosition).map(([posStr, playersAtPos]) => {
-        const pos = parseInt(posStr);
-        const spacePos = spacePositions[pos];
+      <LayoutGroup>
+        {Object.entries(playersByPosition).map(([posStr, playersAtPos]) => {
+          const pos = parseInt(posStr);
+          const spacePos = spacePositions[pos];
 
-        return playersAtPos.map((player, stackIndex) => (
-          <PlayerToken
-            key={player.id}
-            player={player}
-            position={spacePos}
-            stackIndex={stackIndex}
-            totalAtPosition={playersAtPos.length}
-          />
-        ));
-      })}
+          return playersAtPos.map((player, stackIndex) => (
+            <PlayerToken
+              key={`${player.id}-${player.position}`}
+              player={player}
+              position={spacePos}
+              stackIndex={stackIndex}
+              totalAtPosition={playersAtPos.length}
+            />
+          ));
+        })}
+      </LayoutGroup>
     </div>
   );
 }

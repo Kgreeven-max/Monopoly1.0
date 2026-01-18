@@ -78,6 +78,7 @@ export function useSocket(): UseSocketReturn {
     // This is the ONLY event that should update game state
     socket.on(SocketEvents.GAME_STATE, (state: GameState) => {
       console.log('[TV Socket] Game state update, phase:', state.phase, 'round:', state.round);
+      console.log('[TV Socket] Player positions:', Object.values(state.players).map(p => ({ name: p.name, position: p.position })));
       setGameState(state);
     });
 

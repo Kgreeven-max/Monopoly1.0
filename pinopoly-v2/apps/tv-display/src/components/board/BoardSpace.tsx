@@ -43,7 +43,6 @@ export function BoardSpace({ space, property, position, index }: BoardSpaceProps
         height,
         transform: `translate(-50%, -50%) rotate(${position.rotation}deg)`,
       }}
-      whileHover={{ scale: 1.05, zIndex: 10 }}
     >
       {/* Color bar for properties */}
       {space.colorGroup && (
