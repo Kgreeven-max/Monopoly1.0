@@ -4,7 +4,7 @@
  * No side effects, deterministic, testable
  */
 
-import type { GameState, GameEvent, DiceRoll } from '../state/types';
+import type { GameState, GameEvent } from '../state/types';
 import type { GameAction } from '../actions/types';
 import { ActionTypes } from '../actions/types';
 import { SeededRandom } from '../rng/SeededRandom';
@@ -332,7 +332,7 @@ export function gameReducer(
       );
 
       // Check for third consecutive doubles (go to jail)
-      let newConsecutiveDoubles = diceRoll.isDoubles
+      const newConsecutiveDoubles = diceRoll.isDoubles
         ? state.consecutiveDoubles + 1
         : 0;
 
@@ -389,7 +389,7 @@ export function gameReducer(
         )
       );
 
-      let newState: GameState = {
+      const newState: GameState = {
         ...state,
         players: {
           ...state.players,
@@ -835,7 +835,7 @@ export function gameReducer(
         cardId
       );
 
-      let finalState: GameState = {
+      const finalState: GameState = {
         ...newState,
         chanceDeck: deck === 'chance' ? updatedDeck : newState.chanceDeck,
         communityChestDeck: deck === 'community_chest' ? updatedDeck : newState.communityChestDeck,
@@ -1066,7 +1066,7 @@ export function gameReducer(
       };
 
       // Transfer properties
-      let updatedProperties = { ...state.properties };
+      const updatedProperties = { ...state.properties };
       let creditorMoney = 0;
 
       if (creditorId && state.players[creditorId]) {
@@ -1093,7 +1093,7 @@ export function gameReducer(
       }
 
       // Update creditor if applicable
-      let updatedPlayers = {
+      const updatedPlayers = {
         ...state.players,
         [playerId]: bankruptPlayer,
       };
@@ -1231,9 +1231,9 @@ export function gameReducer(
       }
 
       // Execute the trade - transfer assets
-      let updatedProposer = { ...proposer };
-      let updatedRecipient = { ...recipient };
-      let updatedProperties = { ...state.properties };
+      const updatedProposer = { ...proposer };
+      const updatedRecipient = { ...recipient };
+      const updatedProperties = { ...state.properties };
 
       // Transfer money
       updatedProposer.money = updatedProposer.money - trade.offer.money + trade.request.money;

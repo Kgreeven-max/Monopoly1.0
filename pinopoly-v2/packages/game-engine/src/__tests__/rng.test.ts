@@ -62,11 +62,13 @@ describe('SeededRandom', () => {
       const rng = new SeededRandom(12345);
 
       for (let i = 0; i < 50; i++) {
-        const [die1, die2] = rng.rollDice();
-        expect(die1).toBeGreaterThanOrEqual(1);
-        expect(die1).toBeLessThanOrEqual(6);
-        expect(die2).toBeGreaterThanOrEqual(1);
-        expect(die2).toBeLessThanOrEqual(6);
+        const roll = rng.rollDice();
+        expect(roll.die1).toBeGreaterThanOrEqual(1);
+        expect(roll.die1).toBeLessThanOrEqual(6);
+        expect(roll.die2).toBeGreaterThanOrEqual(1);
+        expect(roll.die2).toBeLessThanOrEqual(6);
+        expect(roll.total).toBe(roll.die1 + roll.die2);
+        expect(roll.isDoubles).toBe(roll.die1 === roll.die2);
       }
     });
 

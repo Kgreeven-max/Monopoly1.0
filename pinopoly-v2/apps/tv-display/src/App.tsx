@@ -33,10 +33,9 @@ function App() {
 
     if (!gameState) {
       return (
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-white text-2xl animate-pulse">
-            Connecting to game...
-          </div>
+        <div className="flex flex-col items-center justify-center h-screen gap-6">
+          <div className="spinner" />
+          <p className="text-white/60 text-xl">Connecting to game...</p>
         </div>
       );
     }

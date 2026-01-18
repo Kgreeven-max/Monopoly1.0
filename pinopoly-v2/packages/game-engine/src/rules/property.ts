@@ -7,7 +7,7 @@ import type { GameState, PropertyState, ColorGroup } from '../state/types';
 /**
  * Color group sizes (number of properties per group)
  */
-const GROUP_SIZES: Record<ColorGroup, number> = {
+export const GROUP_SIZES: Record<ColorGroup, number> = {
   brown: 2,
   lightBlue: 3,
   pink: 3,

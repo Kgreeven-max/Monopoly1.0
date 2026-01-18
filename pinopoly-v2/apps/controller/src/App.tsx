@@ -22,10 +22,9 @@ function AppContent() {
     // Joined but waiting for game state
     if (!gameState) {
       return (
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-white text-xl animate-pulse">
-            Connecting...
-          </div>
+        <div className="flex flex-col items-center justify-center h-screen gap-4">
+          <div className="spinner" />
+          <p className="text-white/60">Joining game...</p>
         </div>
       );
     }

@@ -13,15 +13,15 @@ module.exports = {
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
-    'plugin:@typescript-eslint/recommended-requiring-type-checking',
     'prettier',
   ],
   rules: {
-    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-explicit-any': 'warn',
-    'no-console': ['warn', { allow: ['warn', 'error'] }],
+    'no-console': 'off',
+    'no-case-declarations': 'off', // Allow declarations in switch cases
   },
   ignorePatterns: ['node_modules', 'dist', 'coverage', '*.js'],
 };

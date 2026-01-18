@@ -4,7 +4,6 @@
 
 import type { GameState, GameEvent } from '../state/types';
 import {
-  getNextPosition,
   getNearestRailroad,
   getNearestUtility,
   moveBack,
