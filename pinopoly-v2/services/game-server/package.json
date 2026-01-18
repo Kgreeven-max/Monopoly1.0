@@ -16,12 +16,14 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "play-game": "tsx src/scripts/play-full-game.ts"
   },
   "dependencies": {
     "@pinopoly/game-engine": "workspace:*",
     "@pinopoly/shared": "workspace:*",
     "@prisma/client": "^5.7.0",
+    "socket.io-client": "^4.7.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.1.0",
     "cors": "^2.8.5",

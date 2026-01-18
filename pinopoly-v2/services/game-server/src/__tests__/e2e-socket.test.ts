@@ -497,25 +497,30 @@ describe('E2E Socket Tests', () => {
       player1.emit(SocketEvents.LOBBY_START_GAME);
       await gameStartedPromise;
 
-      // Auction events should be emittable
-      const bidPromise = new Promise<any>((resolve, reject) => {
-        player1.on(SocketEvents.AUCTION_BID_PLACED, resolve);
-        player1.on(SocketEvents.ERROR, reject);
-        setTimeout(() => reject(new Error('Timeout - no auction active')), 2000);
+      // Verify auction handler exists and does not crash when no auction is active
+      // The server will silently ignore bids when no auction is active
+      let receivedBid = false;
+      let receivedError = false;
+
+      player1.on(SocketEvents.AUCTION_BID_PLACED, () => {
+        receivedBid = true;
+      });
+      player1.on(SocketEvents.ERROR, () => {
+        receivedError = true;
       });
 
-      // This will likely fail if no auction is active, which is expected
+      // Emit bid with no active auction - server should ignore silently
       player1.emit(SocketEvents.AUCTION_BID, {
         auctionId: 'test',
         amount: 100,
       });
 
-      try {
-        await bidPromise;
-      } catch (error: any) {
-        // Expected - no active auction
-        expect(error.message).toBeDefined();
-      }
+      // Wait a short time for any response
+      await new Promise(r => setTimeout(r, 500));
+
+      // No auction active, so no bid should be placed
+      // This verifies the auction system is wired up but correctly ignores invalid bids
+      expect(receivedBid).toBe(false);
     });
 
     it('should handle trade proposal', async () => {
@@ -580,9 +585,28 @@ describe('E2E Socket Tests', () => {
         });
       });
 
+      // Connect player 2 (keeps room alive during player 1 disconnect)
+      player2 = ioClient(SERVER_URL, { transports: ['websocket'] });
+      await new Promise<void>((resolve) => {
+        player2.on(SocketEvents.JOINED_GAME, () => resolve());
+        player2.emit(SocketEvents.LOBBY_JOIN, {
+          roomCode,
+          playerName: 'Player2',
+          token: 'dog',
+          color: '#4ECDC4',
+        });
+      });
+
+      // Start game (so room isn't deleted when player disconnects)
+      const gameStartedPromise = new Promise<any>((resolve) => {
+        player1.on(SocketEvents.GAME_STARTED, resolve);
+      });
+      player1.emit(SocketEvents.LOBBY_START_GAME);
+      await gameStartedPromise;
+
       const { playerId, sessionToken } = joinData;
 
-      // Disconnect
+      // Disconnect player 1
       player1.disconnect();
       await new Promise(r => setTimeout(r, 100));
 
@@ -613,7 +637,7 @@ describe('E2E Socket Tests', () => {
         .expect(201);
       roomCode = response.body.roomCode;
 
-      // Connect and get session
+      // Connect player 1
       player1 = ioClient(SERVER_URL, { transports: ['websocket'] });
       const joinData = await new Promise<any>((resolve) => {
         player1.on(SocketEvents.JOINED_GAME, resolve);
@@ -624,6 +648,25 @@ describe('E2E Socket Tests', () => {
           color: '#FF6B6B',
         });
       });
+
+      // Connect player 2 (keeps room alive during player 1 disconnect)
+      player2 = ioClient(SERVER_URL, { transports: ['websocket'] });
+      await new Promise<void>((resolve) => {
+        player2.on(SocketEvents.JOINED_GAME, () => resolve());
+        player2.emit(SocketEvents.LOBBY_JOIN, {
+          roomCode,
+          playerName: 'Player2',
+          token: 'dog',
+          color: '#4ECDC4',
+        });
+      });
+
+      // Start game
+      const gameStartedPromise = new Promise<any>((resolve) => {
+        player1.on(SocketEvents.GAME_STARTED, resolve);
+      });
+      player1.emit(SocketEvents.LOBBY_START_GAME);
+      await gameStartedPromise;
 
       player1.disconnect();
       await new Promise(r => setTimeout(r, 100));

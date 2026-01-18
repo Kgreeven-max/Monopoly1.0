@@ -18,6 +18,11 @@ import {
 import { SocketEvents, generateRoomCode, uuid } from '@pinopoly/shared';
 import { AuthenticatedSocket } from './SocketServer';
 import { config } from '../config';
+import {
+  evaluateTrade,
+  generateTradeProposals,
+  getPendingTradeResponse,
+} from '../bot/BotTradeAI';
 
 interface PlayerSession {
   playerId: string;
@@ -456,7 +461,12 @@ export class RoomManager {
       // Emit move event
       const moveEvent = events.find(e => e.type === 'PLAYER_MOVED');
       if (moveEvent) {
-        this.io.to(room.code).emit(SocketEvents.GAME_PLAYER_MOVED, moveEvent.payload);
+        const movePayload = moveEvent.payload as { from: number; to: number; spaces: number; passedGo: boolean };
+        this.io.to(room.code).emit(SocketEvents.GAME_PLAYER_MOVED, {
+          playerId: socket.playerId,
+          newPosition: movePayload.to,
+          ...movePayload,
+        });
       }
 
       // Emit full state
@@ -472,7 +482,7 @@ export class RoomManager {
     if (!room || !this.isCurrentPlayer(room, socket.playerId)) return;
 
     try {
-      const [newState, events] = gameReducer(room.state, {
+      let [newState, events] = gameReducer(room.state, {
         type: ActionTypes.END_TURN,
         payload: { playerId: socket.playerId! },
       });
@@ -488,8 +498,13 @@ export class RoomManager {
         });
       }
 
+      // Trigger economy tick if economic cycles are enabled
+      if (newState.config.economicCyclesEnabled) {
+        this.triggerEconomyTick(room);
+      }
+
       // Emit full state
-      this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
+      this.io.to(room.code).emit(SocketEvents.GAME_STATE, room.state);
 
       // Start timer for next player
       this.startTurnTimer(room);
@@ -674,7 +689,12 @@ export class RoomManager {
       // Emit move event if player moved
       const moveEvent = events.find(e => e.type === 'PLAYER_MOVED');
       if (moveEvent) {
-        this.io.to(room.code).emit(SocketEvents.GAME_PLAYER_MOVED, moveEvent.payload);
+        const movePayload = moveEvent.payload as { from: number; to: number; spaces: number; passedGo: boolean };
+        this.io.to(room.code).emit(SocketEvents.GAME_PLAYER_MOVED, {
+          playerId: socket.playerId,
+          newPosition: movePayload.to,
+          ...movePayload,
+        });
       }
 
       this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
@@ -853,7 +873,21 @@ export class RoomManager {
       // Emit trade proposed event
       const tradeEvent = events.find(e => e.type === 'TRADE_PROPOSED');
       if (tradeEvent) {
-        this.io.to(room.code).emit(SocketEvents.TRADE_PROPOSED, tradeEvent.payload);
+        const tradePayload = tradeEvent.payload as { trade: { id: string; proposerId: string; recipientId: string; offer: any; request: any } };
+        // Emit flattened trade data for easier client consumption
+        this.io.to(room.code).emit(SocketEvents.TRADE_PROPOSED, {
+          ...tradePayload.trade,
+        });
+
+        // Check if recipient is a bot - schedule bot response
+        const recipient = newState.players[data.recipientId];
+        if (recipient?.isBot) {
+          const tradeId = tradePayload.trade.id;
+          console.log(`[TRADE] Bot ${recipient.name} received trade offer, will respond in 2-3s`);
+          setTimeout(() => {
+            this.handleBotTradeResponse(room, data.recipientId, tradeId);
+          }, 2000 + Math.random() * 1000); // 2-3 second delay
+        }
       }
 
       this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
@@ -1176,9 +1210,67 @@ export class RoomManager {
   }
 
   private async executeBotTurn(room: GameRoom, botId: string): Promise<void> {
-    // Simple bot logic - just roll and end turn
-    console.log('Bot', botId, 'taking turn');
+    const bot = room.state.players[botId];
+    console.log('Bot', bot?.name || botId, 'taking turn');
+
     try {
+      // First, check for any pending trades targeting this bot
+      const pendingResponse = getPendingTradeResponse(botId, room.state);
+      if (pendingResponse) {
+        console.log(`[TRADE] Bot ${bot?.name} responding to pending trade`);
+        this.handleBotTradeResponse(room, botId, pendingResponse.trade.id);
+        await this.sleep(1500);
+      }
+
+      // Then, consider proposing a trade (only during pre_roll and if game is playing)
+      if (room.state.phase === 'pre_roll' && room.state.status === 'playing') {
+        const proposals = generateTradeProposals(botId, room.state);
+        if (proposals.length > 0) {
+          console.log(`[TRADE] Bot ${bot?.name} generated ${proposals.length} trade proposal(s)`);
+          const bestProposal = proposals[0]; // Already sorted by priority
+          const recipient = room.state.players[bestProposal.recipientId];
+
+          if (recipient && !recipient.isBankrupt) {
+            console.log(`[TRADE] Bot ${bot?.name} proposing trade to ${recipient.name}`);
+
+            try {
+              const [tradeState, tradeEvents] = gameReducer(room.state, {
+                type: ActionTypes.PROPOSE_TRADE,
+                payload: {
+                  proposerId: botId,
+                  recipientId: bestProposal.recipientId,
+                  offer: bestProposal.offer,
+                  request: bestProposal.request,
+                },
+              });
+              room.state = tradeState;
+
+              // Emit trade proposed event
+              const tradeEvent = tradeEvents.find(e => e.type === 'TRADE_PROPOSED');
+              if (tradeEvent) {
+                const tradePayload = tradeEvent.payload as { trade: any };
+                this.io.to(room.code).emit(SocketEvents.TRADE_PROPOSED, {
+                  ...tradePayload.trade,
+                });
+
+                // If recipient is also a bot, schedule their response
+                if (recipient.isBot) {
+                  const tradeId = tradePayload.trade.id;
+                  setTimeout(() => {
+                    this.handleBotTradeResponse(room, bestProposal.recipientId, tradeId);
+                  }, 2000 + Math.random() * 1000);
+                }
+              }
+
+              this.io.to(room.code).emit(SocketEvents.GAME_STATE, room.state);
+              await this.sleep(2000); // Wait for trade to potentially complete
+            } catch (tradeError) {
+              console.log(`[TRADE] Bot trade proposal failed:`, tradeError);
+            }
+          }
+        }
+      }
+
       // Roll dice
       let [newState, events] = gameReducer(room.state, {
         type: ActionTypes.ROLL_DICE,
@@ -1316,8 +1408,13 @@ export class RoomManager {
           });
         }
 
-        this.io.to(room.code).emit(SocketEvents.GAME_STATE, newState);
-        console.log('Bot ended turn, next player index:', newState.currentPlayerIndex);
+        // Trigger economy tick if economic cycles are enabled (same as handleEndTurn)
+        if (newState.config.economicCyclesEnabled) {
+          this.triggerEconomyTick(room);
+        }
+
+        this.io.to(room.code).emit(SocketEvents.GAME_STATE, room.state);
+        console.log('Bot ended turn, next player index:', room.state.currentPlayerIndex);
 
         // Check if next player is also a bot
         this.checkBotTurn(room);
@@ -1329,6 +1426,174 @@ export class RoomManager {
 
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Handle bot response to a trade offer
+   */
+  private handleBotTradeResponse(room: GameRoom, botId: string, tradeId: string): void {
+    // Verify trade still exists and is pending
+    const trade = room.state.activeTrades.find(t => t.id === tradeId);
+    if (!trade || trade.status !== 'pending') {
+      console.log(`[TRADE] Trade ${tradeId} no longer pending, skipping bot response`);
+      return;
+    }
+
+    const bot = room.state.players[botId];
+    if (!bot || !bot.isBot) return;
+
+    try {
+      // Evaluate the trade using bot AI
+      const evaluation = evaluateTrade(trade, botId, room.state);
+
+      console.log(`[TRADE] Bot ${bot.name} evaluating trade:`);
+      console.log(`  Receive value: $${evaluation.receiveValue}`);
+      console.log(`  Give value: $${evaluation.giveValue}`);
+      console.log(`  Decision: ${evaluation.decision}`);
+      console.log(`  Reason: ${evaluation.reason}`);
+
+      let newState = room.state;
+      let events: any[] = [];
+
+      switch (evaluation.decision) {
+        case 'accept':
+          [newState, events] = gameReducer(room.state, {
+            type: ActionTypes.ACCEPT_TRADE,
+            payload: { tradeId, playerId: botId },
+          });
+          room.state = newState;
+
+          console.log(`[TRADE] Bot ${bot.name} ACCEPTED trade`);
+          this.io.to(room.code).emit(SocketEvents.TRADE_ACCEPTED, {
+            tradeId,
+            proposerId: trade.proposerId,
+            recipientId: trade.recipientId,
+          });
+          break;
+
+        case 'reject':
+          [newState, events] = gameReducer(room.state, {
+            type: ActionTypes.REJECT_TRADE,
+            payload: { tradeId, playerId: botId },
+          });
+          room.state = newState;
+
+          console.log(`[TRADE] Bot ${bot.name} REJECTED trade`);
+          this.io.to(room.code).emit(SocketEvents.TRADE_REJECTED, {
+            tradeId,
+            rejectedBy: botId,
+          });
+          break;
+
+        case 'counter':
+          // For counter offers, reject the original and propose a new one
+          if (evaluation.counterOffer) {
+            // First reject the original
+            [newState, events] = gameReducer(room.state, {
+              type: ActionTypes.REJECT_TRADE,
+              payload: { tradeId, playerId: botId },
+            });
+            room.state = newState;
+
+            // Then propose the counter
+            [newState, events] = gameReducer(room.state, {
+              type: ActionTypes.PROPOSE_TRADE,
+              payload: {
+                proposerId: botId,
+                recipientId: trade.proposerId,
+                offer: evaluation.counterOffer.offer,
+                request: evaluation.counterOffer.request,
+              },
+            });
+            room.state = newState;
+
+            console.log(`[TRADE] Bot ${bot.name} COUNTERED trade with new proposal`);
+
+            // Emit counter event
+            const counterEvent = events.find(e => e.type === 'TRADE_PROPOSED');
+            if (counterEvent) {
+              const counterPayload = counterEvent.payload as { trade: any };
+              this.io.to(room.code).emit(SocketEvents.TRADE_PROPOSED, {
+                ...counterPayload.trade,
+                isCounter: true,
+              });
+
+              // Check if original proposer is also a bot
+              const originalProposer = room.state.players[trade.proposerId];
+              if (originalProposer?.isBot) {
+                const newTradeId = counterPayload.trade.id;
+                setTimeout(() => {
+                  this.handleBotTradeResponse(room, trade.proposerId, newTradeId);
+                }, 2000 + Math.random() * 1000);
+              }
+            }
+          } else {
+            // Fallback to reject if no counter offer generated
+            [newState, events] = gameReducer(room.state, {
+              type: ActionTypes.REJECT_TRADE,
+              payload: { tradeId, playerId: botId },
+            });
+            room.state = newState;
+            this.io.to(room.code).emit(SocketEvents.TRADE_REJECTED, {
+              tradeId,
+              rejectedBy: botId,
+            });
+          }
+          break;
+      }
+
+      this.io.to(room.code).emit(SocketEvents.GAME_STATE, room.state);
+    } catch (error) {
+      console.error(`[TRADE] Error in bot trade response:`, error);
+    }
+  }
+
+  /**
+   * Trigger economy tick with random market volatility
+   */
+  private triggerEconomyTick(room: GameRoom): void {
+    try {
+      const previousPhase = room.state.economy.phase;
+
+      // Add small random change to economy cycle position
+      // Bias towards the middle (stable) with occasional larger swings
+      const volatility = Math.random();
+      let inflationChange: number;
+
+      if (volatility < 0.7) {
+        // Normal: small change (-2 to +2)
+        inflationChange = Math.floor(Math.random() * 5) - 2;
+      } else if (volatility < 0.9) {
+        // Moderate swing (-4 to +4)
+        inflationChange = Math.floor(Math.random() * 9) - 4;
+      } else {
+        // Major event (-8 to +8)
+        inflationChange = Math.floor(Math.random() * 17) - 8;
+        console.log(`[ECONOMY] Market shock! Change: ${inflationChange}`);
+      }
+
+      const [newState, events] = gameReducer(room.state, {
+        type: ActionTypes.ECONOMY_TICK,
+        payload: { inflationChange },
+      });
+
+      room.state = newState;
+
+      // Check if phase changed and emit event
+      const economyEvent = events.find(e => e.type === 'ECONOMY_CHANGED');
+      if (economyEvent) {
+        console.log(`[ECONOMY] Phase changed: ${previousPhase} -> ${newState.economy.phase}`);
+        this.io.to(room.code).emit(SocketEvents.ECONOMY_CHANGED, {
+          phase: newState.economy.phase,
+          cyclePosition: newState.economy.cyclePosition,
+          rentMultiplier: newState.economy.rentMultiplier,
+          propertyValueMultiplier: newState.economy.propertyValueMultiplier,
+          previousPhase,
+        });
+      }
+    } catch (error) {
+      console.error('[ECONOMY] Error triggering economy tick:', error);
+    }
   }
 
   /**

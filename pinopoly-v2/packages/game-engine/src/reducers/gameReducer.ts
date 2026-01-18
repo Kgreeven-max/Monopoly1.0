@@ -1319,6 +1319,111 @@ export function gameReducer(
       return [newState, events];
     }
 
+    // =========================================================================
+    // ECONOMY ACTIONS
+    // =========================================================================
+
+    case ActionTypes.ECONOMY_TICK: {
+      const { inflationChange } = action.payload;
+      const currentEconomy = state.economy;
+
+      // Calculate new cycle position with some randomness
+      // Position moves 1-3 per tick, can go up or down based on current phase
+      const positionChange = inflationChange ?? (Math.random() > 0.5 ? 1 : -1) * (1 + Math.floor(Math.random() * 3));
+      let newCyclePosition = currentEconomy.cyclePosition + positionChange;
+
+      // Clamp cycle position between 0 and 100, with wrapping
+      if (newCyclePosition < 0) newCyclePosition = 0;
+      if (newCyclePosition > 100) newCyclePosition = 100;
+
+      // Determine phase based on cycle position
+      let newPhase: 'recession' | 'stable' | 'growth' | 'boom';
+      if (newCyclePosition < 25) {
+        newPhase = 'recession';
+      } else if (newCyclePosition < 50) {
+        newPhase = 'stable';
+      } else if (newCyclePosition < 75) {
+        newPhase = 'growth';
+      } else {
+        newPhase = 'boom';
+      }
+
+      // Calculate multipliers based on phase
+      let rentMultiplier: number;
+      let propertyValueMultiplier: number;
+      let baseInterestRate: number;
+      let inflationRate: number;
+
+      switch (newPhase) {
+        case 'recession':
+          rentMultiplier = 0.7;
+          propertyValueMultiplier = 0.8;
+          baseInterestRate = 0.02; // Low rates to stimulate economy
+          inflationRate = -0.01; // Deflation
+          break;
+        case 'stable':
+          rentMultiplier = 1.0;
+          propertyValueMultiplier = 1.0;
+          baseInterestRate = 0.05;
+          inflationRate = 0.02;
+          break;
+        case 'growth':
+          rentMultiplier = 1.2;
+          propertyValueMultiplier = 1.15;
+          baseInterestRate = 0.06;
+          inflationRate = 0.03;
+          break;
+        case 'boom':
+          rentMultiplier = 1.5;
+          propertyValueMultiplier = 1.3;
+          baseInterestRate = 0.08; // Higher rates to cool economy
+          inflationRate = 0.05;
+          break;
+      }
+
+      const newEconomy = {
+        phase: newPhase,
+        cyclePosition: newCyclePosition,
+        inflationRate,
+        baseInterestRate,
+        propertyValueMultiplier,
+        rentMultiplier,
+        turnsUntilPhaseCheck: currentEconomy.turnsUntilPhaseCheck - 1,
+      };
+
+      // Update property current values based on new multiplier
+      const updatedProperties = { ...state.properties };
+      for (const propId in updatedProperties) {
+        const prop = updatedProperties[propId];
+        updatedProperties[propId] = {
+          ...prop,
+          currentValue: Math.floor(prop.price * propertyValueMultiplier),
+        };
+      }
+
+      const newState: GameState = {
+        ...state,
+        economy: newEconomy,
+        properties: updatedProperties,
+        lastActionAt: Date.now(),
+      };
+
+      // Only emit event if phase changed
+      if (currentEconomy.phase !== newPhase) {
+        events.push(
+          createEvent(newState, 'ECONOMY_CHANGED', {
+            previousPhase: currentEconomy.phase,
+            newPhase,
+            cyclePosition: newCyclePosition,
+            rentMultiplier,
+            propertyValueMultiplier,
+          })
+        );
+      }
+
+      return [newState, events];
+    }
+
     default:
       // Unknown action - return state unchanged
       return [state, events];
